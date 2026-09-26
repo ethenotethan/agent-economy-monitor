@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all-targets --all-features
+
+if git grep -nE '(ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|/v2/[A-Za-z0-9_-]{24,})' -- ':!Cargo.lock'; then
+    echo 'possible credential found in tracked files' >&2
+    exit 1
+fi
