@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Source-backed System Map for the Agent Economy Monitor.">
+  <meta name="theme-color" content="#07110f">
+  <title>Agent Economy Monitor · Architecture</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#system-map">Skip to System Map</a>
+  <div class="ambient ambient-a" aria-hidden="true"></div>
+  <div class="ambient ambient-b" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Agent Economy Monitor architecture home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>AGENT ECONOMY <b>MONITOR</b></span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="#system-map">System map</a>
+      <a href="#flows">Flows</a>
+      <a href="#coverage">Coverage</a>
+      <a class="repo-link" href="https://github.com/ethenotethan/agent-economy-monitor">GitHub <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero section-shell" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="pulse"></span> SOURCE-BACKED SYSTEM MAP</div>
+        <h1 id="hero-title">Trust is an<br><em>architecture.</em></h1>
+        <p class="hero-lede">A deterministic map of how untrusted commerce signals become replayable evidence, canonical knowledge, and bounded semantic intelligence.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#system-map">Explore the topology <span aria-hidden="true">↓</span></a>
+          <a class="button secondary" href="https://github.com/ethenotethan/agent-economy-monitor/blob/main/architecture/model/model.json">Inspect model.json <span aria-hidden="true">↗</span></a>
+        </div>
+        <p class="model-stamp" id="model-stamp" role="status">Loading repository model…</p>
+      </div>
+      <div class="hero-panel" aria-label="Architecture summary">
+        <div class="radar" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div class="hero-stat-grid" id="hero-stats"></div>
+        <div class="signal-line"><span>MODEL INTEGRITY</span><b id="integrity-status">CHECKING</b></div>
+      </div>
+    </section>
+
+    <section class="marquee" aria-label="Core guarantees">
+      <div>IMMUTABLE EVIDENCE <span>◆</span> REVERSIBLE ATTRIBUTION <span>◆</span> CITED PROJECTION <span>◆</span> REPLAYABLE STATE <span>◆</span> IMMUTABLE EVIDENCE <span>◆</span></div>
+    </section>
+
+    <section class="section-shell section-block" id="authority-model" aria-labelledby="authority-title">
+      <div class="section-heading">
+        <p class="kicker">01 / AUTHORITY MODEL</p>
+        <h2 id="authority-title">Three authorities.<br>Zero ambiguity.</h2>
+        <p>The product keeps observation, adjudication, and explanation separate. Each layer can reference the one below it without silently acquiring its authority.</p>
+      </div>
+      <div class="authority-grid" id="authority-grid"></div>
+    </section>
+
+    <section class="map-section section-block" id="system-map" aria-labelledby="map-title">
+      <div class="section-shell section-heading map-heading">
+        <div>
+          <p class="kicker">02 / LIVE TOPOLOGY</p>
+          <h2 id="map-title">The system, as the<br>repository defines it.</h2>
+        </div>
+        <p>Every node carries source evidence. Select a component to inspect its authority, placement, and citation.</p>
+      </div>
+      <div class="map-toolbar section-shell" aria-label="System Map controls">
+        <div class="filter-group" id="map-filters" role="group" aria-label="Filter topology by authority layer"></div>
+        <label class="search-control"><span class="sr-only">Search components</span><input id="node-search" type="search" placeholder="Search components…" autocomplete="off"></label>
+        <span id="map-result-count" class="sr-only" aria-live="polite"></span>
+      </div>
+      <div class="map-frame">
+        <div class="map-canvas" id="map-canvas" tabindex="0" aria-label="Interactive architecture topology"></div>
+        <aside class="node-detail" id="node-detail" aria-live="polite">
+          <p class="detail-empty">Select a node to inspect its source evidence.</p>
+        </aside>
+      </div>
+      <details class="accessible-directory section-shell">
+        <summary>Browse accessible component directory</summary>
+        <div id="node-directory" class="directory-grid"></div>
+      </details>
+    </section>
+
+    <section class="section-shell section-block" id="flows" aria-labelledby="flows-title">
+      <div class="section-heading split-heading">
+        <div><p class="kicker">03 / DATA LIFECYCLE</p><h2 id="flows-title">Evidence moves.<br>Authority does not.</h2></div>
+        <p>Explicit relations govern each transition. Raw evidence remains available for replay while derived state remains versioned and attributable.</p>
+      </div>
+      <div id="flow-list" class="flow-list"></div>
+    </section>
+
+    <section class="section-shell section-block" id="storage" aria-labelledby="storage-title">
+      <div class="section-heading"><p class="kicker">04 / DATA CUSTODY</p><h2 id="storage-title">Each store has one job.</h2></div>
+      <div class="storage-grid" id="storage-grid"></div>
+      <div class="boundary-panel">
+        <div><p class="kicker">TRUST BOUNDARIES</p><h3>Infrastructure is visible,<br>not disguised as application code.</h3></div>
+        <div id="boundary-groups" class="boundary-groups"></div>
+      </div>
+    </section>
+
+    <section class="section-shell section-block" id="invariants" aria-labelledby="invariants-title">
+      <div class="section-heading split-heading">
+        <div><p class="kicker">05 / NON-NEGOTIABLES</p><h2 id="invariants-title">Rules the graph<br>must keep true.</h2></div>
+        <p>These invariants are evaluated by the architecture compiler. A violation blocks delivery instead of becoming stale documentation.</p>
+      </div>
+      <div class="invariant-grid" id="invariant-grid"></div>
+    </section>
+
+    <section class="coverage-section section-block" id="coverage" aria-labelledby="coverage-title">
+      <div class="section-shell">
+        <div class="section-heading split-heading">
+          <div><p class="kicker">06 / EXTRACTION COVERAGE</p><h2 id="coverage-title">Observed facts.<br>Named unknowns.</h2></div>
+          <p>The map distinguishes facts mechanically extracted from source, policy specified with exact citations, and implementation gaps that remain unresolved.</p>
+        </div>
+        <div class="coverage-layout">
+          <div id="extraction-passes" class="pass-list"></div>
+          <div class="unresolved-panel"><div class="panel-label">KNOWN UNRESOLVED</div><div id="unresolved-list"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-shell section-block" id="delivery" aria-labelledby="delivery-title">
+      <div class="section-heading"><p class="kicker">07 / DELIVERY CONTROL PLANE</p><h2 id="delivery-title">The map gates the merge.</h2><p>Architecture and behavior remain independent proofs. Both must pass before the deterministic queue can merge.</p></div>
+      <div class="delivery-pipeline" id="delivery-pipeline"></div>
+    </section>
+
+    <section class="section-shell section-block provenance" id="provenance" aria-labelledby="provenance-title">
+      <div class="section-heading split-heading">
+        <div><p class="kicker">08 / PROVENANCE</p><h2 id="provenance-title">Click through<br>to the proof.</h2></div>
+        <p>No hidden design deck. Citations resolve to repository paths and lines; the full public model is available as deterministic JSON.</p>
+      </div>
+      <div class="provenance-stats" id="provenance-stats"></div>
+      <div id="citation-list" class="citation-list"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div><span class="brand-mini">AEM / SYSTEM MAP</span><p>Generated from repository source and specified policy.</p></div>
+    <div class="footer-links"><a href="architecture.json">Raw architecture JSON</a><a href="build-meta.json">Build metadata</a><a href="https://github.com/ethenotethan/agent-economy-monitor/issues/22">Issue #22</a></div>
+  </footer>
+
+  <noscript><div class="noscript">This source-backed architecture explorer needs JavaScript to render model.json. The raw model remains available at <a href="architecture.json">architecture.json</a>.</div></noscript>
+</body>
+</html>

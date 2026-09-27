@@ -284,20 +284,27 @@ def rust_declarations(text: str) -> list[dict[str, Any]]:
 
 def parse_ci(root: Path) -> dict[str, Any]:
     relative = ".github/workflows/ci.yml"
+    pages_relative = ".github/workflows/pages.yml"
     workflows = sorted(
         path.relative_to(root).as_posix()
         for path in (root / ".github" / "workflows").glob("*")
         if path.is_file() and path.suffix in {".yml", ".yaml"}
     )
-    unmapped_workflows = [workflow for workflow in workflows if workflow != relative]
+    governed_workflows = {relative, pages_relative}
+    unmapped_workflows = [workflow for workflow in workflows if workflow not in governed_workflows]
     if unmapped_workflows:
         raise ArchitectureError(
             "unmapped GitHub Actions workflow: " + ", ".join(unmapped_workflows)
         )
-    if workflows != [relative]:
+    if relative not in workflows:
         raise ArchitectureError(f"missing governed GitHub Actions workflow: {relative}")
     path = root / relative
     text = path.read_text(encoding="utf-8")
+    pages_text = (
+        (root / pages_relative).read_text(encoding="utf-8")
+        if pages_relative in workflows
+        else None
+    )
     canonical = """name: CI
 
 on:
@@ -340,6 +347,61 @@ jobs:
     # compiler and its adversarial tests in the same reviewed change.
     if text != canonical:
         raise ArchitectureError(f"{relative} must match the canonical workflow grammar exactly")
+    pages_canonical = """name: Architecture Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build-pages
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - name: Verify canonical architecture model
+        run: python3 scripts/build_architecture.py --check
+      - name: Build architecture showcase
+        run: python3 scripts/build_architecture_site.py --output _site --revision "$GITHUB_SHA"
+      - name: Verify architecture showcase
+        run: python3 -m unittest scripts.test_architecture_site -v
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: _site
+          include-hidden-files: true
+
+  deploy:
+    name: deploy-pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
+"""
+    if pages_text is not None and pages_text != pages_canonical:
+        raise ArchitectureError(
+            f"{pages_relative} must match the canonical Pages workflow grammar exactly"
+        )
     lines = text.splitlines()
     on_indexes = [
         index for index, line in enumerate(lines) if re.match(r"^on:\s*(?:#.*)?$", line)
@@ -470,6 +532,7 @@ jobs:
                 "id": match.group(1),
                 "name": match.group(1),
                 "needs": [],
+                "step_count": 0,
                 "unsafe_controls": [],
             }
             run_block_indent = None
@@ -477,6 +540,8 @@ jobs:
             continue
         if current is None:
             continue
+        if re.match(r"^      -\s+(?:uses|name|run):", line):
+            current["step_count"] += 1
         name_match = re.match(r"^    name:\s*(.+)$", line)
         needs_match = re.match(r"^    needs:\s*(.+)$", line)
         run_match = re.match(r"^\s+(?:-\s+)?run:\s*(.+)$", line)
@@ -546,10 +611,79 @@ jobs:
                 "role": "gate",
                 "runs_on": job.get("runs_on", ""),
                 "scripts": sorted(set(job["commands"])),
-                "step_count": len(job["commands"]),
+                "step_count": job["step_count"],
                 "workflow": "ci",
             }
         )
+    pages_lines = pages_text.splitlines() if pages_text is not None else []
+    pages_jobs = [
+        {
+            "evidence": {"line": pages_lines.index("  build:") + 1, "path": pages_relative},
+            "family": "documentation",
+            "id": "build-pages",
+            "name": "build-pages",
+            "needs": [],
+            "role": "post-merge",
+            "runs_on": "ubuntu-latest",
+            "condition": "github.ref == 'refs/heads/main'",
+            "steps": [
+                {"uses": "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"},
+                {"uses": "actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b"},
+                {"run": "python3 scripts/build_architecture.py --check"},
+                {"run": "python3 scripts/build_architecture_site.py --output _site --revision \"$GITHUB_SHA\""},
+                {"run": "python3 -m unittest scripts.test_architecture_site -v"},
+                {"uses": "actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9"},
+            ],
+            "scripts": [
+                "python3 -m unittest scripts.test_architecture_site -v",
+                "python3 scripts/build_architecture.py --check",
+                "python3 scripts/build_architecture_site.py --output _site --revision \"$GITHUB_SHA\"",
+            ],
+            "step_count": 6,
+            "workflow": "architecture-pages",
+        },
+        {
+            "evidence": {"line": pages_lines.index("  deploy:") + 1, "path": pages_relative},
+            "family": "documentation",
+            "id": "deploy-pages",
+            "name": "deploy-pages",
+            "needs": ["build-pages"],
+            "role": "post-merge",
+            "runs_on": "ubuntu-latest",
+            "steps": [
+                {"uses": "actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346"},
+            ],
+            "scripts": [],
+            "step_count": 1,
+            "workflow": "architecture-pages",
+        },
+    ] if pages_text is not None else []
+    all_jobs = normalized_jobs + pages_jobs
+    pages_edges = [
+        {"kind": "triggers", "source": "push-main", "target": "build-pages"},
+        {"kind": "needs", "source": "build-pages", "target": "deploy-pages"},
+    ] if pages_text is not None else []
+    pages_triggers = [
+        {
+            "event": "push:main; workflow_dispatch (main only)",
+            "id": "push-main",
+            "workflows": ["architecture-pages"],
+        },
+    ] if pages_text is not None else []
+    pages_workflows = [
+        {
+            "events": [
+                "push:main",
+                "workflow_dispatch (main only)",
+            ],
+            "family": "documentation",
+            "id": "architecture-pages",
+            "jobs": ["build-pages", "deploy-pages"],
+            "label": "Architecture Pages",
+            "name": "Architecture Pages",
+            "path": pages_relative,
+        },
+    ] if pages_text is not None else []
     return {
         "architectural": {
             "command": "python3 scripts/build_architecture.py --check",
@@ -560,8 +694,8 @@ jobs:
             {"kind": "triggers", "source": "pull-request", "target": "verify"},
             {"kind": "gates", "source": "architecture", "target": "merge"},
             {"kind": "gates", "source": "verify", "target": "merge"},
-        ],
-        "jobs": normalized_jobs,
+        ] + pages_edges,
+        "jobs": all_jobs,
         "limitations": [],
         "merge": {"id": "merge", "inputs": ["architecture", "verify"], "label": "Deterministic merge queue"},
         "ratchets": [],
@@ -581,8 +715,10 @@ jobs:
                 "scripts": ["scripts/verify"],
             },
         ],
-        "summary": {"gates": 2, "jobs": len(normalized_jobs), "ratchets": 0, "static_checks": 2, "workflows": len(workflows)},
-        "triggers": [{"event": "pull_request", "id": "pull-request", "workflows": ["ci"]}],
+        "summary": {"gates": 2, "jobs": len(all_jobs), "ratchets": 0, "static_checks": 2, "workflows": len(workflows)},
+        "triggers": [
+            {"event": "pull_request", "id": "pull-request", "workflows": ["ci"]},
+        ] + pages_triggers,
         "workflows": [
             {
                 "events": ["pull_request", "push:main"],
@@ -592,8 +728,8 @@ jobs:
                 "label": workflow_name,
                 "name": workflow_name,
                 "path": relative,
-            }
-        ],
+            },
+        ] + pages_workflows,
     }
 
 

@@ -24,6 +24,16 @@
         "kind": "gates",
         "source": "verify",
         "target": "merge"
+      },
+      {
+        "kind": "triggers",
+        "source": "push-main",
+        "target": "build-pages"
+      },
+      {
+        "kind": "needs",
+        "source": "build-pages",
+        "target": "deploy-pages"
       }
     ],
     "jobs": [
@@ -43,7 +53,7 @@
           "python3 scripts/build_architecture.py --check",
           "python3 scripts/check_architecture_contract.py"
         ],
-        "step_count": 3,
+        "step_count": 2,
         "workflow": "ci"
       },
       {
@@ -60,8 +70,70 @@
         "scripts": [
           "./scripts/verify"
         ],
-        "step_count": 1,
+        "step_count": 4,
         "workflow": "ci"
+      },
+      {
+        "condition": "github.ref == 'refs/heads/main'",
+        "evidence": {
+          "line": 16,
+          "path": ".github/workflows/pages.yml"
+        },
+        "family": "documentation",
+        "id": "build-pages",
+        "name": "build-pages",
+        "needs": [],
+        "role": "post-merge",
+        "runs_on": "ubuntu-latest",
+        "scripts": [
+          "python3 -m unittest scripts.test_architecture_site -v",
+          "python3 scripts/build_architecture.py --check",
+          "python3 scripts/build_architecture_site.py --output _site --revision \"$GITHUB_SHA\""
+        ],
+        "step_count": 6,
+        "steps": [
+          {
+            "uses": "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"
+          },
+          {
+            "uses": "actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b"
+          },
+          {
+            "run": "python3 scripts/build_architecture.py --check"
+          },
+          {
+            "run": "python3 scripts/build_architecture_site.py --output _site --revision \"$GITHUB_SHA\""
+          },
+          {
+            "run": "python3 -m unittest scripts.test_architecture_site -v"
+          },
+          {
+            "uses": "actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9"
+          }
+        ],
+        "workflow": "architecture-pages"
+      },
+      {
+        "evidence": {
+          "line": 37,
+          "path": ".github/workflows/pages.yml"
+        },
+        "family": "documentation",
+        "id": "deploy-pages",
+        "name": "deploy-pages",
+        "needs": [
+          "build-pages"
+        ],
+        "role": "post-merge",
+        "runs_on": "ubuntu-latest",
+        "scripts": [],
+        "step_count": 1,
+        "steps": [
+          {
+            "uses": "actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346"
+          }
+        ],
+        "workflow": "architecture-pages"
       }
     ],
     "limitations": [],
@@ -103,10 +175,10 @@
     ],
     "summary": {
       "gates": 2,
-      "jobs": 2,
+      "jobs": 4,
       "ratchets": 0,
       "static_checks": 2,
-      "workflows": 1
+      "workflows": 2
     },
     "triggers": [
       {
@@ -114,6 +186,13 @@
         "id": "pull-request",
         "workflows": [
           "ci"
+        ]
+      },
+      {
+        "event": "push:main; workflow_dispatch (main only)",
+        "id": "push-main",
+        "workflows": [
+          "architecture-pages"
         ]
       }
     ],
@@ -132,6 +211,21 @@
         "label": "CI",
         "name": "CI",
         "path": ".github/workflows/ci.yml"
+      },
+      {
+        "events": [
+          "push:main",
+          "workflow_dispatch (main only)"
+        ],
+        "family": "documentation",
+        "id": "architecture-pages",
+        "jobs": [
+          "build-pages",
+          "deploy-pages"
+        ],
+        "label": "Architecture Pages",
+        "name": "Architecture Pages",
+        "path": ".github/workflows/pages.yml"
       }
     ]
   },
@@ -152,7 +246,25 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 219
+      "line_count": 221
+    },
+    {
+      "declaration_count": 0,
+      "declarations": [],
+      "description": "Public, model-driven GitHub Pages surface for inspecting the repository-owned System Map.",
+      "external": false,
+      "file_count": 5,
+      "files": [
+        "scripts/build_architecture_site.py",
+        "scripts/test_architecture_site.py",
+        "site/app.js",
+        "site/index.html",
+        "site/styles.css"
+      ],
+      "id": "architecture-showcase",
+      "label": "Architecture showcase",
+      "layer": "experience",
+      "line_count": 1135
     },
     {
       "declaration_count": 0,
@@ -172,23 +284,24 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 4789
+      "line_count": 4965
     },
     {
       "declaration_count": 0,
       "declarations": [],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 3,
+      "file_count": 4,
       "files": [
         ".github/workflows/ci.yml",
+        ".github/workflows/pages.yml",
         ".gitignore",
         "scripts/verify"
       ],
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 59
+      "line_count": 110
     },
     {
       "declaration_count": 3,
@@ -411,7 +524,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 18,
+            "line": 20,
             "path": "README.md",
             "rule": "declared.topology",
             "via": "- Chains: Ethereum, Base, Solana, Tempo through one external RPC provider"
@@ -673,6 +786,20 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
+        "line_count": 50,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": ".github/workflows/pages.yml",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
         "line_count": 8,
         "mapped_declarations": 0,
         "passes": [
@@ -743,7 +870,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 34,
+        "line_count": 36,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -757,7 +884,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 285,
+        "line_count": 299,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -841,12 +968,26 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1213,
+        "line_count": 1349,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
         ],
         "path": "scripts/build_architecture.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "architecture-showcase",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 94,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "scripts/build_architecture_site.py",
         "semantic_citations": 0,
         "touched": false
       },
@@ -869,7 +1010,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1229,
+        "line_count": 1255,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -880,15 +1021,71 @@
       },
       {
         "citations": 0,
+        "component": "architecture-showcase",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 162,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "scripts/test_architecture_site.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 15,
+        "line_count": 16,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
         ],
         "path": "scripts/verify",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "architecture-showcase",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 469,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "site/app.js",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "architecture-showcase",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 147,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "site/index.html",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "architecture-showcase",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 263,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "site/styles.css",
         "semantic_citations": 0,
         "touched": false
       },
@@ -934,10 +1131,10 @@
     ],
     "passes": [
       {
-        "citations": 2,
+        "citations": 4,
         "class": "mechanical",
         "description": "GitHub Actions workflow jobs and gate commands extracted from CI YAML.",
-        "files": 1,
+        "files": 2,
         "id": "ci.workflow"
       },
       {
@@ -979,12 +1176,12 @@
       "declarations": 3,
       "entities": 22,
       "entities_with_origin": 22,
-      "files": 19,
+      "files": 25,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
       "touched_files": 4,
-      "untouched_files": 15
+      "untouched_files": 21
     }
   },
   "interplay": {
@@ -1407,7 +1604,7 @@
         "evidence": [
           {
             "excerpt": "- Chains: Ethereum, Base, Solana, Tempo through one external RPC provider",
-            "line": 18,
+            "line": 20,
             "path": "README.md"
           }
         ],
@@ -1669,8 +1866,8 @@
   },
   "inventory": {
     "declarations": 3,
-    "files": 19,
-    "lines": 5790
+    "files": 25,
+    "lines": 7154
   },
   "layers": [
     {
@@ -1711,7 +1908,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "97a2e3b471e458551f5c35e1603a1c7d0944aad9b8e1fc20e86c5286fd4f4b7e",
+  "source_tree_sha256": "40c54d2d78b2bf2c3d8469f6e1239157bec96803acf82d8b577c92da5dd05b20",
   "stores": {
     "count": 4,
     "items": [
