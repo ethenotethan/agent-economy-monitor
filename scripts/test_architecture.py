@@ -191,6 +191,42 @@ jobs:
             with self.assertRaisesRegex(architecture.ArchitectureError, "undeclared Axum route"):
                 architecture.compile_architecture(root)
 
+    def test_compiler_rejects_an_axum_route_with_a_comment_after_the_dot(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8").replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", get(status))\n'
+                    '        . /* architecture-bypass */ route("/admin", get(status));',
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(architecture.ArchitectureError, "undeclared Axum route"):
+                architecture.compile_architecture(root)
+
+    def test_compiler_rejects_an_axum_route_with_a_comment_before_the_parenthesis(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8").replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", get(status))\n'
+                    '        .route /* architecture-bypass */ ("/admin", get(status));',
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(architecture.ArchitectureError, "undeclared Axum route"):
+                architecture.compile_architecture(root)
+
     def test_compiler_rejects_an_axum_route_ufcs_call(self) -> None:
         architecture = load_compiler()
         with tempfile.TemporaryDirectory() as directory:

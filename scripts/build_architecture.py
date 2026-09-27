@@ -61,6 +61,62 @@ def line_for(text: str, offset: int) -> int:
     return text.count("\n", 0, offset) + 1
 
 
+def rust_without_comments(text: str) -> str:
+    """Replace Rust comments with spaces while preserving offsets and literals."""
+    result = list(text)
+    index = 0
+    length = len(text)
+
+    def mask(start: int, end: int) -> None:
+        for position in range(start, end):
+            if text[position] not in "\r\n":
+                result[position] = " "
+
+    while index < length:
+        raw = re.match(r"(?:br|r)(?P<hashes>#{0,255})\"", text[index:])
+        if raw:
+            terminator = '"' + raw.group("hashes")
+            end = text.find(terminator, index + raw.end())
+            index = length if end < 0 else end + len(terminator)
+            continue
+        if text.startswith(('"', 'b"', 'c"'), index):
+            quote = index + (1 if text[index] in "bc" else 0)
+            index = quote + 1
+            while index < length:
+                if text[index] == "\\":
+                    index += 2
+                elif text[index] == '"':
+                    index += 1
+                    break
+                else:
+                    index += 1
+            continue
+        if text.startswith("//", index):
+            end = text.find("\n", index + 2)
+            end = length if end < 0 else end
+            mask(index, end)
+            index = end
+            continue
+        if text.startswith("/*", index):
+            start = index
+            depth = 1
+            index += 2
+            while index < length and depth:
+                if text.startswith("/*", index):
+                    depth += 1
+                    index += 2
+                elif text.startswith("*/", index):
+                    depth -= 1
+                    index += 2
+                else:
+                    index += 1
+            mask(start, index)
+            continue
+        index += 1
+
+    return "".join(result)
+
+
 def evidence_for(root: Path, raw: dict[str, Any]) -> dict[str, Any]:
     relative = raw.get("path")
     if not isinstance(relative, str) or relative.startswith("/") or ".." in Path(relative).parts:
@@ -70,13 +126,14 @@ def evidence_for(root: Path, raw: dict[str, Any]) -> dict[str, Any]:
         raise ArchitectureError(f"origin cites missing file: {relative}")
     text = path.read_text(encoding="utf-8")
     if "route" in raw:
+        route_source = rust_without_comments(text)
         route = raw["route"]
         method = raw.get("method")
         if not isinstance(method, str) or not method:
             raise ArchitectureError(f"route origin {route!r} in {relative} needs method")
         matches = [
             match
-            for match in RUST_ROUTE_RE.finditer(text)
+            for match in RUST_ROUTE_RE.finditer(route_source)
             if match.group("path") == route and match.group("method") == method
         ]
         if len(matches) != 1:
@@ -85,7 +142,7 @@ def evidence_for(root: Path, raw: dict[str, Any]) -> dict[str, Any]:
             )
         match = matches[0]
         return {
-            "excerpt": match.group(0),
+            "excerpt": text[match.start() : match.end()],
             "line": line_for(text, match.start()),
             "path": relative,
             "rule": "rust.http-route",
@@ -847,25 +904,26 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
         digest.update(relative.encode("utf-8") + b"\0" + data + b"\0")
         declarations = rust_declarations(text) if path.suffix == ".rs" else []
         if path.suffix == ".rs":
-            router_ufcs_calls = list(RUST_ROUTER_UFCS_CALL_RE.finditer(text))
+            route_source = rust_without_comments(text)
+            router_ufcs_calls = list(RUST_ROUTER_UFCS_CALL_RE.finditer(route_source))
             if router_ufcs_calls:
                 call = router_ufcs_calls[0]
                 raise ArchitectureError(
                     f"unsupported Axum {call.group('constructor')}: "
                     f"{relative} at line {line_for(text, call.start())}"
                 )
-            unmodeled_router_calls = list(RUST_UNMODELED_ROUTER_CALL_RE.finditer(text))
+            unmodeled_router_calls = list(RUST_UNMODELED_ROUTER_CALL_RE.finditer(route_source))
             if unmodeled_router_calls:
                 call = unmodeled_router_calls[0]
                 raise ArchitectureError(
                     f"unsupported Axum {call.group('constructor')}: "
                     f"{relative} at line {line_for(text, call.start())}"
                 )
-            route_matches = list(RUST_ROUTE_RE.finditer(text))
+            route_matches = list(RUST_ROUTE_RE.finditer(route_source))
             supported_route_offsets = {match.start() for match in route_matches}
             unsupported_routes = [
                 match
-                for match in RUST_ROUTE_CALL_RE.finditer(text)
+                for match in RUST_ROUTE_CALL_RE.finditer(route_source)
                 if match.start() not in supported_route_offsets
             ]
             if unsupported_routes:
