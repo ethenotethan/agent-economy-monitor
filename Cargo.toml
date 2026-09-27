@@ -5,6 +5,10 @@ edition = "2024"
 license = "Apache-2.0"
 description = "Private intelligence cockpit for x402 and MPP commerce activity"
 
+[workspace]
+members = ["crates/adapter-api", "crates/contracts"]
+resolver = "3"
+
 [dependencies]
 axum = "0.8"
 serde = { version = "1", features = ["derive"] }
@@ -12,3 +16,7 @@ serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+agent-economy-adapter-api = { path = "crates/adapter-api" }
+agent-economy-contracts = { path = "crates/contracts" }

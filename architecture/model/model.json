@@ -231,6 +231,25 @@
   },
   "components": [
     {
+      "declaration_count": 3,
+      "declarations": [
+        "Error",
+        "ProtocolAdapter",
+        "observe"
+      ],
+      "description": "Stateless Rust adapter boundary that permits protocol parsers to emit immutable observations only.",
+      "external": false,
+      "file_count": 2,
+      "files": [
+        "crates/adapter-api/Cargo.toml",
+        "crates/adapter-api/src/lib.rs"
+      ],
+      "id": "adapter-api",
+      "label": "Adapter API",
+      "layer": "evidence",
+      "line_count": 20
+    },
+    {
       "declaration_count": 0,
       "declarations": [],
       "description": "Human-authored product, trust, and runtime architecture authority.",
@@ -284,24 +303,49 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 4993
+      "line_count": 5031
     },
     {
-      "declaration_count": 0,
-      "declarations": [],
+      "declaration_count": 22,
+      "declarations": [
+        "Error",
+        "X402Adapter",
+        "adapters_emit_immutable_observations",
+        "additive_unknown_fields_are_covered_by_the_content_address",
+        "canonical_event_cites_supporting_observations",
+        "canonical_event_decode_rejects_support_from_another_event",
+        "canonical_event_keys_are_protocol_defined",
+        "canonical_event_rejects_mismatched_support",
+        "collect",
+        "mpp_event_key_rejects_invalid_method_grammar",
+        "mpp_event_keys_are_scoped_by_required_realm",
+        "mpp_extension_replays_through_the_shared_envelope",
+        "observation",
+        "observation_construction_rejects_invalid_provenance",
+        "observation_id_is_content_addressed",
+        "observe",
+        "protobuf_replay_preserves_the_canonical_event",
+        "protobuf_replay_preserves_the_observation",
+        "protocol_observation_construction_rejects_invalid_amount",
+        "reducers_can_read_typed_observation_fields",
+        "x402_event_key_requires_protocol_identifier_binding",
+        "x402_key"
+      ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 4,
+      "file_count": 6,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
         ".gitignore",
-        "scripts/verify"
+        "scripts/verify",
+        "tests/adapter_boundary.rs",
+        "tests/observation_contracts.rs"
       ],
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 112
+      "line_count": 389
     },
     {
       "declaration_count": 0,
@@ -318,6 +362,76 @@
       "label": "Local data plane",
       "layer": "delivery",
       "line_count": 408
+    },
+    {
+      "declaration_count": 51,
+      "declarations": [
+        "CanonicalEvent",
+        "EvidenceRef",
+        "MppEventKey",
+        "MppObservation",
+        "Observation",
+        "ObservationError",
+        "ProtocolEventKey",
+        "ProtocolObservation",
+        "Provenance",
+        "SCHEMA_VERSION",
+        "X402EventKey",
+        "X402Observation",
+        "algorithm",
+        "amount_atomic",
+        "asset",
+        "byte_length",
+        "canonical_id",
+        "checked_advance",
+        "content_id",
+        "content_id_from_wire",
+        "decode",
+        "decode_varint",
+        "digest",
+        "encode",
+        "event_key",
+        "evidence",
+        "future_schema_additive_field_replays_through_v1_reader",
+        "id",
+        "intent",
+        "main",
+        "media_type",
+        "new",
+        "observed_at_unix_ms",
+        "parser_version",
+        "payment_identifier",
+        "protocol",
+        "protocol_event_key",
+        "provenance",
+        "required",
+        "sha256",
+        "source_id",
+        "supporting_observation_ids",
+        "tempo",
+        "tests",
+        "to_wire",
+        "valid_content_id",
+        "valid_mpp_method",
+        "validate_amount",
+        "validate_envelope",
+        "wire",
+        "wire_v2"
+      ],
+      "description": "Versioned Protobuf contracts and deterministic Rust validation for immutable observations and canonical event keys.",
+      "external": false,
+      "file_count": 5,
+      "files": [
+        "crates/contracts/Cargo.toml",
+        "crates/contracts/build.rs",
+        "crates/contracts/proto/agent_economy/observation/v1/observation.proto",
+        "crates/contracts/proto/agent_economy/observation/v2/observation.proto",
+        "crates/contracts/src/lib.rs"
+      ],
+      "id": "observation-contracts",
+      "label": "Observation contracts",
+      "layer": "evidence",
+      "line_count": 824
     },
     {
       "declaration_count": 3,
@@ -338,7 +452,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 723
+      "line_count": 1116
     }
   ],
   "description": "Source-backed architecture of the Agent Economy Monitor, preserving deterministic evidence, canonical knowledge, and semantic projection as separate authorities.",
@@ -346,8 +460,8 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "Only the Axum status surface is implemented at this revision; product pipeline nodes are specified and explicitly reported as unresolved implementation coverage.",
-      "Protocol semantics are declared from repository architecture documents until Rust adapters exist."
+      "Only the Axum status surface and observation contract boundaries are implemented at this revision; product pipeline nodes are specified and explicitly reported as unresolved implementation coverage.",
+      "The adapter output boundary is implemented, but concrete x402 and MPP protocol parsers remain unresolved."
     ],
     "rules": {
       "ci.workflow": "Mechanically extracts job IDs and run commands from .github/workflows/ci.yml.",
@@ -417,7 +531,7 @@
         },
         {
           "id": "rust.protocol-adapters",
-          "reason": "No Rust x402 or MPP adapter module exists yet; the adapter slot is specified only."
+          "reason": "The observation-only Rust adapter boundary exists, but no concrete x402 or MPP parser implementation exists yet."
         },
         {
           "id": "rust.workers",
@@ -427,6 +541,21 @@
     },
     "derivation": "Repository-relative UTF-8 inventory plus deterministic Rust/CI extraction and uniquely cited architecture policy.",
     "entities": [
+      {
+        "component": "adapter-api",
+        "id": "adapter-boundary",
+        "kind": "boundary",
+        "label": "Observation-only adapter API",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 7,
+            "path": "crates/adapter-api/src/lib.rs",
+            "rule": "declared.topology",
+            "via": "pub trait ProtocolAdapter {"
+          }
+        ]
+      },
       {
         "component": "architecture-policy",
         "id": "attribution",
@@ -619,6 +748,21 @@
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
             "via": "P --> M[LLM projector]"
+          }
+        ]
+      },
+      {
+        "component": "observation-contracts",
+        "id": "observation-contract",
+        "kind": "contract",
+        "label": "Immutable observation contract",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 249,
+            "path": "crates/contracts/src/lib.rs",
+            "rule": "declared.topology",
+            "via": "pub struct Observation {"
           }
         ]
       },
@@ -858,7 +1002,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 655,
+        "line_count": 1040,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -872,7 +1016,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 14,
+        "line_count": 22,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -900,7 +1044,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 315,
+        "line_count": 341,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -964,6 +1108,611 @@
         "path": "compose.yaml",
         "semantic_citations": 0,
         "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "adapter-api",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 9,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "crates/adapter-api/Cargo.toml",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "adapter-api",
+        "declaration_count": 3,
+        "declarations": [
+          {
+            "kind": "trait",
+            "line": 7,
+            "name": "ProtocolAdapter",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "type",
+            "line": 8,
+            "name": "Error",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 9,
+            "name": "observe",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 11,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/adapter-api/src/lib.rs",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "observation-contracts",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 16,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "crates/contracts/Cargo.toml",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "observation-contracts",
+        "declaration_count": 1,
+        "declarations": [
+          {
+            "kind": "fn",
+            "line": 1,
+            "name": "main",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 13,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/contracts/build.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "observation-contracts",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 71,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "crates/contracts/proto/agent_economy/observation/v1/observation.proto",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "observation-contracts",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 42,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "crates/contracts/proto/agent_economy/observation/v2/observation.proto",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "observation-contracts",
+        "declaration_count": 59,
+        "declarations": [
+          {
+            "kind": "mod",
+            "line": 6,
+            "name": "wire",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "mod",
+            "line": 11,
+            "name": "wire_v2",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 14,
+            "name": "SCHEMA_VERSION",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 18,
+            "name": "ObservationError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 36,
+            "name": "EvidenceRef",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 39,
+            "name": "sha256",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 48,
+            "name": "algorithm",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 52,
+            "name": "digest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 56,
+            "name": "media_type",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 60,
+            "name": "byte_length",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 67,
+            "name": "Provenance",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 70,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 84,
+            "name": "source_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 88,
+            "name": "observed_at_unix_ms",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 92,
+            "name": "parser_version",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 99,
+            "name": "X402EventKey",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 102,
+            "name": "payment_identifier",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 128,
+            "name": "MppEventKey",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 131,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 146,
+            "name": "tempo",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 156,
+            "name": "ProtocolEventKey",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 162,
+            "name": "canonical_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 173,
+            "name": "to_wire",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 189,
+            "name": "X402Observation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 192,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 205,
+            "name": "asset",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 209,
+            "name": "amount_atomic",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 216,
+            "name": "MppObservation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 219,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 232,
+            "name": "intent",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 236,
+            "name": "amount_atomic",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 243,
+            "name": "ProtocolObservation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 249,
+            "name": "Observation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 255,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 275,
+            "name": "decode",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 291,
+            "name": "id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 295,
+            "name": "encode",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 299,
+            "name": "provenance",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 308,
+            "name": "evidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 312,
+            "name": "event_key",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 323,
+            "name": "protocol",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 337,
+            "name": "CanonicalEvent",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 343,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 372,
+            "name": "decode",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 416,
+            "name": "id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 420,
+            "name": "supporting_observation_ids",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 424,
+            "name": "encode",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 429,
+            "name": "protocol_event_key",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 452,
+            "name": "validate_envelope",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 518,
+            "name": "validate_amount",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 526,
+            "name": "content_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 535,
+            "name": "content_id_from_wire",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 589,
+            "name": "decode_varint",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 607,
+            "name": "checked_advance",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 617,
+            "name": "valid_content_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 623,
+            "name": "valid_mpp_method",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 627,
+            "name": "required",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "mod",
+            "line": 637,
+            "name": "tests",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 641,
+            "name": "future_schema_additive_field_replays_through_v1_reader",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 682,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/contracts/src/lib.rs",
+        "semantic_citations": 0,
+        "touched": true
       },
       {
         "citations": 15,
@@ -1054,7 +1803,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1267,
+        "line_count": 1279,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1174,6 +1923,61 @@
       },
       {
         "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 5,
+        "declarations": [
+          {
+            "kind": "struct",
+            "line": 8,
+            "name": "X402Adapter",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "type",
+            "line": 12,
+            "name": "Error",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 13,
+            "name": "observe",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 30,
+            "name": "collect",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 36,
+            "name": "adapters_emit_immutable_observations",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 42,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/adapter_boundary.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
         "component": "local-data-plane",
         "declaration_count": 0,
         "declarations": [],
@@ -1183,6 +1987,157 @@
           "declared.topology"
         ],
         "path": "tests/dev_stack_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 17,
+        "declarations": [
+          {
+            "kind": "fn",
+            "line": 5,
+            "name": "observation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 13,
+            "name": "x402_key",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 23,
+            "name": "observation_id_is_content_addressed",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 37,
+            "name": "observation_construction_rejects_invalid_provenance",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 48,
+            "name": "protocol_observation_construction_rejects_invalid_amount",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 56,
+            "name": "canonical_event_keys_are_protocol_defined",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 69,
+            "name": "mpp_event_keys_are_scoped_by_required_realm",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 78,
+            "name": "x402_event_key_requires_protocol_identifier_binding",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 92,
+            "name": "mpp_event_key_rejects_invalid_method_grammar",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 100,
+            "name": "protobuf_replay_preserves_the_observation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 111,
+            "name": "reducers_can_read_typed_observation_fields",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 128,
+            "name": "additive_unknown_fields_are_covered_by_the_content_address",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 141,
+            "name": "mpp_extension_replays_through_the_shared_envelope",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 161,
+            "name": "canonical_event_cites_supporting_observations",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 173,
+            "name": "protobuf_replay_preserves_the_canonical_event",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 191,
+            "name": "canonical_event_decode_rejects_support_from_another_event",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 221,
+            "name": "canonical_event_rejects_mismatched_support",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 235,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/observation_contracts.rs",
         "semantic_citations": 0,
         "touched": false
       }
@@ -1196,17 +2151,17 @@
         "id": "ci.workflow"
       },
       {
-        "citations": 20,
+        "citations": 22,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
-        "files": 4,
+        "files": 6,
         "id": "declared.topology"
       },
       {
-        "citations": 3,
+        "citations": 88,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 1,
+        "files": 6,
         "id": "rust.declaration"
       },
       {
@@ -1220,7 +2175,8 @@
     "summary": {
       "by_kind": {
         "adapter": 1,
-        "boundary": 1,
+        "boundary": 2,
+        "contract": 1,
         "endpoint": 2,
         "external": 4,
         "projection": 1,
@@ -1230,16 +2186,16 @@
         "surface": 1,
         "worker": 5
       },
-      "citations": 22,
-      "declarations": 3,
-      "entities": 22,
-      "entities_with_origin": 22,
-      "files": 28,
+      "citations": 24,
+      "declarations": 88,
+      "entities": 24,
+      "entities_with_origin": 24,
+      "files": 37,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
-      "touched_files": 4,
-      "untouched_files": 24
+      "touched_files": 6,
+      "untouched_files": 31
     }
   },
   "interplay": {
@@ -1560,6 +2516,20 @@
     "machines": {},
     "nodes": [
       {
+        "component": "adapter-api",
+        "evidence": [
+          {
+            "excerpt": "pub trait ProtocolAdapter {",
+            "line": 7,
+            "path": "crates/adapter-api/src/lib.rs"
+          }
+        ],
+        "id": "adapter-boundary",
+        "kind": "boundary",
+        "label": "Observation-only adapter API",
+        "page": "evidence"
+      },
+      {
         "component": "architecture-policy",
         "evidence": [
           {
@@ -1742,6 +2712,20 @@
         "page": "projection"
       },
       {
+        "component": "observation-contracts",
+        "evidence": [
+          {
+            "excerpt": "pub struct Observation {",
+            "line": 249,
+            "path": "crates/contracts/src/lib.rs"
+          }
+        ],
+        "id": "observation-contract",
+        "kind": "contract",
+        "label": "Immutable observation contract",
+        "page": "evidence"
+      },
+      {
         "component": "architecture-policy",
         "evidence": [
           {
@@ -1881,12 +2865,16 @@
       },
       {
         "components": [
-          "architecture-policy"
+          "architecture-policy",
+          "observation-contracts",
+          "adapter-api"
         ],
         "id": "evidence",
         "label": "Deterministic evidence",
         "roots": [
-          "collector"
+          "collector",
+          "observation-contract",
+          "adapter-boundary"
         ]
       },
       {
@@ -1923,9 +2911,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 3,
-    "files": 28,
-    "lines": 7610
+    "declarations": 88,
+    "files": 37,
+    "lines": 9162
   },
   "layers": [
     {
@@ -1966,7 +2954,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "48e838e0b39d9671efe56829081bf0482be137447055d56acd716463700cc061",
+  "source_tree_sha256": "32cdd68ffff30051e775edeafb40391823abb248bfcd8e4ca9599659642db905",
   "stores": {
     "count": 4,
     "items": [

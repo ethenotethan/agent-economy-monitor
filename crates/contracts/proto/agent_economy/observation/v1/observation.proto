@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package agent_economy.observation.v1;
+
+message EvidenceRef {
+  string algorithm = 1;
+  string digest = 2;
+  string media_type = 3;
+  uint64 byte_length = 4;
+}
+
+message Provenance {
+  string source_id = 1;
+  int64 observed_at_unix_ms = 2;
+  string parser_version = 3;
+}
+
+message X402EventKey {
+  // The x402 payment-identifier extension, bound to the normalized paid
+  // request and backend scope required to prevent cross-request merging.
+  string payment_identifier = 1;
+  string request_fingerprint = 2;
+  string scope = 3;
+}
+
+message MppEventKey {
+  // MPP challenge ids are scoped to the required HTTP protection-space realm.
+  string realm = 1;
+  string method = 2;
+  string challenge_id = 3;
+}
+
+message X402Observation {
+  X402EventKey event_key = 1;
+  string asset = 2;
+  string amount_atomic = 3;
+}
+
+message MppObservation {
+  MppEventKey event_key = 1;
+  string intent = 2;
+  string amount_atomic = 3;
+}
+
+message ObservationEnvelope {
+  uint32 schema_version = 1;
+  // SHA-256 of the exact encoded envelope bytes with this field omitted.
+  // Unknown additive fields are therefore preserved and covered by identity.
+  string observation_id = 2;
+  Provenance provenance = 3;
+  EvidenceRef evidence = 4;
+
+  oneof protocol {
+    X402Observation x402 = 10;
+    MppObservation mpp = 11;
+  }
+}
+
+message CanonicalEventKey {
+  oneof protocol {
+    X402EventKey x402 = 1;
+    MppEventKey mpp = 2;
+  }
+}
+
+message CanonicalEvent {
+  uint32 schema_version = 1;
+  string event_id = 2;
+  CanonicalEventKey event_key = 3;
+  repeated string supporting_observation_ids = 4;
+}

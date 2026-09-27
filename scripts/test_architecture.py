@@ -121,6 +121,18 @@ class ArchitectureCompilerTests(unittest.TestCase):
             {job["id"]: job["step_count"] for job in model["ci"]["jobs"]},
         )
 
+    def test_observation_contract_crates_are_explicit_system_map_components(self) -> None:
+        architecture = load_compiler()
+        model = architecture.compile_architecture(ROOT)
+
+        component_ids = {component["id"] for component in model["components"]}
+        entity_ids = {entity["id"] for entity in model["extraction"]["entities"]}
+
+        self.assertIn("observation-contracts", component_ids)
+        self.assertIn("adapter-api", component_ids)
+        self.assertIn("observation-contract", entity_ids)
+        self.assertIn("adapter-boundary", entity_ids)
+
     def test_ci_extraction_rejects_named_jobs_that_do_not_run_the_gates(self) -> None:
         architecture = load_compiler()
         with tempfile.TemporaryDirectory() as directory:

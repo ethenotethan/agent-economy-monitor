@@ -7,8 +7,8 @@ python3 scripts/check_architecture_contract.py
 python3 scripts/build_architecture.py --check
 
 cargo fmt --all -- --check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test --all-targets --all-features
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test --workspace --all-targets --all-features
 python3 -m unittest discover -s tests -p '*_test.py' -v
 
 if git grep -nE '(ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|/v2/[A-Za-z0-9_-]{24,})' -- ':!Cargo.lock'; then

@@ -1,0 +1,9 @@
+[package]
+name = "agent-economy-adapter-api"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Stateless protocol adapter boundary for Agent Economy Monitor"
+
+[dependencies]
+agent-economy-contracts = { path = "../contracts" }
