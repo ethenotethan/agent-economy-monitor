@@ -25,18 +25,19 @@ RUST_DECLARATION_RE = re.compile(
     r"(struct|enum|trait|type|const|static|fn|mod)\s+([A-Za-z_][A-Za-z0-9_]*)"
 )
 RUST_ROUTE_RE = re.compile(
-    r"\.\s*route\s*\(\s*\"(?P<path>/[^\"]*)\"\s*,\s*"
+    r"\.\s*(?:r#)?route\s*\(\s*\"(?P<path>/[^\"]*)\"\s*,\s*"
     r"(?P<method>get|post|put|patch|delete|head|options|trace|any)"
     r"\(\s*(?P<handler>[A-Za-z_][A-Za-z0-9_:]*)\s*\)\s*\)"
 )
-RUST_ROUTE_CALL_RE = re.compile(r"\.\s*route\s*\(")
+RUST_ROUTE_CALL_RE = re.compile(r"\.\s*(?:r#)?route\s*\(")
 RUST_UNMODELED_ROUTER_CALL_RE = re.compile(
-    r"\.\s*(?P<constructor>route_service|nest_service|fallback_service|nest|fallback|merge)\s*\("
+    r"\.\s*(?:r#)?(?P<constructor>route_service|nest_service|fallback_service|nest|fallback|merge)\s*\("
 )
 RUST_ROUTER_UFCS_CALL_RE = re.compile(
     r"\b(?:[A-Za-z_][A-Za-z0-9_]*\s*::\s*)*Router(?:\s*::<[^>\n]+>)?\s*::\s*"
-    r"(?P<constructor>route|route_service|nest_service|fallback_service|nest|fallback|merge)\s*\("
+    r"(?:r#)?(?P<constructor>route|route_service|nest_service|fallback_service|nest|fallback|merge)\s*\("
 )
+RUST_MACRO_METHOD_CALL_RE = re.compile(r"\.\s*\$(?P<method>[A-Za-z_][A-Za-z0-9_]*)\s*\(")
 
 
 class ArchitectureError(RuntimeError):
@@ -905,6 +906,13 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
         declarations = rust_declarations(text) if path.suffix == ".rs" else []
         if path.suffix == ".rs":
             route_source = rust_without_comments(text)
+            macro_method_calls = list(RUST_MACRO_METHOD_CALL_RE.finditer(route_source))
+            if macro_method_calls:
+                call = macro_method_calls[0]
+                raise ArchitectureError(
+                    "unsupported Axum macro method indirection: "
+                    f"{relative} at line {line_for(text, call.start())}"
+                )
             router_ufcs_calls = list(RUST_ROUTER_UFCS_CALL_RE.finditer(route_source))
             if router_ufcs_calls:
                 call = router_ufcs_calls[0]

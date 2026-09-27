@@ -227,6 +227,54 @@ jobs:
             with self.assertRaisesRegex(architecture.ArchitectureError, "undeclared Axum route"):
                 architecture.compile_architecture(root)
 
+    def test_compiler_rejects_an_undeclared_raw_identifier_axum_route(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8").replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", get(status))\n'
+                    '        .r#route("/admin", get(status));',
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(architecture.ArchitectureError, "undeclared Axum route"):
+                architecture.compile_architecture(root)
+
+    def test_compiler_rejects_axum_macro_method_indirection(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8").replace(
+                    "#[tokio::main]",
+                    """macro_rules! add_route {
+    ($router:expr, $method:ident, $path:expr, $handler:expr) => {
+        $router.$method($path, $handler)
+    };
+}
+
+#[tokio::main]""",
+                ).replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", get(status));\n'
+                    '    let app = add_route!(app, route, "/admin", get(status));',
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(
+                architecture.ArchitectureError,
+                "unsupported Axum macro method indirection",
+            ):
+                architecture.compile_architecture(root)
+
     def test_compiler_rejects_an_axum_route_ufcs_call(self) -> None:
         architecture = load_compiler()
         with tempfile.TemporaryDirectory() as directory:
