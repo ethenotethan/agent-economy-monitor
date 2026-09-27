@@ -7,6 +7,7 @@ import copy
 import importlib.util
 import json
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -331,6 +332,77 @@ jobs:
                 encoding="utf-8",
             )
 
+            with self.assertRaisesRegex(architecture.ArchitectureError, "unsupported Axum route"):
+                architecture.compile_architecture(root)
+
+    def test_compiler_rejects_an_axum_route_ufcs_call_through_a_cross_file_alias(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            (root / "src" / "router_alias.rs").write_text(
+                "pub type AliasRouter = axum::Router;\n",
+                encoding="utf-8",
+            )
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8")
+                .replace(
+                    "use axum::{Json, Router, routing::get};",
+                    "mod router_alias;\n\nuse axum::{Json, Router, routing::get};\n"
+                    "use router_alias::AliasRouter;",
+                )
+                .replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", get(status));\n'
+                    '    let app = AliasRouter::route(app, "/admin", get(status));',
+                ),
+                encoding="utf-8",
+            )
+
+            subprocess.run(
+                ["cargo", "check", "--quiet"],
+                cwd=root,
+                check=True,
+            )
+            with self.assertRaisesRegex(architecture.ArchitectureError, "unsupported Axum route"):
+                architecture.compile_architecture(root)
+
+    def test_compiler_rejects_an_axum_route_ufcs_call_through_a_reexported_alias(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            (root / "src" / "router_alias.rs").write_text(
+                "pub type AliasRouter = axum::Router;\n",
+                encoding="utf-8",
+            )
+            (root / "src" / "router_reexport.rs").write_text(
+                "pub use crate::router_alias::AliasRouter as ReexportedRouter;\n",
+                encoding="utf-8",
+            )
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8")
+                .replace(
+                    "use axum::{Json, Router, routing::get};",
+                    "mod router_alias;\nmod router_reexport;\n\n"
+                    "use axum::{Json, Router, routing::get};\n"
+                    "use router_reexport::ReexportedRouter;",
+                )
+                .replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", get(status));\n'
+                    '    let app = ReexportedRouter::route(app, "/admin", get(status));',
+                ),
+                encoding="utf-8",
+            )
+
+            subprocess.run(
+                ["cargo", "check", "--quiet"],
+                cwd=root,
+                check=True,
+            )
             with self.assertRaisesRegex(architecture.ArchitectureError, "unsupported Axum route"):
                 architecture.compile_architecture(root)
 

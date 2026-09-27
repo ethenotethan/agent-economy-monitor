@@ -39,7 +39,10 @@ RUST_ROUTER_TYPE_ALIAS_RE = re.compile(
     r"(?:\s*<[^;\n]+>)?\s*;"
 )
 RUST_USE_RE = re.compile(r"\buse\b(?P<body>[^;]+);")
-RUST_ROUTER_IMPORT_ALIAS_RE = re.compile(r"\bRouter\s+as\s+(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\b")
+RUST_IMPORT_ALIAS_RE = re.compile(
+    r"\b(?P<target>[A-Za-z_][A-Za-z0-9_]*)\s+as\s+"
+    r"(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\b"
+)
 RUST_ROUTER_UFCS_CALL_RE = re.compile(
     r"\b(?P<router_type>[A-Za-z_][A-Za-z0-9_]*)(?:\s*::<[^>\n]+>)?\s*::\s*"
     r"(?:r#)?(?P<constructor>route|route_service|nest_service|fallback_service|nest|fallback|merge)\s*\("
@@ -125,20 +128,22 @@ def rust_without_comments(text: str) -> str:
     return "".join(result)
 
 
-def rust_router_type_names(text: str) -> set[str]:
-    """Return Router plus type aliases that resolve to it in this source file."""
-    aliases = {
-        match.group("alias"): match.group("target").split("::")[-1].strip()
+def rust_router_type_names(texts: list[str]) -> set[str]:
+    """Return Router plus type aliases that resolve to it across Rust sources."""
+    aliases = [
+        (match.group("alias"), match.group("target").split("::")[-1].strip())
+        for text in texts
         for match in RUST_ROUTER_TYPE_ALIAS_RE.finditer(text)
-    }
-    router_types = {"Router"}
-    router_types.update(
-        alias.group("alias")
+    ]
+    aliases.extend(
+        (alias.group("alias"), alias.group("target"))
+        for text in texts
         for use in RUST_USE_RE.finditer(text)
-        for alias in RUST_ROUTER_IMPORT_ALIAS_RE.finditer(use.group("body"))
+        for alias in RUST_IMPORT_ALIAS_RE.finditer(use.group("body"))
     )
+    router_types = {"Router"}
     while True:
-        resolved = {alias for alias, target in aliases.items() if target in router_types}
+        resolved = {alias for alias, target in aliases if target in router_types}
         if resolved <= router_types:
             return router_types
         router_types.update(resolved)
@@ -912,6 +917,13 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
     config = load_json(root / "architecture" / "config.json")
     validate_config(config)
     inventory_paths = expanded_inventory(root, config["inventory_globs"])
+    router_types = rust_router_type_names(
+        [
+            rust_without_comments(path.read_text(encoding="utf-8"))
+            for path in inventory_paths
+            if path.suffix == ".rs"
+        ]
+    )
     components = config["components"]
     files: list[dict[str, Any]] = []
     digest = hashlib.sha256()
@@ -939,7 +951,6 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
                     "unsupported Axum macro method indirection: "
                     f"{relative} at line {line_for(text, call.start())}"
                 )
-            router_types = rust_router_type_names(route_source)
             router_ufcs_calls = [
                 call
                 for call in RUST_ROUTER_UFCS_CALL_RE.finditer(route_source)
