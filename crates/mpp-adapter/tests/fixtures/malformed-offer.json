@@ -1,0 +1,17 @@
+{
+  "openapi": "3.1.0",
+  "info": {"title": "Broken MPP", "version": "1"},
+  "paths": {
+    "/mixed": {
+      "post": {
+        "x-payment-info": {
+          "offers": [
+            {"intent": "charge", "method": "tempo", "amount": "1"},
+            {"intent": "charge", "method": "tempo", "amount": "01"}
+          ]
+        },
+        "responses": {"402": {"description": "Payment Required"}}
+      }
+    }
+  }
+}

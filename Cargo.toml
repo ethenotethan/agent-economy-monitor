@@ -6,7 +6,7 @@ license = "Apache-2.0"
 description = "Private intelligence cockpit for x402 and MPP commerce activity"
 
 [workspace]
-members = ["crates/adapter-api", "crates/contracts"]
+members = ["crates/adapter-api", "crates/contracts", "crates/mpp-adapter"]
 resolver = "3"
 
 [dependencies]

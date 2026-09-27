@@ -1,0 +1,13 @@
+[package]
+name = "agent-economy-mpp-adapter"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Deterministic MPP discovery adapter for Agent Economy Monitor"
+
+[dependencies]
+agent-economy-adapter-api = { path = "../adapter-api" }
+agent-economy-contracts = { path = "../contracts" }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["raw_value"] }
+thiserror = "2"

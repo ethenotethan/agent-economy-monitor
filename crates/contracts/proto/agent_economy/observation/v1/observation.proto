@@ -30,6 +30,14 @@ message MppEventKey {
   string challenge_id = 3;
 }
 
+message MppDiscoveryKey {
+  // Seller-declared discovery is not a runtime challenge or settlement.
+  string service_id = 1;
+  string http_method = 2;
+  string path_template = 3;
+  uint32 offer_index = 4;
+}
+
 message X402Observation {
   X402EventKey event_key = 1;
   string asset = 2;
@@ -40,6 +48,20 @@ message MppObservation {
   MppEventKey event_key = 1;
   string intent = 2;
   string amount_atomic = 3;
+}
+
+message MppDiscoveryObservation {
+  MppDiscoveryKey event_key = 1;
+  string openapi_version = 2;
+  string service_title = 3;
+  string api_version = 4;
+  string intent = 5;
+  string method = 6;
+  optional string amount_atomic = 7;
+  optional string currency = 8;
+  optional string description = 9;
+  // Exact x-payment-info JSON bytes preserve protocol metadata for replay.
+  bytes raw_payment_info_json = 10;
 }
 
 message ObservationEnvelope {
@@ -53,6 +75,7 @@ message ObservationEnvelope {
   oneof protocol {
     X402Observation x402 = 10;
     MppObservation mpp = 11;
+    MppDiscoveryObservation mpp_discovery = 12;
   }
 }
 
@@ -60,6 +83,7 @@ message CanonicalEventKey {
   oneof protocol {
     X402EventKey x402 = 1;
     MppEventKey mpp = 2;
+    MppDiscoveryKey mpp_discovery = 3;
   }
 }
 

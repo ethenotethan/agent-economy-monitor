@@ -130,8 +130,10 @@ class ArchitectureCompilerTests(unittest.TestCase):
 
         self.assertIn("observation-contracts", component_ids)
         self.assertIn("adapter-api", component_ids)
+        self.assertIn("mpp-adapter", component_ids)
         self.assertIn("observation-contract", entity_ids)
         self.assertIn("adapter-boundary", entity_ids)
+        self.assertIn("mpp-discovery-adapter", entity_ids)
 
     def test_ci_extraction_rejects_named_jobs_that_do_not_run_the_gates(self) -> None:
         architecture = load_compiler()

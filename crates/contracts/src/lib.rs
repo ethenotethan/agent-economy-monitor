@@ -153,9 +153,33 @@ impl MppEventKey {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MppDiscoveryKey(wire::MppDiscoveryKey);
+
+impl MppDiscoveryKey {
+    pub fn new(
+        service_id: impl Into<String>,
+        http_method: impl Into<String>,
+        path_template: impl Into<String>,
+        offer_index: u32,
+    ) -> Result<Self, ObservationError> {
+        let http_method = http_method.into();
+        if !valid_http_method(&http_method) {
+            return Err(ObservationError::Invalid("MPP discovery HTTP method"));
+        }
+        Ok(Self(wire::MppDiscoveryKey {
+            service_id: required(service_id.into(), "MPP discovery service id")?,
+            http_method,
+            path_template: required(path_template.into(), "MPP discovery path template")?,
+            offer_index,
+        }))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ProtocolEventKey {
     X402(X402EventKey),
     Mpp(MppEventKey),
+    MppDiscovery(MppDiscoveryKey),
 }
 
 impl ProtocolEventKey {
@@ -180,6 +204,10 @@ impl ProtocolEventKey {
             Self::Mpp(value) => (
                 "mpp",
                 wire::canonical_event_key::Protocol::Mpp(value.0.clone()),
+            ),
+            Self::MppDiscovery(value) => (
+                "mpp",
+                wire::canonical_event_key::Protocol::MppDiscovery(value.0.clone()),
             ),
         }
     }
@@ -240,9 +268,94 @@ impl MppObservation {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MppDiscoveryObservation(wire::MppDiscoveryObservation);
+
+impl MppDiscoveryObservation {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        event_key: MppDiscoveryKey,
+        openapi_version: impl Into<String>,
+        service_title: impl Into<String>,
+        api_version: impl Into<String>,
+        intent: impl Into<String>,
+        method: impl Into<String>,
+        amount_atomic: Option<String>,
+        currency: Option<String>,
+        description: Option<String>,
+        raw_payment_info_json: Vec<u8>,
+    ) -> Result<Self, ObservationError> {
+        let method = method.into();
+        if !valid_mpp_method(&method) {
+            return Err(ObservationError::Invalid("mpp method"));
+        }
+        if let Some(amount) = amount_atomic.as_deref() {
+            validate_canonical_amount(amount, "mpp discovery atomic amount")?;
+        }
+        if raw_payment_info_json.is_empty() {
+            return Err(ObservationError::Empty("MPP raw payment metadata"));
+        }
+        Ok(Self(wire::MppDiscoveryObservation {
+            event_key: Some(event_key.0),
+            openapi_version: required(openapi_version.into(), "OpenAPI version")?,
+            service_title: required(service_title.into(), "MPP service title")?,
+            api_version: required(api_version.into(), "MPP API version")?,
+            intent: required(intent.into(), "mpp intent")?,
+            method,
+            amount_atomic,
+            currency,
+            description,
+            raw_payment_info_json,
+        }))
+    }
+
+    pub fn event_key(&self) -> ProtocolEventKey {
+        ProtocolEventKey::MppDiscovery(MppDiscoveryKey(
+            self.0.event_key.clone().expect("validated discovery key"),
+        ))
+    }
+
+    pub fn openapi_version(&self) -> &str {
+        &self.0.openapi_version
+    }
+
+    pub fn service_title(&self) -> &str {
+        &self.0.service_title
+    }
+
+    pub fn api_version(&self) -> &str {
+        &self.0.api_version
+    }
+
+    pub fn intent(&self) -> &str {
+        &self.0.intent
+    }
+
+    pub fn method(&self) -> &str {
+        &self.0.method
+    }
+
+    pub fn amount_atomic(&self) -> Option<&str> {
+        self.0.amount_atomic.as_deref()
+    }
+
+    pub fn currency(&self) -> Option<&str> {
+        self.0.currency.as_deref()
+    }
+
+    pub fn description(&self) -> Option<&str> {
+        self.0.description.as_deref()
+    }
+
+    pub fn raw_payment_info_json(&self) -> &[u8] {
+        &self.0.raw_payment_info_json
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ProtocolObservation {
     X402(X402Observation),
     Mpp(MppObservation),
+    MppDiscovery(MppDiscoveryObservation),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -260,6 +373,9 @@ impl Observation {
         let protocol = match protocol {
             ProtocolObservation::X402(value) => wire::observation_envelope::Protocol::X402(value.0),
             ProtocolObservation::Mpp(value) => wire::observation_envelope::Protocol::Mpp(value.0),
+            ProtocolObservation::MppDiscovery(value) => {
+                wire::observation_envelope::Protocol::MppDiscovery(value.0)
+            }
         };
         let mut envelope = wire::ObservationEnvelope {
             schema_version: SCHEMA_VERSION,
@@ -318,6 +434,11 @@ impl Observation {
             wire::observation_envelope::Protocol::Mpp(value) => ProtocolEventKey::Mpp(MppEventKey(
                 value.event_key.clone().expect("validated mpp event key"),
             )),
+            wire::observation_envelope::Protocol::MppDiscovery(value) => {
+                ProtocolEventKey::MppDiscovery(MppDiscoveryKey(
+                    value.event_key.clone().expect("validated discovery key"),
+                ))
+            }
         }
     }
 
@@ -328,6 +449,9 @@ impl Observation {
             }
             wire::observation_envelope::Protocol::Mpp(value) => {
                 ProtocolObservation::Mpp(MppObservation(value.clone()))
+            }
+            wire::observation_envelope::Protocol::MppDiscovery(value) => {
+                ProtocolObservation::MppDiscovery(MppDiscoveryObservation(value.clone()))
             }
         }
     }
@@ -447,6 +571,14 @@ fn protocol_event_key(key: &wire::CanonicalEventKey) -> Result<ProtocolEventKey,
                 value.challenge_id.clone(),
             )?))
         }
+        wire::canonical_event_key::Protocol::MppDiscovery(value) => {
+            Ok(ProtocolEventKey::MppDiscovery(MppDiscoveryKey::new(
+                value.service_id.clone(),
+                value.http_method.clone(),
+                value.path_template.clone(),
+                value.offer_index,
+            )?))
+        }
     }
 }
 
@@ -512,6 +644,29 @@ fn validate_envelope(envelope: &wire::ObservationEnvelope) -> Result<(), Observa
             required(value.intent.clone(), "mpp intent")?;
             validate_amount(&value.amount_atomic, "mpp atomic amount")?;
         }
+        wire::observation_envelope::Protocol::MppDiscovery(value) => {
+            let key = value.event_key.as_ref().ok_or_else(|| {
+                ObservationError::Decode("MPP discovery event key is missing".into())
+            })?;
+            required(key.service_id.clone(), "MPP discovery service id")?;
+            if !valid_http_method(&key.http_method) {
+                return Err(ObservationError::Invalid("MPP discovery HTTP method"));
+            }
+            required(key.path_template.clone(), "MPP discovery path template")?;
+            required(value.openapi_version.clone(), "OpenAPI version")?;
+            required(value.service_title.clone(), "MPP service title")?;
+            required(value.api_version.clone(), "MPP API version")?;
+            required(value.intent.clone(), "mpp intent")?;
+            if !valid_mpp_method(&value.method) {
+                return Err(ObservationError::Invalid("mpp method"));
+            }
+            if let Some(amount) = value.amount_atomic.as_deref() {
+                validate_canonical_amount(amount, "mpp discovery atomic amount")?;
+            }
+            if value.raw_payment_info_json.is_empty() {
+                return Err(ObservationError::Empty("MPP raw payment metadata"));
+            }
+        }
     }
     Ok(())
 }
@@ -521,6 +676,18 @@ fn validate_amount(value: &str, field: &'static str) -> Result<(), ObservationEr
         Err(ObservationError::Invalid(field))
     } else {
         Ok(())
+    }
+}
+
+fn validate_canonical_amount(value: &str, field: &'static str) -> Result<(), ObservationError> {
+    if value == "0"
+        || (!value.starts_with('0')
+            && !value.is_empty()
+            && value.bytes().all(|byte| byte.is_ascii_digit()))
+    {
+        Ok(())
+    } else {
+        Err(ObservationError::Invalid(field))
     }
 }
 
@@ -623,6 +790,13 @@ fn valid_content_id(value: &str) -> bool {
 
 fn valid_mpp_method(value: &str) -> bool {
     !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_lowercase())
+}
+
+fn valid_http_method(value: &str) -> bool {
+    matches!(
+        value,
+        "delete" | "get" | "head" | "options" | "patch" | "post" | "put" | "trace"
+    )
 }
 
 fn required(value: String, field: &'static str) -> Result<String, ObservationError> {

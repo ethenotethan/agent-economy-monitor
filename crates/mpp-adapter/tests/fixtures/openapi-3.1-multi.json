@@ -1,0 +1,36 @@
+{
+  "openapi": "3.1.0",
+  "info": {"title": "MPP Weather", "version": "2026-09"},
+  "x-service-info": {
+    "categories": ["data"],
+    "docs": {"homepage": "https://weather.example"}
+  },
+  "paths": {
+    "/forecast": {
+      "post": {
+        "summary": "Paid forecast",
+        "x-payment-info": {
+          "offers": [
+            {
+              "intent": "charge",
+              "method": "tempo",
+              "amount": "500",
+              "currency": "0x20c0000000000000000000000000000000000000",
+              "description": "One forecast"
+            },
+            {
+              "intent": "session",
+              "method": "tempo",
+              "amount": null,
+              "currency": "0x20c0000000000000000000000000000000000000"
+            }
+          ]
+        },
+        "responses": {
+          "200": {"description": "Forecast"},
+          "402": {"description": "Payment Required"}
+        }
+      }
+    }
+  }
+}
