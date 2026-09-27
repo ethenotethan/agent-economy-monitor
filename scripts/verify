@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+python3 -m unittest scripts.test_architecture -v
+python3 scripts/check_architecture_contract.py
+python3 scripts/build_architecture.py --check
+
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-targets --all-features

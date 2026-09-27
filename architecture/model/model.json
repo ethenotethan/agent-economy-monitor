@@ -1,0 +1,1782 @@
+{
+  "ci": {
+    "architectural": {
+      "command": "python3 scripts/build_architecture.py --check",
+      "job": "architecture"
+    },
+    "edges": [
+      {
+        "kind": "triggers",
+        "source": "pull-request",
+        "target": "architecture"
+      },
+      {
+        "kind": "triggers",
+        "source": "pull-request",
+        "target": "verify"
+      },
+      {
+        "kind": "gates",
+        "source": "architecture",
+        "target": "merge"
+      },
+      {
+        "kind": "gates",
+        "source": "verify",
+        "target": "merge"
+      }
+    ],
+    "jobs": [
+      {
+        "evidence": {
+          "line": 13,
+          "path": ".github/workflows/ci.yml"
+        },
+        "family": "architecture",
+        "id": "architecture",
+        "name": "architecture",
+        "needs": [],
+        "role": "gate",
+        "runs_on": "ubuntu-latest",
+        "scripts": [
+          "python3 -m unittest scripts.test_architecture -v",
+          "python3 scripts/build_architecture.py --check",
+          "python3 scripts/check_architecture_contract.py"
+        ],
+        "step_count": 3,
+        "workflow": "ci"
+      },
+      {
+        "evidence": {
+          "line": 26,
+          "path": ".github/workflows/ci.yml"
+        },
+        "family": "behavior",
+        "id": "verify",
+        "name": "verify",
+        "needs": [],
+        "role": "gate",
+        "runs_on": "ubuntu-latest",
+        "scripts": [
+          "./scripts/verify"
+        ],
+        "step_count": 1,
+        "workflow": "ci"
+      }
+    ],
+    "limitations": [],
+    "merge": {
+      "id": "merge",
+      "inputs": [
+        "architecture",
+        "verify"
+      ],
+      "label": "Deterministic merge queue"
+    },
+    "ratchets": [],
+    "static_checks": [
+      {
+        "command": "python3 scripts/build_architecture.py --check",
+        "evidence": {
+          "line": 13,
+          "path": ".github/workflows/ci.yml"
+        },
+        "job": "architecture",
+        "name": "Architecture model current and conforming",
+        "scripts": [
+          "scripts/build_architecture.py",
+          "scripts/test_architecture.py"
+        ]
+      },
+      {
+        "command": "./scripts/verify",
+        "evidence": {
+          "line": 26,
+          "path": ".github/workflows/ci.yml"
+        },
+        "job": "verify",
+        "name": "Repository behavior gate",
+        "scripts": [
+          "scripts/verify"
+        ]
+      }
+    ],
+    "summary": {
+      "gates": 2,
+      "jobs": 2,
+      "ratchets": 0,
+      "static_checks": 2,
+      "workflows": 1
+    },
+    "triggers": [
+      {
+        "event": "pull_request",
+        "id": "pull-request",
+        "workflows": [
+          "ci"
+        ]
+      }
+    ],
+    "workflows": [
+      {
+        "events": [
+          "pull_request",
+          "push:main"
+        ],
+        "family": "delivery",
+        "id": "ci",
+        "jobs": [
+          "architecture",
+          "verify"
+        ],
+        "label": "CI",
+        "name": "CI",
+        "path": ".github/workflows/ci.yml"
+      }
+    ]
+  },
+  "components": [
+    {
+      "declaration_count": 0,
+      "declarations": [],
+      "description": "Human-authored product, trust, and runtime architecture authority.",
+      "external": false,
+      "file_count": 5,
+      "files": [
+        "AGENTS.md",
+        "CONTEXT.md",
+        "README.md",
+        "docs/ARCHITECTURE.md",
+        "docs/PRODUCT.md"
+      ],
+      "id": "architecture-policy",
+      "label": "Architecture policy",
+      "layer": "governance",
+      "line_count": 219
+    },
+    {
+      "declaration_count": 0,
+      "declarations": [],
+      "description": "Deterministic compiler, contract tests, and local architecture gate.",
+      "external": false,
+      "file_count": 7,
+      "files": [
+        "architecture/config.json",
+        "architecture/contract/architecture-document-v1.schema.json",
+        "architecture/contract/architecture_contract.py",
+        "architecture/contract/pins.json",
+        "scripts/build_architecture.py",
+        "scripts/check_architecture_contract.py",
+        "scripts/test_architecture.py"
+      ],
+      "id": "architecture-tooling",
+      "label": "Architecture tooling",
+      "layer": "governance",
+      "line_count": 4789
+    },
+    {
+      "declaration_count": 0,
+      "declarations": [],
+      "description": "Repository and CI gates that defend behavior and architecture independently.",
+      "external": false,
+      "file_count": 3,
+      "files": [
+        ".github/workflows/ci.yml",
+        ".gitignore",
+        "scripts/verify"
+      ],
+      "id": "delivery-gates",
+      "label": "Delivery gates",
+      "layer": "governance",
+      "line_count": 59
+    },
+    {
+      "declaration_count": 3,
+      "declarations": [
+        "Status",
+        "main",
+        "status"
+      ],
+      "description": "Axum process entry point and current HTTP status surface.",
+      "external": false,
+      "file_count": 4,
+      "files": [
+        ".env.example",
+        "Cargo.lock",
+        "Cargo.toml",
+        "src/main.rs"
+      ],
+      "id": "runtime",
+      "label": "Runtime",
+      "layer": "delivery",
+      "line_count": 723
+    }
+  ],
+  "description": "Source-backed architecture of the Agent Economy Monitor, preserving deterministic evidence, canonical knowledge, and semantic projection as separate authorities.",
+  "edges": [],
+  "evidence_metadata": {
+    "class": "repository-source-and-specified-policy",
+    "limitations": [
+      "Only the Axum status surface is implemented at this revision; product pipeline nodes are specified and explicitly reported as unresolved implementation coverage.",
+      "Protocol semantics are declared from repository architecture documents until Rust adapters exist."
+    ],
+    "rules": {
+      "ci.workflow": "Mechanically extracts job IDs and run commands from .github/workflows/ci.yml.",
+      "declared.topology": "Resolves a unique repository-relative source citation for each specified construction.",
+      "rust.declaration": "Extracts Rust item declarations from tracked Rust source.",
+      "rust.http-route": "Extracts literal Axum route paths and handlers from Router::route calls."
+    }
+  },
+  "externals": {
+    "edges": [],
+    "groups": [
+      {
+        "id": "evidence-sources",
+        "label": "External evidence sources"
+      },
+      {
+        "id": "data-infrastructure",
+        "label": "Data infrastructure"
+      }
+    ],
+    "systems": [
+      {
+        "category": "discovery-seed",
+        "description": "Untrusted AgentCash discovery seed; candidates require independent verification.",
+        "id": "agentcash",
+        "label": "AgentCash"
+      },
+      {
+        "category": "rpc-provider",
+        "description": "One configured external RPC provider for Ethereum, Base, Solana, and Tempo.",
+        "id": "rpc-provider",
+        "label": "External RPC provider"
+      },
+      {
+        "category": "public-discovery",
+        "description": "OpenAPI, well-known documents, registries, GitHub, submissions, and observed recipients.",
+        "id": "web-discovery",
+        "label": "Web discovery"
+      },
+      {
+        "category": "discovery-seed",
+        "description": "Untrusted x402 discovery seed; candidates require independent verification.",
+        "id": "x402scan",
+        "label": "x402scan"
+      }
+    ]
+  },
+  "extraction": {
+    "authority": "observed",
+    "coverage": {
+      "mechanically_extracted": [
+        "rust.source-inventory",
+        "rust.http-routes",
+        "ci.workflow-topology"
+      ],
+      "specified": [
+        "pipeline.topology",
+        "storage.authority",
+        "external.boundaries",
+        "system-map.pages",
+        "system-flows"
+      ],
+      "unresolved": [
+        {
+          "id": "runtime.storage-clients",
+          "reason": "No Redpanda, object storage, ClickHouse, or PostgreSQL client exists yet; storage boundaries are specified only."
+        },
+        {
+          "id": "rust.protocol-adapters",
+          "reason": "No Rust x402 or MPP adapter module exists yet; the adapter slot is specified only."
+        },
+        {
+          "id": "rust.workers",
+          "reason": "No collect/reduce/classify/enrich/project-wiki process mode exists yet; worker topology is specified only."
+        }
+      ]
+    },
+    "derivation": "Repository-relative UTF-8 inventory plus deterministic Rust/CI extraction and uniquely cited architecture policy.",
+    "entities": [
+      {
+        "component": "architecture-policy",
+        "id": "attribution",
+        "kind": "worker",
+        "label": "Attribution engine",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 13,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "D --> AT[Attribution engine]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "classification",
+        "kind": "worker",
+        "label": "Behavioral classification",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 15,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "CH --> F[Behavioral features and rule classifiers]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "cockpit",
+        "kind": "surface",
+        "label": "Leptos private cockpit",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 21,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "Q --> L[Leptos private cockpit]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "collector",
+        "kind": "worker",
+        "label": "Collectors",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 7,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "S[External RPC · x402scan · AgentCash · Web discovery · opt-in feeds] --> C[Collectors]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "enrichment",
+        "kind": "worker",
+        "label": "Targeted buyer enrichment",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 17,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "PG --> E[Targeted buyer enrichment]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "evidence-snapshot",
+        "kind": "boundary",
+        "label": "Bounded evidence snapshots",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 22,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "CH --> P[Bounded evidence snapshots]"
+          }
+        ]
+      },
+      {
+        "component": null,
+        "id": "external:agentcash",
+        "kind": "external",
+        "label": "AgentCash",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 29,
+            "path": "docs/PRODUCT.md",
+            "rule": "declared.topology",
+            "via": "- Discovery: x402scan and AgentCash seeds; OpenAPI; well-known documents; runtime 402 challenges; registries; GitHub; submissions; observed recipients"
+          }
+        ]
+      },
+      {
+        "component": null,
+        "id": "external:rpc-provider",
+        "kind": "external",
+        "label": "External RPC provider",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 18,
+            "path": "README.md",
+            "rule": "declared.topology",
+            "via": "- Chains: Ethereum, Base, Solana, Tempo through one external RPC provider"
+          }
+        ]
+      },
+      {
+        "component": null,
+        "id": "external:web-discovery",
+        "kind": "external",
+        "label": "Web discovery",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 29,
+            "path": "docs/PRODUCT.md",
+            "rule": "declared.topology",
+            "via": "- Discovery: x402scan and AgentCash seeds; OpenAPI; well-known documents; runtime 402 challenges; registries; GitHub; submissions; observed recipients"
+          }
+        ]
+      },
+      {
+        "component": null,
+        "id": "external:x402scan",
+        "kind": "external",
+        "label": "x402scan",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 29,
+            "path": "docs/PRODUCT.md",
+            "rule": "declared.topology",
+            "via": "- Discovery: x402scan and AgentCash seeds; OpenAPI; well-known documents; runtime 402 challenges; registries; GitHub; submissions; observed recipients"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:healthz",
+        "kind": "endpoint",
+        "label": "GET /healthz",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 37,
+            "path": "src/main.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/healthz\", get(status))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:status",
+        "kind": "endpoint",
+        "label": "GET /api/v1/status",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 38,
+            "path": "src/main.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/status\", get(status))"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "llm-projector",
+        "kind": "projector",
+        "label": "LLM projector",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 25,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "P --> M[LLM projector]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "protocol-adapters",
+        "kind": "adapter",
+        "label": "Stateless x402 / MPP adapters",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 10,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "R --> A[Stateless Rust adapters: chain · x402 · MPP]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "query-api",
+        "kind": "service",
+        "label": "Axum query API",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 19,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "CH --> Q[Axum query API and dashboard read models]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "reducers",
+        "kind": "worker",
+        "label": "Deterministic reducers",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 11,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "A --> D[Deterministic reducers: keys · finality · reconciliation]"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "runtime-service",
+        "kind": "service",
+        "label": "agent-economy-monitor",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 40,
+            "path": "src/main.rs",
+            "rule": "declared.topology",
+            "via": "info!(%address, \"agent economy monitor listening\");"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "semantic-wiki",
+        "kind": "projection",
+        "label": "Agentic Commerce Intelligence wiki",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 26,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "M --> W[Agentic Commerce Intelligence wiki]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "store:clickhouse",
+        "kind": "store",
+        "label": "ClickHouse observations and events",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 12,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "D --> CH[ClickHouse observations · events · features]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "store:evidence",
+        "kind": "store",
+        "label": "S3 immutable evidence",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 9,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "R --> O[S3 immutable evidence]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "store:postgresql",
+        "kind": "store",
+        "label": "PostgreSQL entities and claims",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 14,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "AT --> PG[PostgreSQL entities · edges · claims]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "store:redpanda",
+        "kind": "store",
+        "label": "Redpanda replay log",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 8,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "C --> R[Redpanda replay log]"
+          }
+        ]
+      }
+    ],
+    "families": {
+      "mechanical": [
+        "ci.workflow",
+        "rust.declaration",
+        "rust.http-route"
+      ],
+      "specified": [
+        "declared.topology"
+      ]
+    },
+    "files": [
+      {
+        "citations": 0,
+        "component": "runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 11,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": ".env.example",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 36,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": ".github/workflows/ci.yml",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 8,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": ".gitignore",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "architecture-policy",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 23,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "AGENTS.md",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "architecture-policy",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 49,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "CONTEXT.md",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 655,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "Cargo.lock",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 14,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "Cargo.toml",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "architecture-policy",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 34,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "README.md",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "architecture-tooling",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 285,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "architecture/config.json",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "architecture-tooling",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 1344,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "architecture/contract/architecture-document-v1.schema.json",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "architecture-tooling",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 522,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "architecture/contract/architecture_contract.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "architecture-tooling",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 16,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "architecture/contract/pins.json",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 15,
+        "component": "architecture-policy",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 63,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "docs/ARCHITECTURE.md",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 3,
+        "component": "architecture-policy",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 50,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "docs/PRODUCT.md",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "architecture-tooling",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 1213,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "scripts/build_architecture.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "architecture-tooling",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 180,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "scripts/check_architecture_contract.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "architecture-tooling",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 1229,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "scripts/test_architecture.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 15,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "scripts/verify",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 3,
+        "component": "runtime",
+        "declaration_count": 3,
+        "declarations": [
+          {
+            "kind": "struct",
+            "line": 10,
+            "name": "Status",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 15,
+            "name": "status",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 25,
+            "name": "main",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 43,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "src/main.rs",
+        "semantic_citations": 0,
+        "touched": true
+      }
+    ],
+    "passes": [
+      {
+        "citations": 2,
+        "class": "mechanical",
+        "description": "GitHub Actions workflow jobs and gate commands extracted from CI YAML.",
+        "files": 1,
+        "id": "ci.workflow"
+      },
+      {
+        "citations": 20,
+        "class": "semantic",
+        "description": "Human-authoritative topology with unique source citations.",
+        "files": 4,
+        "id": "declared.topology"
+      },
+      {
+        "citations": 3,
+        "class": "mechanical",
+        "description": "Rust item declarations extracted with source lines.",
+        "files": 1,
+        "id": "rust.declaration"
+      },
+      {
+        "citations": 2,
+        "class": "mechanical",
+        "description": "Literal Axum method and path routes extracted from Rust source.",
+        "files": 1,
+        "id": "rust.http-route"
+      }
+    ],
+    "summary": {
+      "by_kind": {
+        "adapter": 1,
+        "boundary": 1,
+        "endpoint": 2,
+        "external": 4,
+        "projection": 1,
+        "projector": 1,
+        "service": 2,
+        "store": 4,
+        "surface": 1,
+        "worker": 5
+      },
+      "citations": 22,
+      "declarations": 3,
+      "entities": 22,
+      "entities_with_origin": 22,
+      "files": 19,
+      "mapped_declarations": 0,
+      "passes": 4,
+      "semantic_citations": 0,
+      "touched_files": 4,
+      "untouched_files": 15
+    }
+  },
+  "interplay": {
+    "boundary_groups": [
+      {
+        "description": "Durable infrastructure is independently supervised and is not duplicated as an application runtime.",
+        "id": "data-infrastructure",
+        "label": "Data infrastructure",
+        "members": [
+          "store:clickhouse",
+          "store:evidence",
+          "store:postgresql",
+          "store:redpanda"
+        ]
+      },
+      {
+        "description": "Public discovery and chain/provider boundaries remain untrusted evidence sources.",
+        "id": "evidence-sources",
+        "label": "External evidence sources",
+        "members": [
+          "external:agentcash",
+          "external:rpc-provider",
+          "external:web-discovery",
+          "external:x402scan"
+        ]
+      }
+    ],
+    "clusters": [],
+    "edges": [
+      {
+        "class": "lifecycle",
+        "relation": "writes-claims",
+        "source": "attribution",
+        "target": "store:postgresql"
+      },
+      {
+        "class": "lifecycle",
+        "relation": "writes-versioned-claims",
+        "source": "classification",
+        "target": "store:postgresql"
+      },
+      {
+        "class": "lifecycle",
+        "relation": "appends",
+        "source": "collector",
+        "target": "store:redpanda"
+      },
+      {
+        "class": "boundary",
+        "relation": "queries",
+        "source": "enrichment",
+        "target": "external:rpc-provider"
+      },
+      {
+        "class": "interplay",
+        "relation": "constrains",
+        "source": "evidence-snapshot",
+        "target": "llm-projector"
+      },
+      {
+        "class": "boundary",
+        "relation": "seeds",
+        "source": "external:agentcash",
+        "target": "collector"
+      },
+      {
+        "class": "boundary",
+        "relation": "observes",
+        "source": "external:rpc-provider",
+        "target": "collector"
+      },
+      {
+        "class": "boundary",
+        "relation": "discovers",
+        "source": "external:web-discovery",
+        "target": "collector"
+      },
+      {
+        "class": "boundary",
+        "relation": "seeds",
+        "source": "external:x402scan",
+        "target": "collector"
+      },
+      {
+        "class": "lifecycle",
+        "relation": "writes-cited-projection",
+        "source": "llm-projector",
+        "target": "semantic-wiki"
+      },
+      {
+        "class": "interplay",
+        "relation": "emits-observations",
+        "source": "protocol-adapters",
+        "target": "reducers"
+      },
+      {
+        "class": "interplay",
+        "relation": "serves",
+        "source": "query-api",
+        "target": "cockpit"
+      },
+      {
+        "class": "interplay",
+        "relation": "reads",
+        "source": "query-api",
+        "target": "store:clickhouse"
+      },
+      {
+        "class": "interplay",
+        "relation": "reads",
+        "source": "query-api",
+        "target": "store:postgresql"
+      },
+      {
+        "class": "interplay",
+        "relation": "feeds",
+        "source": "reducers",
+        "target": "attribution"
+      },
+      {
+        "class": "lifecycle",
+        "relation": "writes-events",
+        "source": "reducers",
+        "target": "store:clickhouse"
+      },
+      {
+        "class": "structure",
+        "relation": "exposes",
+        "source": "runtime-service",
+        "target": "http:healthz"
+      },
+      {
+        "class": "structure",
+        "relation": "exposes",
+        "source": "runtime-service",
+        "target": "http:status"
+      },
+      {
+        "class": "interplay",
+        "relation": "serves",
+        "source": "semantic-wiki",
+        "target": "query-api"
+      },
+      {
+        "class": "interplay",
+        "relation": "derives-features",
+        "source": "store:clickhouse",
+        "target": "classification"
+      },
+      {
+        "class": "interplay",
+        "relation": "bounds",
+        "source": "store:clickhouse",
+        "target": "evidence-snapshot"
+      },
+      {
+        "class": "interplay",
+        "relation": "cites",
+        "source": "store:evidence",
+        "target": "evidence-snapshot"
+      },
+      {
+        "class": "interplay",
+        "relation": "targets",
+        "source": "store:postgresql",
+        "target": "enrichment"
+      },
+      {
+        "class": "interplay",
+        "relation": "bounds",
+        "source": "store:postgresql",
+        "target": "evidence-snapshot"
+      },
+      {
+        "class": "interplay",
+        "relation": "feeds",
+        "source": "store:redpanda",
+        "target": "protocol-adapters"
+      },
+      {
+        "class": "lifecycle",
+        "relation": "retains",
+        "source": "store:redpanda",
+        "target": "store:evidence"
+      }
+    ],
+    "flows": [
+      {
+        "authority": "specified",
+        "evidence": [
+          {
+            "excerpt": "CH --> P[Bounded evidence snapshots]",
+            "line": 22,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "canonical-to-semantic-projection",
+        "page": "projection",
+        "steps": [
+          {
+            "from": "store:clickhouse",
+            "relation": "bounds",
+            "to": "evidence-snapshot"
+          },
+          {
+            "from": "store:postgresql",
+            "relation": "bounds",
+            "to": "evidence-snapshot"
+          },
+          {
+            "from": "store:evidence",
+            "relation": "cites",
+            "to": "evidence-snapshot"
+          },
+          {
+            "from": "evidence-snapshot",
+            "relation": "constrains",
+            "to": "llm-projector"
+          },
+          {
+            "from": "llm-projector",
+            "relation": "writes-cited-projection",
+            "to": "semantic-wiki"
+          },
+          {
+            "from": "semantic-wiki",
+            "relation": "serves",
+            "to": "query-api"
+          }
+        ],
+        "summary": "Bounded deterministic snapshots constrain cited narrative projection without granting canonical authority.",
+        "title": "Canonical knowledge to semantic projection"
+      },
+      {
+        "authority": "specified",
+        "evidence": [
+          {
+            "excerpt": "S[External RPC · x402scan · AgentCash · Web discovery · opt-in feeds] --> C[Collectors]",
+            "line": 7,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "evidence-to-canonical",
+        "page": "evidence",
+        "steps": [
+          {
+            "from": "external:rpc-provider",
+            "relation": "observes",
+            "to": "collector"
+          },
+          {
+            "from": "collector",
+            "relation": "appends",
+            "to": "store:redpanda"
+          },
+          {
+            "from": "store:redpanda",
+            "relation": "retains",
+            "to": "store:evidence"
+          },
+          {
+            "from": "store:redpanda",
+            "relation": "feeds",
+            "to": "protocol-adapters"
+          },
+          {
+            "from": "protocol-adapters",
+            "relation": "emits-observations",
+            "to": "reducers"
+          },
+          {
+            "from": "reducers",
+            "relation": "writes-events",
+            "to": "store:clickhouse"
+          },
+          {
+            "from": "reducers",
+            "relation": "feeds",
+            "to": "attribution"
+          },
+          {
+            "from": "attribution",
+            "relation": "writes-claims",
+            "to": "store:postgresql"
+          }
+        ],
+        "summary": "Immutable observations become replayable canonical events and provenance-bearing claims.",
+        "title": "Evidence to canonical knowledge"
+      }
+    ],
+    "invariants": [
+      {
+        "id": "adapters-observation-only",
+        "kind": "authority-boundary",
+        "status": "holds",
+        "why": "The only adapter output edge targets deterministic reducers and is labeled emits-observations."
+      },
+      {
+        "id": "evidence-canonical-projection-separated",
+        "kind": "authority-boundary",
+        "status": "holds",
+        "why": "Evidence storage, canonical stores, and semantic wiki are distinct nodes joined only by explicit bounded flows."
+      },
+      {
+        "id": "no-shared-core-fallback",
+        "kind": "placement",
+        "status": "holds",
+        "why": "Every internal construction names an explicit System Map page; Shared-core is forbidden."
+      },
+      {
+        "id": "single-runtime-identity",
+        "kind": "runtime-identity",
+        "status": "holds",
+        "why": "Exactly one runtime-service construction represents agent-economy-monitor; infrastructure remains boundary or store nodes."
+      }
+    ],
+    "launch": {},
+    "machines": {},
+    "nodes": [
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "D --> AT[Attribution engine]",
+            "line": 13,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "attribution",
+        "kind": "worker",
+        "label": "Attribution engine",
+        "page": "canonical"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "CH --> F[Behavioral features and rule classifiers]",
+            "line": 15,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "classification",
+        "kind": "worker",
+        "label": "Behavioral classification",
+        "page": "canonical"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "Q --> L[Leptos private cockpit]",
+            "line": 21,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "cockpit",
+        "kind": "surface",
+        "label": "Leptos private cockpit",
+        "page": "experience"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "S[External RPC · x402scan · AgentCash · Web discovery · opt-in feeds] --> C[Collectors]",
+            "line": 7,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "collector",
+        "kind": "worker",
+        "label": "Collectors",
+        "page": "evidence"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "PG --> E[Targeted buyer enrichment]",
+            "line": 17,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "enrichment",
+        "kind": "worker",
+        "label": "Targeted buyer enrichment",
+        "page": "canonical"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "CH --> P[Bounded evidence snapshots]",
+            "line": 22,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "evidence-snapshot",
+        "kind": "boundary",
+        "label": "Bounded evidence snapshots",
+        "page": "projection"
+      },
+      {
+        "component": null,
+        "evidence": [
+          {
+            "excerpt": "- Discovery: x402scan and AgentCash seeds; OpenAPI; well-known documents; runtime 402 challenges; registries; GitHub; submissions; observed recipients",
+            "line": 29,
+            "path": "docs/PRODUCT.md"
+          }
+        ],
+        "id": "external:agentcash",
+        "kind": "external",
+        "label": "AgentCash",
+        "page": null
+      },
+      {
+        "component": null,
+        "evidence": [
+          {
+            "excerpt": "- Chains: Ethereum, Base, Solana, Tempo through one external RPC provider",
+            "line": 18,
+            "path": "README.md"
+          }
+        ],
+        "id": "external:rpc-provider",
+        "kind": "external",
+        "label": "External RPC provider",
+        "page": null
+      },
+      {
+        "component": null,
+        "evidence": [
+          {
+            "excerpt": "- Discovery: x402scan and AgentCash seeds; OpenAPI; well-known documents; runtime 402 challenges; registries; GitHub; submissions; observed recipients",
+            "line": 29,
+            "path": "docs/PRODUCT.md"
+          }
+        ],
+        "id": "external:web-discovery",
+        "kind": "external",
+        "label": "Web discovery",
+        "page": null
+      },
+      {
+        "component": null,
+        "evidence": [
+          {
+            "excerpt": "- Discovery: x402scan and AgentCash seeds; OpenAPI; well-known documents; runtime 402 challenges; registries; GitHub; submissions; observed recipients",
+            "line": 29,
+            "path": "docs/PRODUCT.md"
+          }
+        ],
+        "id": "external:x402scan",
+        "kind": "external",
+        "label": "x402scan",
+        "page": null
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/healthz\", get(status))",
+            "line": 37,
+            "path": "src/main.rs"
+          }
+        ],
+        "id": "http:healthz",
+        "kind": "endpoint",
+        "label": "GET /healthz",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/api/v1/status\", get(status))",
+            "line": 38,
+            "path": "src/main.rs"
+          }
+        ],
+        "id": "http:status",
+        "kind": "endpoint",
+        "label": "GET /api/v1/status",
+        "page": "delivery"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "P --> M[LLM projector]",
+            "line": 25,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "llm-projector",
+        "kind": "projector",
+        "label": "LLM projector",
+        "page": "projection"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "R --> A[Stateless Rust adapters: chain · x402 · MPP]",
+            "line": 10,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "protocol-adapters",
+        "kind": "adapter",
+        "label": "Stateless x402 / MPP adapters",
+        "page": "evidence"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "CH --> Q[Axum query API and dashboard read models]",
+            "line": 19,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "query-api",
+        "kind": "service",
+        "label": "Axum query API",
+        "page": "delivery"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "A --> D[Deterministic reducers: keys · finality · reconciliation]",
+            "line": 11,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "reducers",
+        "kind": "worker",
+        "label": "Deterministic reducers",
+        "page": "canonical"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": "info!(%address, \"agent economy monitor listening\");",
+            "line": 40,
+            "path": "src/main.rs"
+          }
+        ],
+        "id": "runtime-service",
+        "kind": "service",
+        "label": "agent-economy-monitor",
+        "page": "delivery"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "M --> W[Agentic Commerce Intelligence wiki]",
+            "line": 26,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "semantic-wiki",
+        "kind": "projection",
+        "label": "Agentic Commerce Intelligence wiki",
+        "page": "projection"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "D --> CH[ClickHouse observations · events · features]",
+            "line": 12,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "store:clickhouse",
+        "kind": "store",
+        "label": "ClickHouse observations and events",
+        "page": "canonical"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "R --> O[S3 immutable evidence]",
+            "line": 9,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "store:evidence",
+        "kind": "store",
+        "label": "S3 immutable evidence",
+        "page": "evidence"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "AT --> PG[PostgreSQL entities · edges · claims]",
+            "line": 14,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "store:postgresql",
+        "kind": "store",
+        "label": "PostgreSQL entities and claims",
+        "page": "canonical"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "C --> R[Redpanda replay log]",
+            "line": 8,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "store:redpanda",
+        "kind": "store",
+        "label": "Redpanda replay log",
+        "page": "evidence"
+      }
+    ],
+    "pages": [
+      {
+        "components": [
+          "runtime"
+        ],
+        "id": "experience",
+        "label": "Private cockpit",
+        "roots": [
+          "cockpit"
+        ]
+      },
+      {
+        "components": [
+          "architecture-policy"
+        ],
+        "id": "evidence",
+        "label": "Deterministic evidence",
+        "roots": [
+          "collector"
+        ]
+      },
+      {
+        "components": [
+          "architecture-policy"
+        ],
+        "id": "canonical",
+        "label": "Canonical knowledge",
+        "roots": [
+          "reducers"
+        ]
+      },
+      {
+        "components": [
+          "architecture-policy"
+        ],
+        "id": "projection",
+        "label": "Semantic projection",
+        "roots": [
+          "evidence-snapshot"
+        ]
+      },
+      {
+        "components": [
+          "runtime"
+        ],
+        "id": "delivery",
+        "label": "Runtime delivery",
+        "roots": [
+          "runtime-service"
+        ]
+      }
+    ],
+    "triggers": []
+  },
+  "inventory": {
+    "declarations": 3,
+    "files": 19,
+    "lines": 5790
+  },
+  "layers": [
+    {
+      "id": "experience",
+      "label": "Experience",
+      "order": 0
+    },
+    {
+      "id": "projection",
+      "label": "Semantic projection",
+      "order": 1
+    },
+    {
+      "id": "canonical",
+      "label": "Canonical knowledge",
+      "order": 2
+    },
+    {
+      "id": "evidence",
+      "label": "Deterministic evidence",
+      "order": 3
+    },
+    {
+      "id": "delivery",
+      "label": "Delivery",
+      "order": 4
+    },
+    {
+      "id": "governance",
+      "label": "Governance",
+      "order": 5
+    },
+    {
+      "id": "external",
+      "label": "External systems",
+      "order": 6
+    }
+  ],
+  "repository": "ethenotethan/agent-economy-monitor",
+  "schema_version": "1.0.0",
+  "source_tree_sha256": "97a2e3b471e458551f5c35e1603a1c7d0944aad9b8e1fc20e86c5286fd4f4b7e",
+  "stores": {
+    "count": 4,
+    "items": [
+      {
+        "component": "architecture-policy",
+        "evidence": {
+          "excerpt": "D --> CH[ClickHouse observations · events · features]",
+          "line": 12,
+          "path": "docs/ARCHITECTURE.md"
+        },
+        "id": "clickhouse",
+        "kind": "analytical-database",
+        "label": "ClickHouse",
+        "persistence": [
+          "observations",
+          "canonical-events",
+          "features"
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": {
+          "excerpt": "R --> O[S3 immutable evidence]",
+          "line": 9,
+          "path": "docs/ARCHITECTURE.md"
+        },
+        "id": "evidence",
+        "kind": "object-storage",
+        "label": "S3-compatible evidence",
+        "persistence": [
+          "immutable-raw-evidence"
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": {
+          "excerpt": "AT --> PG[PostgreSQL entities · edges · claims]",
+          "line": 14,
+          "path": "docs/ARCHITECTURE.md"
+        },
+        "id": "postgresql",
+        "kind": "relational-database",
+        "label": "PostgreSQL",
+        "persistence": [
+          "entities",
+          "edges",
+          "claims",
+          "provenance"
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": {
+          "excerpt": "C --> R[Redpanda replay log]",
+          "line": 8,
+          "path": "docs/ARCHITECTURE.md"
+        },
+        "id": "redpanda",
+        "kind": "replay-log",
+        "label": "Redpanda",
+        "persistence": [
+          "durable-operational-log"
+        ]
+      }
+    ]
+  },
+  "title": "Agent Economy Monitor Architecture"
+}

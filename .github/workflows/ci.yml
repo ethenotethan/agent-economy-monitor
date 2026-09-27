@@ -10,7 +10,21 @@ permissions:
   contents: read
 
 jobs:
+  architecture:
+    name: architecture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Verify architecture contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -m unittest scripts.test_architecture -v
+          python3 scripts/check_architecture_contract.py
+          python3 scripts/build_architecture.py --check
+
   verify:
+    name: verify
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
