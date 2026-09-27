@@ -245,6 +245,52 @@ jobs:
             with self.assertRaisesRegex(architecture.ArchitectureError, "unsupported Axum route"):
                 architecture.compile_architecture(root)
 
+    def test_compiler_rejects_an_axum_route_service(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8").replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", get(status))\n'
+                    '        .route_service("/admin", get(status));',
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(architecture.ArchitectureError, "unsupported Axum route_service"):
+                architecture.compile_architecture(root)
+
+    def test_compiler_rejects_unmodeled_axum_router_composition(self) -> None:
+        architecture = load_compiler()
+        calls = {
+            "nest": '.nest("/admin", Router::new())',
+            "nest_service": '.nest_service("/admin", get(status))',
+            "fallback": ".fallback(status)",
+            "fallback_service": ".fallback_service(get(status))",
+            "merge": ".merge(Router::new())",
+        }
+        for constructor, call in calls.items():
+            with self.subTest(constructor=constructor), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.copy_repository(root)
+                main = root / "src" / "main.rs"
+                main.write_text(
+                    main.read_text(encoding="utf-8").replace(
+                        '.route("/api/v1/status", get(status));',
+                        f'.route("/api/v1/status", get(status))\n        {call};',
+                    ),
+                    encoding="utf-8",
+                )
+
+                with self.assertRaisesRegex(
+                    architecture.ArchitectureError,
+                    f"unsupported Axum {constructor}",
+                ):
+                    architecture.compile_architecture(root)
+
     def test_model_validation_rejects_unknown_static_check_scripts(self) -> None:
         architecture = load_compiler()
         model = architecture.compile_architecture(ROOT)
