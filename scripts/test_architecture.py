@@ -314,6 +314,36 @@ jobs:
             with self.assertRaisesRegex(architecture.ArchitectureError, "unsupported Axum route"):
                 architecture.compile_architecture(root)
 
+    def test_compiler_rejects_an_axum_route_ufcs_call_through_a_generic_type_alias(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8")
+                .replace(
+                    "use axum::{Json, Router, routing::get};",
+                    "use axum::{Json, Router, routing::get};\n\n"
+                    "#[allow(type_alias_bounds)]\n"
+                    "type AliasRouter<S: Clone = ()> = Router<S>;",
+                )
+                .replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", get(status));\n'
+                    '    let app = AliasRouter::route(app, "/admin", get(status));',
+                ),
+                encoding="utf-8",
+            )
+
+            subprocess.run(
+                ["cargo", "check", "--quiet"],
+                cwd=root,
+                check=True,
+            )
+            with self.assertRaisesRegex(architecture.ArchitectureError, "unsupported Axum route"):
+                architecture.compile_architecture(root)
+
     def test_compiler_rejects_an_axum_route_ufcs_call_through_an_import_alias(self) -> None:
         architecture = load_compiler()
         with tempfile.TemporaryDirectory() as directory:

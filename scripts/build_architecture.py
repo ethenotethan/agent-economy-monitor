@@ -34,7 +34,8 @@ RUST_UNMODELED_ROUTER_CALL_RE = re.compile(
     r"\.\s*(?:r#)?(?P<constructor>route_service|nest_service|fallback_service|nest|fallback|merge)\s*\("
 )
 RUST_ROUTER_TYPE_ALIAS_RE = re.compile(
-    r"\btype\s+(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*"
+    r"\btype\s+(?P<alias>[A-Za-z_][A-Za-z0-9_]*)"
+    r"(?:\s*<[^;]*?>)?\s*=\s*"
     r"(?P<target>(?:[A-Za-z_][A-Za-z0-9_]*\s*::\s*)*[A-Za-z_][A-Za-z0-9_]*)"
     r"(?:\s*<[^;\n]+>)?\s*;"
 )
