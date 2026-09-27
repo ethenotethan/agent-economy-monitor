@@ -35,8 +35,8 @@ RUST_UNMODELED_ROUTER_CALL_RE = re.compile(
 )
 RUST_ROUTER_TYPE_ALIAS_RE = re.compile(
     r"\btype\s+(?P<alias>[A-Za-z_][A-Za-z0-9_]*)"
-    r"(?:\s*<[^;]*?>)?\s*=\s*"
-    r"(?P<target>(?:[A-Za-z_][A-Za-z0-9_]*\s*::\s*)*[A-Za-z_][A-Za-z0-9_]*)"
+    r"(?:\s*<[^;]*?>)?(?:\s+where\b[^;]*?)?\s*=\s*"
+    r"(?P<target>(?:::)?(?:[A-Za-z_][A-Za-z0-9_]*\s*::\s*)*[A-Za-z_][A-Za-z0-9_]*)"
     r"(?:\s*<[^;\n]+>)?\s*;"
 )
 RUST_USE_RE = re.compile(r"\buse\b(?P<body>[^;]+);")
@@ -46,7 +46,7 @@ RUST_IMPORT_ALIAS_RE = re.compile(
 )
 RUST_ROUTER_UFCS_CALL_RE = re.compile(
     r"\b(?P<router_type>[A-Za-z_][A-Za-z0-9_]*)(?:\s*::<[^>\n]+>)?\s*::\s*"
-    r"(?:r#)?(?P<constructor>route|route_service|nest_service|fallback_service|nest|fallback|merge)\s*\("
+    r"(?:r#)?(?P<constructor>route|route_service|nest_service|fallback_service|nest|fallback|merge)\b"
 )
 RUST_MACRO_METHOD_CALL_RE = re.compile(r"\.\s*\$(?P<method>[A-Za-z_][A-Za-z0-9_]*)\s*\(")
 
