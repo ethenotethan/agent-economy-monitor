@@ -88,6 +88,17 @@
         "*.md",
         "docs/**"
       ]
+    },
+    {
+      "description": "Public, model-driven GitHub Pages surface for inspecting the repository-owned System Map.",
+      "id": "architecture-showcase",
+      "label": "Architecture showcase",
+      "layer": "experience",
+      "patterns": [
+        "site/**",
+        "scripts/build_architecture_site.py",
+        "scripts/test_architecture_site.py"
+      ]
     }
   ],
   "description": "Source-backed architecture of the Agent Economy Monitor, preserving deterministic evidence, canonical knowledge, and semantic projection as separate authorities.",
@@ -245,9 +256,12 @@
     "crates/**/*.rs",
     "docs/*.md",
     "scripts/build_architecture.py",
+    "scripts/build_architecture_site.py",
     "scripts/check_architecture_contract.py",
     "scripts/test_architecture.py",
+    "scripts/test_architecture_site.py",
     "scripts/verify",
+    "site/*",
     "src/**/*.rs",
     "tests/**/*.rs"
   ],
