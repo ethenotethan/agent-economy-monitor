@@ -173,6 +173,42 @@ jobs:
             with self.assertRaisesRegex(architecture.ArchitectureError, "undeclared Axum route"):
                 architecture.compile_architecture(root)
 
+    def test_compiler_rejects_an_undeclared_whitespace_separated_axum_route(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8").replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", get(status))\n'
+                    '        . route("/admin", get(status));',
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(architecture.ArchitectureError, "undeclared Axum route"):
+                architecture.compile_architecture(root)
+
+    def test_compiler_rejects_an_axum_route_ufcs_call(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8").replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", get(status));\n'
+                    '    let _app = Router::route(app, "/admin", get(status));',
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(architecture.ArchitectureError, "unsupported Axum route"):
+                architecture.compile_architecture(root)
+
     def test_compiler_rejects_undeclared_supported_axum_routes(self) -> None:
         architecture = load_compiler()
         for method in ("post", "put", "patch", "delete", "head", "options", "trace", "any"):
