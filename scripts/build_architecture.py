@@ -33,8 +33,15 @@ RUST_ROUTE_CALL_RE = re.compile(r"\.\s*(?:r#)?route\s*\(")
 RUST_UNMODELED_ROUTER_CALL_RE = re.compile(
     r"\.\s*(?:r#)?(?P<constructor>route_service|nest_service|fallback_service|nest|fallback|merge)\s*\("
 )
+RUST_ROUTER_TYPE_ALIAS_RE = re.compile(
+    r"\btype\s+(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*"
+    r"(?P<target>(?:[A-Za-z_][A-Za-z0-9_]*\s*::\s*)*[A-Za-z_][A-Za-z0-9_]*)"
+    r"(?:\s*<[^;\n]+>)?\s*;"
+)
+RUST_USE_RE = re.compile(r"\buse\b(?P<body>[^;]+);")
+RUST_ROUTER_IMPORT_ALIAS_RE = re.compile(r"\bRouter\s+as\s+(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\b")
 RUST_ROUTER_UFCS_CALL_RE = re.compile(
-    r"\b(?:[A-Za-z_][A-Za-z0-9_]*\s*::\s*)*Router(?:\s*::<[^>\n]+>)?\s*::\s*"
+    r"\b(?P<router_type>[A-Za-z_][A-Za-z0-9_]*)(?:\s*::<[^>\n]+>)?\s*::\s*"
     r"(?:r#)?(?P<constructor>route|route_service|nest_service|fallback_service|nest|fallback|merge)\s*\("
 )
 RUST_MACRO_METHOD_CALL_RE = re.compile(r"\.\s*\$(?P<method>[A-Za-z_][A-Za-z0-9_]*)\s*\(")
@@ -116,6 +123,25 @@ def rust_without_comments(text: str) -> str:
         index += 1
 
     return "".join(result)
+
+
+def rust_router_type_names(text: str) -> set[str]:
+    """Return Router plus type aliases that resolve to it in this source file."""
+    aliases = {
+        match.group("alias"): match.group("target").split("::")[-1].strip()
+        for match in RUST_ROUTER_TYPE_ALIAS_RE.finditer(text)
+    }
+    router_types = {"Router"}
+    router_types.update(
+        alias.group("alias")
+        for use in RUST_USE_RE.finditer(text)
+        for alias in RUST_ROUTER_IMPORT_ALIAS_RE.finditer(use.group("body"))
+    )
+    while True:
+        resolved = {alias for alias, target in aliases.items() if target in router_types}
+        if resolved <= router_types:
+            return router_types
+        router_types.update(resolved)
 
 
 def evidence_for(root: Path, raw: dict[str, Any]) -> dict[str, Any]:
@@ -913,7 +939,12 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
                     "unsupported Axum macro method indirection: "
                     f"{relative} at line {line_for(text, call.start())}"
                 )
-            router_ufcs_calls = list(RUST_ROUTER_UFCS_CALL_RE.finditer(route_source))
+            router_types = rust_router_type_names(route_source)
+            router_ufcs_calls = [
+                call
+                for call in RUST_ROUTER_UFCS_CALL_RE.finditer(route_source)
+                if call.group("router_type") in router_types
+            ]
             if router_ufcs_calls:
                 call = router_ufcs_calls[0]
                 raise ArchitectureError(
