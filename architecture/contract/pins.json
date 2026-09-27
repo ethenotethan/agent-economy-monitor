@@ -1,0 +1,16 @@
+{
+  "contract": "hermes.architecture",
+  "sha256": {
+    "architecture-document-v1.schema.json": "b89978fcf4c8fed4f4f90a516c971d9c8950522040342ee853f64db3e2686541",
+    "architecture_contract.py": "af9da370e8d5f627d2f022f37fa857b25aa33e7eb9b0068fadf6f2653a3c9e36"
+  },
+  "source": {
+    "commit": "c284799ccef91c283127ae62df005b8b85e6e46b",
+    "files": {
+      "architecture-document-v1.schema.json": "docs/api/architecture-document-v1.schema.json",
+      "architecture_contract.py": "tui_gateway/architecture_contract.py"
+    },
+    "repository": "ethenotethan/harness"
+  },
+  "version": "1.0"
+}
