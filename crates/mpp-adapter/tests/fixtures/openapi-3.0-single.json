@@ -1,0 +1,20 @@
+{
+  "openapi": "3.0.3",
+  "info": {"title": "MPP Search", "version": "1.4.2"},
+  "paths": {
+    "/search": {
+      "get": {
+        "x-payment-info": {
+          "intent": "charge",
+          "method": "stripe",
+          "amount": "8",
+          "currency": "usd"
+        },
+        "responses": {
+          "200": {"description": "Results"},
+          "402": {"description": "Payment Required"}
+        }
+      }
+    }
+  }
+}

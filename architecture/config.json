@@ -55,6 +55,15 @@
       ]
     },
     {
+      "description": "Deterministic observation-only parser for MPP OpenAPI discovery metadata.",
+      "id": "mpp-adapter",
+      "label": "MPP discovery adapter",
+      "layer": "evidence",
+      "patterns": [
+        "crates/mpp-adapter/**"
+      ]
+    },
+    {
       "description": "Deterministic compiler, contract tests, and local architecture gate.",
       "id": "architecture-tooling",
       "label": "Architecture tooling",
@@ -105,8 +114,8 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "Only the Axum status surface and observation contract boundaries are implemented at this revision; product pipeline nodes are specified and explicitly reported as unresolved implementation coverage.",
-      "The adapter output boundary is implemented, but concrete x402 and MPP protocol parsers remain unresolved."
+      "Only the Axum status surface, observation contract boundaries, and MPP discovery adapter are implemented at this revision; product pipeline nodes are specified and explicitly reported as unresolved implementation coverage.",
+      "MPP OpenAPI discovery is implemented; concrete x402 and runtime MPP challenge parsers remain unresolved."
     ],
     "rules": {
       "ci.workflow": "Mechanically extracts job IDs and run commands from .github/workflows/ci.yml.",
@@ -252,6 +261,7 @@
     "architecture/contract/*.json",
     "architecture/contract/*.py",
     "crates/**/Cargo.toml",
+    "crates/**/*.json",
     "crates/**/*.proto",
     "crates/**/*.rs",
     "docs/*.md",
@@ -278,6 +288,7 @@
     {"authority": "specified", "component": "architecture-policy", "id": "collector", "kind": "worker", "label": "Collectors", "origin": {"path": "docs/ARCHITECTURE.md", "search": "S[External RPC"}, "page": "evidence"},
     {"authority": "specified", "component": "observation-contracts", "id": "observation-contract", "kind": "contract", "label": "Immutable observation contract", "origin": {"path": "crates/contracts/src/lib.rs", "search": "pub struct Observation {"}, "page": "evidence"},
     {"authority": "specified", "component": "adapter-api", "id": "adapter-boundary", "kind": "boundary", "label": "Observation-only adapter API", "origin": {"path": "crates/adapter-api/src/lib.rs", "search": "pub trait ProtocolAdapter"}, "page": "evidence"},
+    {"authority": "specified", "component": "mpp-adapter", "id": "mpp-discovery-adapter", "kind": "adapter", "label": "MPP OpenAPI discovery adapter", "origin": {"path": "crates/mpp-adapter/src/lib.rs", "search": "impl ProtocolAdapter for MppDiscoveryAdapter"}, "page": "evidence"},
     {"authority": "specified", "component": "architecture-policy", "id": "protocol-adapters", "kind": "adapter", "label": "Stateless x402 / MPP adapters", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Stateless Rust adapters"}, "page": "evidence"},
     {"authority": "specified", "component": "architecture-policy", "id": "reducers", "kind": "worker", "label": "Deterministic reducers", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Deterministic reducers"}, "page": "canonical"},
     {"authority": "specified", "component": "architecture-policy", "id": "attribution", "kind": "worker", "label": "Attribution engine", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Attribution engine"}, "page": "canonical"},
@@ -302,7 +313,7 @@
   ],
   "pages": [
     {"components": ["runtime"], "id": "experience", "label": "Private cockpit", "roots": ["cockpit"]},
-    {"components": ["architecture-policy", "observation-contracts", "adapter-api"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "observation-contract", "adapter-boundary"]},
+    {"components": ["architecture-policy", "observation-contracts", "adapter-api", "mpp-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "observation-contract", "adapter-boundary", "mpp-discovery-adapter"]},
     {"components": ["architecture-policy"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers"]},
     {"components": ["architecture-policy"], "id": "projection", "label": "Semantic projection", "roots": ["evidence-snapshot"]},
     {"components": ["runtime"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service"]}
@@ -317,7 +328,7 @@
   ],
   "title": "Agent Economy Monitor Architecture",
   "unresolved": [
-    {"id": "rust.protocol-adapters", "reason": "The observation-only Rust adapter boundary exists, but no concrete x402 or MPP parser implementation exists yet."},
+    {"id": "rust.protocol-adapters", "reason": "MPP OpenAPI discovery is implemented, but concrete x402 and runtime MPP challenge parsers do not exist yet."},
     {"id": "rust.workers", "reason": "No collect/reduce/classify/enrich/project-wiki process mode exists yet; worker topology is specified only."},
     {"id": "runtime.storage-clients", "reason": "No Redpanda, object storage, ClickHouse, or PostgreSQL client exists yet; storage boundaries are specified only."}
   ]

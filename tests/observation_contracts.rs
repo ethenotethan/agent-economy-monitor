@@ -1,6 +1,7 @@
 use agent_economy_contracts::{
-    CanonicalEvent, EvidenceRef, MppEventKey, MppObservation, Observation, ObservationError,
-    ProtocolEventKey, ProtocolObservation, Provenance, X402EventKey, X402Observation,
+    CanonicalEvent, EvidenceRef, MppDiscoveryKey, MppDiscoveryObservation, MppEventKey,
+    MppObservation, Observation, ObservationError, ProtocolEventKey, ProtocolObservation,
+    Provenance, X402EventKey, X402Observation,
 };
 
 fn observation(source_id: &str) -> Result<Observation, ObservationError> {
@@ -97,6 +98,28 @@ fn mpp_event_key_rejects_invalid_method_grammar() {
 }
 
 #[test]
+fn mpp_discovery_contract_rejects_noncanonical_atomic_amounts() -> Result<(), ObservationError> {
+    let result = MppDiscoveryObservation::new(
+        MppDiscoveryKey::new("service:test", "get", "/paid", 0)?,
+        "3.1.0",
+        "Test service",
+        "1.0.0",
+        "charge",
+        "tempo",
+        Some("01".into()),
+        None,
+        None,
+        br#"{"intent":"charge","method":"tempo","amount":"01"}"#.to_vec(),
+    );
+
+    assert_eq!(
+        result,
+        Err(ObservationError::Invalid("mpp discovery atomic amount"))
+    );
+    Ok(())
+}
+
+#[test]
 fn protobuf_replay_preserves_the_observation() -> Result<(), ObservationError> {
     let original = observation("rpc-primary")?;
     let replayed = Observation::decode(original.encode())?;
@@ -119,7 +142,9 @@ fn reducers_can_read_typed_observation_fields() -> Result<(), ObservationError> 
             assert_eq!(payload.asset(), "USDC");
             assert_eq!(payload.amount_atomic(), "1000");
         }
-        ProtocolObservation::Mpp(_) => panic!("expected x402 observation"),
+        ProtocolObservation::Mpp(_) | ProtocolObservation::MppDiscovery(_) => {
+            panic!("expected x402 observation")
+        }
     }
     Ok(())
 }
@@ -152,7 +177,9 @@ fn mpp_extension_replays_through_the_shared_envelope() -> Result<(), Observation
     assert_eq!(Observation::decode(original.encode())?.id(), original.id());
     match original.protocol() {
         ProtocolObservation::Mpp(payload) => assert_eq!(payload.intent(), "charge"),
-        ProtocolObservation::X402(_) => panic!("expected mpp observation"),
+        ProtocolObservation::X402(_) | ProtocolObservation::MppDiscovery(_) => {
+            panic!("expected MPP challenge observation")
+        }
     }
     Ok(())
 }
