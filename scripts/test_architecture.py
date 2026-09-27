@@ -34,6 +34,15 @@ def load_contract_checker():
 
 class ArchitectureCompilerTests(unittest.TestCase):
     @staticmethod
+    def copy_repository(root: Path) -> None:
+        shutil.copytree(
+            ROOT,
+            root,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns(".git", ".worktrees", "__pycache__", "target"),
+        )
+
+    @staticmethod
     def upstream_contract_bytes(root: Path):
         source_root = root / "architecture" / "contract"
         upstream = {
@@ -131,6 +140,38 @@ jobs:
 
             with self.assertRaisesRegex(architecture.ArchitectureError, "canonical workflow grammar"):
                 architecture.parse_ci(root)
+
+    def test_ci_extraction_rejects_an_unmapped_workflow(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workflows = root / ".github" / "workflows"
+            workflows.mkdir(parents=True)
+            shutil.copy2(ROOT / ".github" / "workflows" / "ci.yml", workflows / "ci.yml")
+            (workflows / "deploy.yml").write_text(
+                "name: Deploy\non:\n  workflow_dispatch:\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo deploy\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(architecture.ArchitectureError, "unmapped GitHub Actions workflow"):
+                architecture.parse_ci(root)
+
+    def test_compiler_rejects_an_undeclared_axum_route(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8").replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", get(status))\n        .route("/admin", get(status));',
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(architecture.ArchitectureError, "undeclared Axum route"):
+                architecture.compile_architecture(root)
 
     def test_model_validation_rejects_unknown_static_check_scripts(self) -> None:
         architecture = load_compiler()

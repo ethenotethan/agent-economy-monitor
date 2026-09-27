@@ -175,6 +175,18 @@ def rust_declarations(text: str) -> list[dict[str, Any]]:
 
 def parse_ci(root: Path) -> dict[str, Any]:
     relative = ".github/workflows/ci.yml"
+    workflows = sorted(
+        path.relative_to(root).as_posix()
+        for path in (root / ".github" / "workflows").glob("*")
+        if path.is_file() and path.suffix in {".yml", ".yaml"}
+    )
+    unmapped_workflows = [workflow for workflow in workflows if workflow != relative]
+    if unmapped_workflows:
+        raise ArchitectureError(
+            "unmapped GitHub Actions workflow: " + ", ".join(unmapped_workflows)
+        )
+    if workflows != [relative]:
+        raise ArchitectureError(f"missing governed GitHub Actions workflow: {relative}")
     path = root / relative
     text = path.read_text(encoding="utf-8")
     canonical = """name: CI
@@ -460,7 +472,7 @@ jobs:
                 "scripts": ["scripts/verify"],
             },
         ],
-        "summary": {"gates": 2, "jobs": len(normalized_jobs), "ratchets": 0, "static_checks": 2, "workflows": 1},
+        "summary": {"gates": 2, "jobs": len(normalized_jobs), "ratchets": 0, "static_checks": 2, "workflows": len(workflows)},
         "triggers": [{"event": "pull_request", "id": "pull-request", "workflows": ["ci"]}],
         "workflows": [
             {
@@ -804,6 +816,7 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
     files_by_component: dict[str, list[str]] = defaultdict(list)
     lines_by_component: Counter[str] = Counter()
     total_declarations = 0
+    discovered_routes: set[tuple[str, str]] = set()
     for path in inventory_paths:
         relative = path.relative_to(root).as_posix()
         owner = component_for(relative, components)
@@ -814,6 +827,10 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
             raise ArchitectureError(f"inventory file is not UTF-8: {relative}") from exc
         digest.update(relative.encode("utf-8") + b"\0" + data + b"\0")
         declarations = rust_declarations(text) if path.suffix == ".rs" else []
+        if path.suffix == ".rs":
+            discovered_routes.update(
+                (relative, match.group("path")) for match in RUST_ROUTE_RE.finditer(text)
+            )
         total_declarations += len(declarations)
         declarations_by_component[owner].extend(item["name"] for item in declarations)
         files_by_component[owner].append(relative)
@@ -865,6 +882,23 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
                 ],
             }
         )
+    declared_routes = {
+        (raw["origin"]["path"], raw["origin"]["route"])
+        for raw in config["nodes"]
+        if "route" in raw["origin"]
+    }
+    undeclared_routes = sorted(discovered_routes - declared_routes)
+    if undeclared_routes:
+        raise ArchitectureError(
+            "undeclared Axum route: "
+            + ", ".join(f"{path}:{route}" for path, route in undeclared_routes)
+        )
+    unimplemented_routes = sorted(declared_routes - discovered_routes)
+    if unimplemented_routes:
+        raise ArchitectureError(
+            "declared Axum route is not implemented: "
+            + ", ".join(f"{path}:{route}" for path, route in unimplemented_routes)
+        )
     for record in files:
         citations = citation_count[record["path"]]
         record["citations"] = citations
@@ -890,13 +924,13 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
             }
         )
 
+    ci = parse_ci(root)
     passes = [
         {"citations": sum(1 for entity in entities for origin in entity["origins"] if origin["rule"] == "declared.topology"), "class": "semantic", "description": "Human-authoritative topology with unique source citations.", "files": sum(record["touched"] for record in files), "id": "declared.topology"},
-        {"citations": sum(1 for entity in entities for origin in entity["origins"] if origin["rule"] == "rust.http-route"), "class": "mechanical", "description": "Literal Axum GET routes extracted from Rust source.", "files": sum(1 for record in files if record["path"].endswith(".rs")), "id": "rust.http-route"},
+        {"citations": len(discovered_routes), "class": "mechanical", "description": "Literal Axum GET routes extracted from Rust source.", "files": len({path for path, _route in discovered_routes}), "id": "rust.http-route"},
         {"citations": total_declarations, "class": "mechanical", "description": "Rust item declarations extracted with source lines.", "files": sum(1 for record in files if record["path"].endswith(".rs")), "id": "rust.declaration"},
-        {"citations": 2, "class": "mechanical", "description": "GitHub Actions workflow jobs and gate commands extracted from CI YAML.", "files": 1, "id": "ci.workflow"},
+        {"citations": len(ci["jobs"]), "class": "mechanical", "description": "GitHub Actions workflow jobs and gate commands extracted from CI YAML.", "files": len(ci["workflows"]), "id": "ci.workflow"},
     ]
-    ci = parse_ci(root)
     flows = []
     for configured_flow in config["flows"]:
         flow = dict(configured_flow)
