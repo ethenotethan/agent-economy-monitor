@@ -804,6 +804,18 @@ jobs:
             with self.assertRaisesRegex(architecture.ArchitectureError, "omits source file"):
                 architecture.expanded_inventory(root, ["src/**/*.rs"])
 
+    def test_inventory_ignores_generated_dev_stack_credentials(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "compose.yaml"
+            source.write_text("services: {}\n", encoding="utf-8")
+            (root / ".dev-stack.env").write_text(
+                "POSTGRES_PASSWORD=generated-local-secret\n", encoding="utf-8"
+            )
+
+            self.assertEqual(architecture.expanded_inventory(root, ["compose.yaml"]), [source])
+
     def test_inventory_rejects_root_configuration_and_manifests_when_omitted(self) -> None:
         architecture = load_compiler()
         with tempfile.TemporaryDirectory() as directory:

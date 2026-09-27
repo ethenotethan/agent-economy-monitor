@@ -3,6 +3,7 @@
 .env
 .env.*
 !.env.example
+.dev-stack.env
 .DS_Store
 *.pem
 *.key

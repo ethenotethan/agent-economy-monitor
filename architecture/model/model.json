@@ -152,7 +152,7 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 219
+      "line_count": 237
     },
     {
       "declaration_count": 0,
@@ -172,7 +172,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 4789
+      "line_count": 4817
     },
     {
       "declaration_count": 0,
@@ -188,7 +188,23 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 59
+      "line_count": 61
+    },
+    {
+      "declaration_count": 0,
+      "declarations": [],
+      "description": "Reproducible local PostgreSQL, ClickHouse, Redpanda, Schema Registry, and S3-compatible development dependencies.",
+      "external": false,
+      "file_count": 3,
+      "files": [
+        "compose.yaml",
+        "scripts/dev-stack",
+        "tests/dev_stack_test.py"
+      ],
+      "id": "local-data-plane",
+      "label": "Local data plane",
+      "layer": "delivery",
+      "line_count": 408
     },
     {
       "declaration_count": 3,
@@ -673,7 +689,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 8,
+        "line_count": 9,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -743,7 +759,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 34,
+        "line_count": 52,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -757,7 +773,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 285,
+        "line_count": 301,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -805,6 +821,20 @@
           "declared.topology"
         ],
         "path": "architecture/contract/pins.json",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "local-data-plane",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 99,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "compose.yaml",
         "semantic_citations": 0,
         "touched": false
       },
@@ -866,10 +896,24 @@
       },
       {
         "citations": 0,
+        "component": "local-data-plane",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 64,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "scripts/dev-stack",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1229,
+        "line_count": 1241,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -883,7 +927,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 15,
+        "line_count": 16,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -930,6 +974,20 @@
         "path": "src/main.rs",
         "semantic_citations": 0,
         "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "local-data-plane",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 245,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/dev_stack_test.py",
+        "semantic_citations": 0,
+        "touched": false
       }
     ],
     "passes": [
@@ -979,12 +1037,12 @@
       "declarations": 3,
       "entities": 22,
       "entities_with_origin": 22,
-      "files": 19,
+      "files": 22,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
       "touched_files": 4,
-      "untouched_files": 15
+      "untouched_files": 18
     }
   },
   "interplay": {
@@ -1669,8 +1727,8 @@
   },
   "inventory": {
     "declarations": 3,
-    "files": 19,
-    "lines": 5790
+    "files": 22,
+    "lines": 6246
   },
   "layers": [
     {
@@ -1711,7 +1769,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "97a2e3b471e458551f5c35e1603a1c7d0944aad9b8e1fc20e86c5286fd4f4b7e",
+  "source_tree_sha256": "297ad503a3036657e1b8d3d188534cc002b2b18fe46a581cef38146111ccf089",
   "stores": {
     "count": 4,
     "items": [

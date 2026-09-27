@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+compose_file="$root_dir/compose.yaml"
+env_file="${DEV_STACK_ENV_FILE:-$root_dir/.dev-stack.env}"
+action="${1:-up}"
+
+if ! command -v docker >/dev/null 2>&1; then
+    echo "docker is required to run the local data-plane stack" >&2
+    exit 1
+fi
+
+docker compose version >/dev/null
+
+create_env_file() {
+    local env_directory temporary_file postgres_password clickhouse_password access_key secret_key
+    env_directory="$(dirname "$env_file")"
+    mkdir -p "$env_directory"
+    postgres_password="$(openssl rand -hex 24)"
+    clickhouse_password="$(openssl rand -hex 24)"
+    access_key="$(openssl rand -hex 16)"
+    secret_key="$(openssl rand -hex 24)"
+    temporary_file="$(mktemp "$env_directory/.dev-stack.env.XXXXXX")"
+    chmod 600 "$temporary_file"
+    {
+        printf 'POSTGRES_PASSWORD=%s\n' "$postgres_password"
+        printf 'CLICKHOUSE_PASSWORD=%s\n' "$clickhouse_password"
+        printf 'AWS_ACCESS_KEY_ID=%s\n' "$access_key"
+        printf 'AWS_SECRET_ACCESS_KEY=%s\n' "$secret_key"
+    } >"$temporary_file"
+    mv "$temporary_file" "$env_file"
+    chmod 600 "$env_file"
+    echo "created local credentials at $env_file"
+}
+
+if [[ ! -f "$env_file" ]]; then
+    create_env_file
+fi
+chmod 600 "$env_file"
+
+compose=(docker compose --env-file "$env_file" -f "$compose_file")
+
+case "$action" in
+    up)
+        "${compose[@]}" up --detach --wait
+        ;;
+    down)
+        "${compose[@]}" down
+        ;;
+    status)
+        "${compose[@]}" ps
+        ;;
+    logs)
+        "${compose[@]}" logs --follow
+        ;;
+    reset)
+        "${compose[@]}" down --volumes
+        ;;
+    *)
+        echo "usage: $0 [up|down|status|logs|reset]" >&2
+        exit 64
+        ;;
+esac

@@ -234,7 +234,7 @@ def expanded_inventory(root: Path, patterns: list[str]) -> list[Path]:
         raise ArchitectureError(
             "inventory configuration omits Rust source: " + ", ".join(omitted_rust)
         )
-    generated_paths = {"architecture/model/model.json"}
+    generated_paths = {".dev-stack.env", "architecture/model/model.json"}
     governed_sources = {
         path
         for path in root.rglob("*")

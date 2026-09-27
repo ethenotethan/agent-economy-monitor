@@ -61,6 +61,18 @@
       ]
     },
     {
+      "description": "Reproducible local PostgreSQL, ClickHouse, Redpanda, Schema Registry, and S3-compatible development dependencies.",
+      "id": "local-data-plane",
+      "label": "Local data plane",
+      "layer": "delivery",
+      "patterns": [
+        "compose.yaml",
+        "scripts/dev-stack",
+        "tests/*.py",
+        "tests/**/*.py"
+      ]
+    },
+    {
       "description": "Human-authored product, trust, and runtime architecture authority.",
       "id": "architecture-policy",
       "label": "Architecture policy",
@@ -222,11 +234,15 @@
     "architecture/contract/*.json",
     "architecture/contract/*.py",
     "docs/*.md",
+    "compose.yaml",
     "scripts/build_architecture.py",
     "scripts/check_architecture_contract.py",
+    "scripts/dev-stack",
     "scripts/test_architecture.py",
     "scripts/verify",
-    "src/**/*.rs"
+    "src/**/*.rs",
+    "tests/*.py",
+    "tests/**/*.py"
   ],
   "layers": [
     {"id": "experience", "label": "Experience", "order": 0},
