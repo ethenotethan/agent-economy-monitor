@@ -830,6 +830,18 @@ jobs:
             with self.assertRaisesRegex(architecture.ArchitectureError, "omits source file"):
                 architecture.expanded_inventory(root, ["src/**/*.rs"])
 
+    def test_inventory_ignores_designated_pages_build_output(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            source = root / "src" / "main.rs"
+            source.write_text("fn main() {}\n", encoding="utf-8")
+            (root / "_site").mkdir()
+            (root / "_site" / "app.js").write_text("generated\n", encoding="utf-8")
+
+            self.assertEqual([source], architecture.expanded_inventory(root, ["src/**/*.rs"]))
+
     def test_inventory_rejects_root_configuration_and_manifests_when_omitted(self) -> None:
         architecture = load_compiler()
         with tempfile.TemporaryDirectory() as directory:

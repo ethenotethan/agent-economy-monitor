@@ -193,7 +193,7 @@ def evidence_for(root: Path, raw: dict[str, Any]) -> dict[str, Any]:
 
 def expanded_inventory(root: Path, patterns: list[str]) -> list[Path]:
     root_resolved = root.resolve(strict=True)
-    ignored_root_names = {".git", ".worktrees", "__pycache__", "target"}
+    ignored_root_names = {".git", ".worktrees", "_site", "__pycache__", "target"}
 
     def is_ignored(path: Path) -> bool:
         relative = path.relative_to(root)
