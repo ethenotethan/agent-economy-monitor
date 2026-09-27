@@ -1,0 +1,16 @@
+[package]
+name = "agent-economy-contracts"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Versioned wire contracts for Agent Economy Monitor evidence"
+
+[dependencies]
+hex = "0.4"
+prost = "0.14"
+sha2 = "0.10"
+thiserror = "2"
+
+[build-dependencies]
+prost-build = "0.14"
+protoc-bin-vendored = "3"

@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package agent_economy.observation.v2;
+
+message EvidenceRef {
+  string algorithm = 1;
+  string digest = 2;
+  string media_type = 3;
+  uint64 byte_length = 4;
+}
+
+message Provenance {
+  string source_id = 1;
+  int64 observed_at_unix_ms = 2;
+  string parser_version = 3;
+}
+
+message X402EventKey {
+  string payment_identifier = 1;
+  string request_fingerprint = 2;
+  string scope = 3;
+}
+
+message X402Observation {
+  X402EventKey event_key = 1;
+  string asset = 2;
+  string amount_atomic = 3;
+}
+
+message ObservationEnvelope {
+  uint32 schema_version = 1;
+  string observation_id = 2;
+  Provenance provenance = 3;
+  EvidenceRef evidence = 4;
+
+  oneof protocol {
+    X402Observation x402 = 10;
+  }
+
+  // Additive field emitted by the future-schema compatibility fixture.
+  string future_note = 100;
+}
