@@ -109,8 +109,16 @@ class ArchitectureCompilerTests(unittest.TestCase):
         self.assertTrue(model["interplay"]["nodes"])
         self.assertTrue(model["extraction"]["entities"])
         self.assertEqual(
-            {"architecture", "verify"},
+            {"architecture", "verify", "build-pages", "deploy-pages"},
             {job["id"] for job in model["ci"]["jobs"]},
+        )
+        self.assertEqual(
+            {"ci", "architecture-pages"},
+            {workflow["id"] for workflow in model["ci"]["workflows"]},
+        )
+        self.assertEqual(
+            {"architecture": 2, "verify": 4, "build-pages": 6, "deploy-pages": 1},
+            {job["id"]: job["step_count"] for job in model["ci"]["jobs"]},
         )
 
     def test_ci_extraction_rejects_named_jobs_that_do_not_run_the_gates(self) -> None:
@@ -155,6 +163,24 @@ jobs:
             )
 
             with self.assertRaisesRegex(architecture.ArchitectureError, "unmapped GitHub Actions workflow"):
+                architecture.parse_ci(root)
+
+    def test_ci_extraction_rejects_pages_workflow_drift(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workflows = root / ".github" / "workflows"
+            workflows.mkdir(parents=True)
+            shutil.copy2(ROOT / ".github" / "workflows" / "ci.yml", workflows / "ci.yml")
+            pages = ROOT / ".github" / "workflows" / "pages.yml"
+            changed = pages.read_text(encoding="utf-8").replace(
+                "  contents: read\n", "  contents: write\n"
+            )
+            (workflows / "pages.yml").write_text(changed, encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                architecture.ArchitectureError, "canonical Pages workflow grammar"
+            ):
                 architecture.parse_ci(root)
 
     def test_compiler_rejects_an_undeclared_axum_route(self) -> None:

@@ -2,6 +2,8 @@
 
 An invite-only intelligence cockpit for discovering, indexing, classifying, and investigating x402 and MPP commerce activity.
 
+[Explore the live, source-backed architecture System Map](https://ethenotethan.github.io/agent-economy-monitor/) generated from `architecture/model/model.json`.
+
 ## Product contract
 
 The system separates three authorities:
