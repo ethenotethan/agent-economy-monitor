@@ -173,6 +173,78 @@ jobs:
             with self.assertRaisesRegex(architecture.ArchitectureError, "undeclared Axum route"):
                 architecture.compile_architecture(root)
 
+    def test_compiler_rejects_undeclared_supported_axum_routes(self) -> None:
+        architecture = load_compiler()
+        for method in ("post", "put", "patch", "delete", "head", "options", "trace", "any"):
+            with self.subTest(method=method), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.copy_repository(root)
+                main = root / "src" / "main.rs"
+                main.write_text(
+                    main.read_text(encoding="utf-8").replace(
+                        '.route("/api/v1/status", get(status));',
+                        '.route("/api/v1/status", get(status))\n'
+                        f'        .route("/admin", {method}(status));',
+                    ),
+                    encoding="utf-8",
+                )
+
+                with self.assertRaisesRegex(architecture.ArchitectureError, "undeclared Axum route"):
+                    architecture.compile_architecture(root)
+
+    def test_compiler_binds_axum_route_method_and_path(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8").replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", post(status));',
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(architecture.ArchitectureError, "route origin GET"):
+                architecture.compile_architecture(root)
+
+    def test_compiler_rejects_an_unrecognized_axum_method_router(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8").replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", get(status))\n'
+                    '        .route("/admin", on(MethodFilter::POST, status));',
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(architecture.ArchitectureError, "unsupported Axum route"):
+                architecture.compile_architecture(root)
+
+    def test_compiler_rejects_a_nonliteral_axum_route_path(self) -> None:
+        architecture = load_compiler()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_repository(root)
+            main = root / "src" / "main.rs"
+            main.write_text(
+                main.read_text(encoding="utf-8").replace(
+                    '.route("/api/v1/status", get(status));',
+                    '.route("/api/v1/status", get(status))\n'
+                    "        .route(ADMIN_PATH, post(status));",
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(architecture.ArchitectureError, "unsupported Axum route"):
+                architecture.compile_architecture(root)
+
     def test_model_validation_rejects_unknown_static_check_scripts(self) -> None:
         architecture = load_compiler()
         model = architecture.compile_architecture(ROOT)

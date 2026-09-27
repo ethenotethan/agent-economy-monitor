@@ -25,8 +25,11 @@ RUST_DECLARATION_RE = re.compile(
     r"(struct|enum|trait|type|const|static|fn|mod)\s+([A-Za-z_][A-Za-z0-9_]*)"
 )
 RUST_ROUTE_RE = re.compile(
-    r"\.route\(\s*\"(?P<path>/[^\"]*)\"\s*,\s*get\(\s*(?P<handler>[A-Za-z_][A-Za-z0-9_:]*)\s*\)\s*\)"
+    r"\.route\(\s*\"(?P<path>/[^\"]*)\"\s*,\s*"
+    r"(?P<method>get|post|put|patch|delete|head|options|trace|any)"
+    r"\(\s*(?P<handler>[A-Za-z_][A-Za-z0-9_:]*)\s*\)\s*\)"
 )
+RUST_ROUTE_CALL_RE = re.compile(r"\.route\s*\(")
 
 
 class ArchitectureError(RuntimeError):
@@ -61,9 +64,18 @@ def evidence_for(root: Path, raw: dict[str, Any]) -> dict[str, Any]:
     text = path.read_text(encoding="utf-8")
     if "route" in raw:
         route = raw["route"]
-        matches = [match for match in RUST_ROUTE_RE.finditer(text) if match.group("path") == route]
+        method = raw.get("method")
+        if not isinstance(method, str) or not method:
+            raise ArchitectureError(f"route origin {route!r} in {relative} needs method")
+        matches = [
+            match
+            for match in RUST_ROUTE_RE.finditer(text)
+            if match.group("path") == route and match.group("method") == method
+        ]
         if len(matches) != 1:
-            raise ArchitectureError(f"route origin {route!r} in {relative} matched {len(matches)} times")
+            raise ArchitectureError(
+                f"route origin {method.upper()} {route!r} in {relative} matched {len(matches)} times"
+            )
         match = matches[0]
         return {
             "excerpt": match.group(0),
@@ -816,7 +828,7 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
     files_by_component: dict[str, list[str]] = defaultdict(list)
     lines_by_component: Counter[str] = Counter()
     total_declarations = 0
-    discovered_routes: set[tuple[str, str]] = set()
+    discovered_routes: set[tuple[str, str, str]] = set()
     for path in inventory_paths:
         relative = path.relative_to(root).as_posix()
         owner = component_for(relative, components)
@@ -828,8 +840,22 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
         digest.update(relative.encode("utf-8") + b"\0" + data + b"\0")
         declarations = rust_declarations(text) if path.suffix == ".rs" else []
         if path.suffix == ".rs":
+            route_matches = list(RUST_ROUTE_RE.finditer(text))
+            supported_route_offsets = {match.start() for match in route_matches}
+            unsupported_routes = [
+                match
+                for match in RUST_ROUTE_CALL_RE.finditer(text)
+                if match.start() not in supported_route_offsets
+            ]
+            if unsupported_routes:
+                route = unsupported_routes[0]
+                raise ArchitectureError(
+                    "unsupported Axum route: "
+                    f"{relative} at line {line_for(text, route.start())}"
+                )
             discovered_routes.update(
-                (relative, match.group("path")) for match in RUST_ROUTE_RE.finditer(text)
+                (relative, match.group("path"), match.group("method"))
+                for match in route_matches
             )
         total_declarations += len(declarations)
         declarations_by_component[owner].extend(item["name"] for item in declarations)
@@ -883,7 +909,7 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
             }
         )
     declared_routes = {
-        (raw["origin"]["path"], raw["origin"]["route"])
+        (raw["origin"]["path"], raw["origin"]["route"], raw["origin"].get("method"))
         for raw in config["nodes"]
         if "route" in raw["origin"]
     }
@@ -891,13 +917,18 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
     if undeclared_routes:
         raise ArchitectureError(
             "undeclared Axum route: "
-            + ", ".join(f"{path}:{route}" for path, route in undeclared_routes)
+            + ", ".join(
+                f"{path}:{method.upper()} {route}" for path, route, method in undeclared_routes
+            )
         )
     unimplemented_routes = sorted(declared_routes - discovered_routes)
     if unimplemented_routes:
         raise ArchitectureError(
             "declared Axum route is not implemented: "
-            + ", ".join(f"{path}:{route}" for path, route in unimplemented_routes)
+            + ", ".join(
+                f"{path}:{method.upper() if method else '<missing-method>'} {route}"
+                for path, route, method in unimplemented_routes
+            )
         )
     for record in files:
         citations = citation_count[record["path"]]
@@ -927,7 +958,7 @@ def compile_architecture(root: Path = ROOT) -> dict[str, Any]:
     ci = parse_ci(root)
     passes = [
         {"citations": sum(1 for entity in entities for origin in entity["origins"] if origin["rule"] == "declared.topology"), "class": "semantic", "description": "Human-authoritative topology with unique source citations.", "files": sum(record["touched"] for record in files), "id": "declared.topology"},
-        {"citations": len(discovered_routes), "class": "mechanical", "description": "Literal Axum GET routes extracted from Rust source.", "files": len({path for path, _route in discovered_routes}), "id": "rust.http-route"},
+        {"citations": len(discovered_routes), "class": "mechanical", "description": "Literal Axum method and path routes extracted from Rust source.", "files": len({path for path, _route, _method in discovered_routes}), "id": "rust.http-route"},
         {"citations": total_declarations, "class": "mechanical", "description": "Rust item declarations extracted with source lines.", "files": sum(1 for record in files if record["path"].endswith(".rs")), "id": "rust.declaration"},
         {"citations": len(ci["jobs"]), "class": "mechanical", "description": "GitHub Actions workflow jobs and gate commands extracted from CI YAML.", "files": len(ci["workflows"]), "id": "ci.workflow"},
     ]
