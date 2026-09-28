@@ -20,8 +20,8 @@ LLM output may explain or suggest. It may not rewrite evidence, merge buyer iden
 - Chains: Ethereum, Base, Solana, Tempo through one external RPC provider
 - Discovery seeds: x402scan and AgentCash, followed by independent verification
 - Product: private shared cockpit with Pulse, Buyers, Services, Graph, Investigations, and System views
-- Implementation: Rust, Axum, Leptos, Redpanda, ClickHouse, PostgreSQL, S3-compatible evidence storage
-- Runtime: one canonical Nomad service definition with internal worker modes
+- Implementation: Rust, Axum, Leptos, PostgreSQL, and Google Cloud Storage
+- Runtime: one Rust image with a scale-to-zero Cloud Run service and bounded Cloud Run worker jobs
 
 Bitcoin Lightning is an adapter slot but is not part of v1.
 
