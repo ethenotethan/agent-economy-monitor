@@ -22,6 +22,7 @@ REMOVED_V1_INFRASTRUCTURE_ALIASES = (
     "seaweedfs",
     "minio",
     "s3-compatible",
+    "s3_compatible",
     "s3 emulator",
     "s3 emulation",
     "s3 endpoint",
@@ -193,6 +194,17 @@ class ArchitectureCompilerTests(unittest.TestCase):
             return findings
 
         self.assertEqual({}, removed_infrastructure(ROOT))
+        with tempfile.TemporaryDirectory() as directory:
+            adversarial_root = Path(directory)
+            environment = adversarial_root / ".env.example"
+            environment.write_text(
+                "S3_COMPATIBLE_ENDPOINT=https://example.invalid\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                {".env.example": ["s3_compatible"]},
+                removed_infrastructure(adversarial_root),
+            )
         for alias in REMOVED_V1_INFRASTRUCTURE_ALIASES:
             with self.subTest(alias=alias), tempfile.TemporaryDirectory() as directory:
                 adversarial_root = Path(directory)
