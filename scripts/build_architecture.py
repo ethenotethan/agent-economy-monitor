@@ -345,6 +345,10 @@ jobs:
         env:
           RUN_KNOWLEDGE_GRAPH_LIVE: "1"
         run: python3 tests/knowledge_graph_schema_test.py KnowledgeGraphMigrationLiveTest -v
+      - name: Qualify operational and analytics migration
+        env:
+          RUN_OPERATIONAL_ANALYTICS_LIVE: "1"
+        run: python3 tests/operational_analytics_schema_test.py OperationalAnalyticsMigrationLiveTest -v
 """
     # Accept one auditable workflow grammar instead of trying to security-parse
     # arbitrary YAML with regular expressions. Workflow changes must update this
@@ -587,6 +591,7 @@ jobs:
         "verify": [
             "./scripts/verify",
             "python3 tests/knowledge_graph_schema_test.py KnowledgeGraphMigrationLiveTest -v",
+            "python3 tests/operational_analytics_schema_test.py OperationalAnalyticsMigrationLiveTest -v",
         ],
     }
     by_id = {job["id"]: job for job in jobs}

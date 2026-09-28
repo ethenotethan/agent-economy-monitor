@@ -130,7 +130,7 @@ class ArchitectureCompilerTests(unittest.TestCase):
             {workflow["id"] for workflow in model["ci"]["workflows"]},
         )
         self.assertEqual(
-            {"architecture": 2, "verify": 5, "build-pages": 6, "deploy-pages": 1},
+            {"architecture": 2, "verify": 6, "build-pages": 6, "deploy-pages": 1},
             {job["id"]: job["step_count"] for job in model["ci"]["jobs"]},
         )
 
@@ -202,9 +202,18 @@ class ArchitectureCompilerTests(unittest.TestCase):
             ("canonical-knowledge-schema", "store:postgresql", "materializes-in"),
             edge_keys,
         )
+        self.assertIn("operational-analytics-schema", component_ids)
+        self.assertIn("operational-analytics-schema", entity_ids)
+        self.assertIn("operational-analytics-schema", canonical["components"])
+        self.assertIn("operational-analytics-schema", canonical["roots"])
+        self.assertIn(
+            ("operational-analytics-schema", "store:postgresql", "materializes-in"),
+            edge_keys,
+        )
 
         workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
         self.assertIn('RUN_KNOWLEDGE_GRAPH_LIVE: "1"', workflow)
+        self.assertIn('RUN_OPERATIONAL_ANALYTICS_LIVE: "1"', workflow)
 
     def test_implemented_local_storage_is_not_reported_as_unresolved(self) -> None:
         architecture = load_compiler()

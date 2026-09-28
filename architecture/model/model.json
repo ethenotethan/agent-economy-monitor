@@ -69,9 +69,10 @@
         "runs_on": "ubuntu-latest",
         "scripts": [
           "./scripts/verify",
-          "python3 tests/knowledge_graph_schema_test.py KnowledgeGraphMigrationLiveTest -v"
+          "python3 tests/knowledge_graph_schema_test.py KnowledgeGraphMigrationLiveTest -v",
+          "python3 tests/operational_analytics_schema_test.py OperationalAnalyticsMigrationLiveTest -v"
         ],
-        "step_count": 5,
+        "step_count": 6,
         "workflow": "ci"
       },
       {
@@ -304,7 +305,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5310
+      "line_count": 5335
     },
     {
       "declaration_count": 23,
@@ -335,7 +336,7 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 9,
+      "file_count": 10,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -345,12 +346,13 @@
         "tests/dev_stack_live_test.py",
         "tests/dev_stack_test.py",
         "tests/knowledge_graph_schema_test.py",
-        "tests/observation_contracts.rs"
+        "tests/observation_contracts.rs",
+        "tests/operational_analytics_schema_test.py"
       ],
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 1226
+      "line_count": 1755
     },
     {
       "declaration_count": 0,
@@ -596,6 +598,21 @@
       "line_count": 1310
     },
     {
+      "declaration_count": 0,
+      "declarations": [],
+      "description": "Partitioned PostgreSQL observations, canonical events, settlements, leases, feature windows, analytical read models, and measured scale thresholds.",
+      "external": false,
+      "file_count": 2,
+      "files": [
+        "migrations/0002_operational_analytics.down.sql",
+        "migrations/0002_operational_analytics.up.sql"
+      ],
+      "id": "operational-analytics-schema",
+      "label": "Observation and analytics schema",
+      "layer": "canonical",
+      "line_count": 430
+    },
+    {
       "declaration_count": 3,
       "declarations": [
         "Status",
@@ -729,7 +746,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, and content-addressed filesystem evidence adapter are implemented at this revision; production PostgreSQL and Google Cloud Storage clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, and content-addressed filesystem evidence adapter are implemented at this revision; production PostgreSQL and Google Cloud Storage clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -1156,6 +1173,21 @@
         ]
       },
       {
+        "component": "operational-analytics-schema",
+        "id": "operational-analytics-schema",
+        "kind": "schema",
+        "label": "Partitioned observation and analytics schema",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 41,
+            "path": "migrations/0002_operational_analytics.up.sql",
+            "rule": "declared.topology",
+            "via": "CREATE TABLE agent_economy.observations ("
+          }
+        ]
+      },
+      {
         "component": "architecture-policy",
         "id": "projection-mirror",
         "kind": "projection",
@@ -1306,7 +1338,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 40,
+        "line_count": 44,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1418,7 +1450,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 419,
+        "line_count": 430,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -4034,10 +4066,38 @@
       },
       {
         "citations": 0,
+        "component": "operational-analytics-schema",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 35,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0002_operational_analytics.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "operational-analytics-schema",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 395,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0002_operational_analytics.up.sql",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1356,
+        "line_count": 1361,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -4093,7 +4153,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1473,
+        "line_count": 1482,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -4466,6 +4526,20 @@
         "path": "tests/observation_contracts.rs",
         "semantic_citations": 0,
         "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 525,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/operational_analytics_schema_test.py",
+        "semantic_citations": 0,
+        "touched": false
       }
     ],
     "passes": [
@@ -4477,10 +4551,10 @@
         "id": "ci.workflow"
       },
       {
-        "citations": 29,
+        "citations": 30,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
-        "files": 11,
+        "files": 12,
         "id": "declared.topology"
       },
       {
@@ -4509,22 +4583,22 @@
         "projection": 2,
         "projector": 1,
         "scheduler": 1,
-        "schema": 1,
+        "schema": 2,
         "service": 2,
         "store": 2,
         "surface": 1,
         "worker": 6
       },
-      "citations": 31,
+      "citations": 32,
       "declarations": 291,
-      "entities": 31,
-      "entities_with_origin": 31,
-      "files": 60,
+      "entities": 32,
+      "entities_with_origin": 32,
+      "files": 63,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
-      "touched_files": 11,
-      "untouched_files": 49
+      "touched_files": 12,
+      "untouched_files": 51
     }
   },
   "interplay": {
@@ -4677,6 +4751,12 @@
         "relation": "writes-native",
         "source": "local-wiki-projector",
         "target": "semantic-wiki"
+      },
+      {
+        "class": "structure",
+        "relation": "materializes-in",
+        "source": "operational-analytics-schema",
+        "target": "store:postgresql"
       },
       {
         "class": "interplay",
@@ -5320,6 +5400,20 @@
         "page": "evidence"
       },
       {
+        "component": "operational-analytics-schema",
+        "evidence": [
+          {
+            "excerpt": "CREATE TABLE agent_economy.observations (",
+            "line": 41,
+            "path": "migrations/0002_operational_analytics.up.sql"
+          }
+        ],
+        "id": "operational-analytics-schema",
+        "kind": "schema",
+        "label": "Partitioned observation and analytics schema",
+        "page": "canonical"
+      },
+      {
         "component": "architecture-policy",
         "evidence": [
           {
@@ -5466,13 +5560,15 @@
       {
         "components": [
           "architecture-policy",
-          "knowledge-graph-schema"
+          "knowledge-graph-schema",
+          "operational-analytics-schema"
         ],
         "id": "canonical",
         "label": "Canonical knowledge",
         "roots": [
           "reducers",
-          "canonical-knowledge-schema"
+          "canonical-knowledge-schema",
+          "operational-analytics-schema"
         ]
       },
       {
@@ -5502,8 +5598,8 @@
   },
   "inventory": {
     "declarations": 291,
-    "files": 60,
-    "lines": 13620
+    "files": 63,
+    "lines": 14604
   },
   "layers": [
     {
@@ -5544,7 +5640,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "14ec815d8b12d09befadf4ec77866a7bb69408e7a617a36e3967130524335b22",
+  "source_tree_sha256": "db62c8e9636de7c835203a9acb457dc067d3aa4fc48ba975141d2248153f3231",
   "stores": {
     "count": 2,
     "items": [
