@@ -34,3 +34,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Verify
         run: ./scripts/verify
+      - name: Qualify knowledge graph migration
+        env:
+          RUN_KNOWLEDGE_GRAPH_LIVE: "1"
+        run: python3 tests/knowledge_graph_schema_test.py KnowledgeGraphMigrationLiveTest -v

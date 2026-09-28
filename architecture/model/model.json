@@ -68,9 +68,10 @@
         "role": "gate",
         "runs_on": "ubuntu-latest",
         "scripts": [
-          "./scripts/verify"
+          "./scripts/verify",
+          "python3 tests/knowledge_graph_schema_test.py KnowledgeGraphMigrationLiveTest -v"
         ],
-        "step_count": 4,
+        "step_count": 5,
         "workflow": "ci"
       },
       {
@@ -303,7 +304,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5265
+      "line_count": 5310
     },
     {
       "declaration_count": 23,
@@ -334,7 +335,7 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 8,
+      "file_count": 9,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -343,12 +344,13 @@
         "tests/adapter_boundary.rs",
         "tests/dev_stack_live_test.py",
         "tests/dev_stack_test.py",
+        "tests/knowledge_graph_schema_test.py",
         "tests/observation_contracts.rs"
       ],
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 809
+      "line_count": 1226
     },
     {
       "declaration_count": 0,
@@ -424,6 +426,21 @@
       "label": "Evidence storage contract",
       "layer": "evidence",
       "line_count": 652
+    },
+    {
+      "declaration_count": 0,
+      "declarations": [],
+      "description": "Namespace-scoped PostgreSQL schema for canonical services, commerce offers, buyer handles, reversible clusters, claims, evidence, and provenance.",
+      "external": false,
+      "file_count": 2,
+      "files": [
+        "migrations/0001_knowledge_graph.down.sql",
+        "migrations/0001_knowledge_graph.up.sql"
+      ],
+      "id": "knowledge-graph-schema",
+      "label": "Canonical knowledge schema",
+      "layer": "canonical",
+      "line_count": 460
     },
     {
       "declaration_count": 41,
@@ -712,7 +729,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, local PostgreSQL development stack, and content-addressed filesystem evidence adapter are implemented at this revision; production PostgreSQL and Google Cloud Storage clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, and content-addressed filesystem evidence adapter are implemented at this revision; production PostgreSQL and Google Cloud Storage clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -820,6 +837,21 @@
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
             "via": "D --> AT[Attribution engine]"
+          }
+        ]
+      },
+      {
+        "component": "knowledge-graph-schema",
+        "id": "canonical-knowledge-schema",
+        "kind": "schema",
+        "label": "Namespace-scoped canonical knowledge graph",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 65,
+            "path": "migrations/0001_knowledge_graph.up.sql",
+            "rule": "declared.topology",
+            "via": "CREATE TABLE agent_economy.services ("
           }
         ]
       },
@@ -1274,7 +1306,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 36,
+        "line_count": 40,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1386,7 +1418,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 407,
+        "line_count": 419,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3974,10 +4006,38 @@
       },
       {
         "citations": 0,
+        "component": "knowledge-graph-schema",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 38,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0001_knowledge_graph.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "knowledge-graph-schema",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 422,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0001_knowledge_graph.up.sql",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1349,
+        "line_count": 1356,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -4033,7 +4093,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1447,
+        "line_count": 1473,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -4237,6 +4297,20 @@
       {
         "citations": 0,
         "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 413,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/knowledge_graph_schema_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
         "declaration_count": 18,
         "declarations": [
           {
@@ -4403,10 +4477,10 @@
         "id": "ci.workflow"
       },
       {
-        "citations": 28,
+        "citations": 29,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
-        "files": 10,
+        "files": 11,
         "id": "declared.topology"
       },
       {
@@ -4435,21 +4509,22 @@
         "projection": 2,
         "projector": 1,
         "scheduler": 1,
+        "schema": 1,
         "service": 2,
         "store": 2,
         "surface": 1,
         "worker": 6
       },
-      "citations": 30,
+      "citations": 31,
       "declarations": 291,
-      "entities": 30,
-      "entities_with_origin": 30,
-      "files": 57,
+      "entities": 31,
+      "entities_with_origin": 31,
+      "files": 60,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
-      "touched_files": 10,
-      "untouched_files": 47
+      "touched_files": 11,
+      "untouched_files": 49
     }
   },
   "interplay": {
@@ -4481,6 +4556,12 @@
         "class": "lifecycle",
         "relation": "writes-claims",
         "source": "attribution",
+        "target": "store:postgresql"
+      },
+      {
+        "class": "structure",
+        "relation": "materializes-in",
+        "source": "canonical-knowledge-schema",
         "target": "store:postgresql"
       },
       {
@@ -4945,6 +5026,20 @@
         "page": "canonical"
       },
       {
+        "component": "knowledge-graph-schema",
+        "evidence": [
+          {
+            "excerpt": "CREATE TABLE agent_economy.services (",
+            "line": 65,
+            "path": "migrations/0001_knowledge_graph.up.sql"
+          }
+        ],
+        "id": "canonical-knowledge-schema",
+        "kind": "schema",
+        "label": "Namespace-scoped canonical knowledge graph",
+        "page": "canonical"
+      },
+      {
         "component": "architecture-policy",
         "evidence": [
           {
@@ -5370,12 +5465,14 @@
       },
       {
         "components": [
-          "architecture-policy"
+          "architecture-policy",
+          "knowledge-graph-schema"
         ],
         "id": "canonical",
         "label": "Canonical knowledge",
         "roots": [
-          "reducers"
+          "reducers",
+          "canonical-knowledge-schema"
         ]
       },
       {
@@ -5405,8 +5502,8 @@
   },
   "inventory": {
     "declarations": 291,
-    "files": 57,
-    "lines": 12698
+    "files": 60,
+    "lines": 13620
   },
   "layers": [
     {
@@ -5447,7 +5544,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "96bc0215a3ea19d68df7d175cd36528d1c036f55474098ca1fb23bdf06b37b63",
+  "source_tree_sha256": "14ec815d8b12d09befadf4ec77866a7bb69408e7a617a36e3967130524335b22",
   "stores": {
     "count": 2,
     "items": [
