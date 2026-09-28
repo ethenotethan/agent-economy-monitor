@@ -1,0 +1,4 @@
+HTTP/1.1 402 Payment Required
+Content-Type: application/json
+
+{"error":"payment required"}
