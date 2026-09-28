@@ -90,6 +90,15 @@
       ]
     },
     {
+      "description": "Append-only shadow candidates, upstream aliases, independent verification signals, liveness history, and two-signal catalog promotion.",
+      "id": "shadow-catalog-schema",
+      "label": "Shadow catalog and promotion schema",
+      "layer": "canonical",
+      "patterns": [
+        "migrations/0003_shadow_catalog.*.sql"
+      ]
+    },
+    {
       "description": "Deterministic observation-only parser for MPP OpenAPI discovery metadata.",
       "id": "mpp-adapter",
       "label": "MPP discovery adapter",
@@ -158,7 +167,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, and content-addressed filesystem evidence adapter are implemented at this revision; production PostgreSQL and Google Cloud Storage clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, and content-addressed filesystem evidence adapter are implemented at this revision; production PostgreSQL and Google Cloud Storage clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -218,6 +227,25 @@
       ],
       "summary": "Immutable observations become replayable canonical events and provenance-bearing claims.",
       "title": "Evidence to canonical knowledge"
+    },
+    {
+      "authority": "specified",
+      "evidence": [
+        {
+          "path": "migrations/0003_shadow_catalog.up.sql",
+          "search": "CREATE TRIGGER catalog_promotions_two_signal_policy"
+        }
+      ],
+      "id": "discovery-to-verified-catalog",
+      "page": "canonical",
+      "steps": [
+        {"from": "external:x402scan", "relation": "seeds-aliases", "to": "shadow-catalog"},
+        {"from": "external:agentcash", "relation": "seeds-aliases", "to": "shadow-catalog"},
+        {"from": "external:web-discovery", "relation": "verifies", "to": "shadow-catalog"},
+        {"from": "shadow-catalog", "relation": "promotes-two-signal", "to": "store:postgresql"}
+      ],
+      "summary": "Untrusted upstream identities remain aliases while independently sourced signal kinds gate canonical catalog visibility.",
+      "title": "Discovery seeds to verified catalog"
     },
     {
       "authority": "specified",
@@ -306,6 +334,11 @@
     {"class": "structure", "relation": "implements-contract-of", "source": "filesystem-evidence-store", "target": "store:evidence"},
     {"class": "structure", "relation": "materializes-in", "source": "canonical-knowledge-schema", "target": "store:postgresql"},
     {"class": "structure", "relation": "materializes-in", "source": "operational-analytics-schema", "target": "store:postgresql"},
+    {"class": "boundary", "relation": "seeds-aliases", "source": "external:x402scan", "target": "shadow-catalog"},
+    {"class": "boundary", "relation": "seeds-aliases", "source": "external:agentcash", "target": "shadow-catalog"},
+    {"class": "boundary", "relation": "verifies", "source": "external:web-discovery", "target": "shadow-catalog"},
+    {"class": "lifecycle", "relation": "promotes-two-signal", "source": "shadow-catalog", "target": "store:postgresql"},
+    {"class": "structure", "relation": "materializes-in", "source": "shadow-catalog", "target": "store:postgresql"},
     {"class": "structure", "relation": "exposes", "source": "runtime-service", "target": "http:healthz"},
     {"class": "structure", "relation": "exposes", "source": "runtime-service", "target": "http:status"}
   ],
@@ -382,6 +415,7 @@
     {"authority": "specified", "component": "development-stack", "id": "local-development-stack", "kind": "deployment", "label": "Lean local PostgreSQL stack", "origin": {"path": "compose.yaml", "search": "image: postgres:17.6-alpine"}, "page": "delivery"},
     {"authority": "specified", "component": "knowledge-graph-schema", "id": "canonical-knowledge-schema", "kind": "schema", "label": "Namespace-scoped canonical knowledge graph", "origin": {"path": "migrations/0001_knowledge_graph.up.sql", "search": "CREATE TABLE agent_economy.services ("}, "page": "canonical"},
     {"authority": "specified", "component": "operational-analytics-schema", "id": "operational-analytics-schema", "kind": "schema", "label": "Partitioned observation and analytics schema", "origin": {"path": "migrations/0002_operational_analytics.up.sql", "search": "CREATE TABLE agent_economy.observations ("}, "page": "canonical"},
+    {"authority": "specified", "component": "shadow-catalog-schema", "id": "shadow-catalog", "kind": "schema", "label": "Shadow catalog and two-signal promotion", "origin": {"path": "migrations/0003_shadow_catalog.up.sql", "search": "CREATE TABLE agent_economy.catalog_candidates ("}, "page": "canonical"},
     {"authority": "specified", "component": "mpp-adapter", "id": "mpp-discovery-adapter", "kind": "adapter", "label": "MPP OpenAPI discovery adapter", "origin": {"path": "crates/mpp-adapter/src/lib.rs", "search": "impl ProtocolAdapter for MppDiscoveryAdapter"}, "page": "evidence"},
     {"authority": "specified", "component": "x402-adapter", "id": "protocol-adapters", "kind": "adapter", "label": "Stateless x402 discovery adapter", "origin": {"path": "crates/x402-adapter/src/lib.rs", "search": "pub struct X402Adapter"}, "page": "evidence"},
     {"authority": "specified", "component": "architecture-policy", "id": "reducers", "kind": "worker", "label": "Deterministic reducers", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Deterministic reducers"}, "page": "canonical"},
@@ -411,7 +445,7 @@
   "pages": [
     {"components": ["runtime"], "id": "experience", "label": "Private cockpit", "roots": ["cockpit"]},
     {"components": ["architecture-policy", "observation-contracts", "adapter-api", "evidence-store", "mpp-adapter", "x402-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "observation-contract", "adapter-boundary", "filesystem-evidence-store", "mpp-discovery-adapter", "protocol-adapters"]},
-    {"components": ["architecture-policy", "knowledge-graph-schema", "operational-analytics-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "canonical-knowledge-schema", "operational-analytics-schema"]},
+    {"components": ["architecture-policy", "knowledge-graph-schema", "operational-analytics-schema", "shadow-catalog-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "canonical-knowledge-schema", "operational-analytics-schema", "shadow-catalog"]},
     {"components": ["architecture-policy"], "id": "projection", "label": "Semantic projection", "roots": ["evidence-snapshot"]},
     {"components": ["runtime", "development-stack"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service", "local-development-stack"]}
   ],

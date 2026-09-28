@@ -305,7 +305,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5341
+      "line_count": 5375
     },
     {
       "declaration_count": 23,
@@ -336,7 +336,7 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 10,
+      "file_count": 11,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -347,12 +347,13 @@
         "tests/dev_stack_test.py",
         "tests/knowledge_graph_schema_test.py",
         "tests/observation_contracts.rs",
-        "tests/operational_analytics_schema_test.py"
+        "tests/operational_analytics_schema_test.py",
+        "tests/shadow_catalog_schema_test.py"
       ],
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 1757
+      "line_count": 2190
     },
     {
       "declaration_count": 0,
@@ -634,6 +635,21 @@
       "line_count": 1372
     },
     {
+      "declaration_count": 0,
+      "declarations": [],
+      "description": "Append-only shadow candidates, upstream aliases, independent verification signals, liveness history, and two-signal catalog promotion.",
+      "external": false,
+      "file_count": 2,
+      "files": [
+        "migrations/0003_shadow_catalog.down.sql",
+        "migrations/0003_shadow_catalog.up.sql"
+      ],
+      "id": "shadow-catalog-schema",
+      "label": "Shadow catalog and promotion schema",
+      "layer": "canonical",
+      "line_count": 369
+    },
+    {
       "declaration_count": 83,
       "declarations": [
         "AdapterError",
@@ -746,7 +762,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, and content-addressed filesystem evidence adapter are implemented at this revision; production PostgreSQL and Google Cloud Storage clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, and content-addressed filesystem evidence adapter are implemented at this revision; production PostgreSQL and Google Cloud Storage clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -1278,6 +1294,21 @@
         ]
       },
       {
+        "component": "shadow-catalog-schema",
+        "id": "shadow-catalog",
+        "kind": "schema",
+        "label": "Shadow catalog and two-signal promotion",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 7,
+            "path": "migrations/0003_shadow_catalog.up.sql",
+            "rule": "declared.topology",
+            "via": "CREATE TABLE agent_economy.catalog_candidates ("
+          }
+        ]
+      },
+      {
         "component": "architecture-policy",
         "id": "store:evidence",
         "kind": "store",
@@ -1450,7 +1481,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 430,
+        "line_count": 464,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -4094,6 +4125,34 @@
       },
       {
         "citations": 0,
+        "component": "shadow-catalog-schema",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 31,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0003_shadow_catalog.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "shadow-catalog-schema",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 338,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0003_shadow_catalog.up.sql",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
@@ -4540,6 +4599,20 @@
         "path": "tests/operational_analytics_schema_test.py",
         "semantic_citations": 0,
         "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 433,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/shadow_catalog_schema_test.py",
+        "semantic_citations": 0,
+        "touched": false
       }
     ],
     "passes": [
@@ -4551,10 +4624,10 @@
         "id": "ci.workflow"
       },
       {
-        "citations": 30,
+        "citations": 31,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
-        "files": 12,
+        "files": 13,
         "id": "declared.topology"
       },
       {
@@ -4583,22 +4656,22 @@
         "projection": 2,
         "projector": 1,
         "scheduler": 1,
-        "schema": 2,
+        "schema": 3,
         "service": 2,
         "store": 2,
         "surface": 1,
         "worker": 6
       },
-      "citations": 32,
+      "citations": 33,
       "declarations": 291,
-      "entities": 32,
-      "entities_with_origin": 32,
-      "files": 63,
+      "entities": 33,
+      "entities_with_origin": 33,
+      "files": 66,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
-      "touched_files": 12,
-      "untouched_files": 51
+      "touched_files": 13,
+      "untouched_files": 53
     }
   },
   "interplay": {
@@ -4694,6 +4767,12 @@
       },
       {
         "class": "boundary",
+        "relation": "seeds-aliases",
+        "source": "external:agentcash",
+        "target": "shadow-catalog"
+      },
+      {
+        "class": "boundary",
         "relation": "observes",
         "source": "external:rpc-provider",
         "target": "collector"
@@ -4706,9 +4785,21 @@
       },
       {
         "class": "boundary",
+        "relation": "verifies",
+        "source": "external:web-discovery",
+        "target": "shadow-catalog"
+      },
+      {
+        "class": "boundary",
         "relation": "seeds",
         "source": "external:x402scan",
         "target": "collector"
+      },
+      {
+        "class": "boundary",
+        "relation": "seeds-aliases",
+        "source": "external:x402scan",
+        "target": "shadow-catalog"
       },
       {
         "class": "structure",
@@ -4835,6 +4926,18 @@
         "relation": "publishes-approved",
         "source": "semantic-wiki",
         "target": "projection-mirror"
+      },
+      {
+        "class": "structure",
+        "relation": "materializes-in",
+        "source": "shadow-catalog",
+        "target": "store:postgresql"
+      },
+      {
+        "class": "lifecycle",
+        "relation": "promotes-two-signal",
+        "source": "shadow-catalog",
+        "target": "store:postgresql"
       },
       {
         "class": "interplay",
@@ -4985,6 +5088,42 @@
         ],
         "summary": "One Rust image serves the scale-to-zero dashboard and bounded scheduled workers without creating another product authority.",
         "title": "Cloud runtime to dashboard"
+      },
+      {
+        "authority": "specified",
+        "evidence": [
+          {
+            "excerpt": "CREATE TRIGGER catalog_promotions_two_signal_policy",
+            "line": 199,
+            "path": "migrations/0003_shadow_catalog.up.sql"
+          }
+        ],
+        "id": "discovery-to-verified-catalog",
+        "page": "canonical",
+        "steps": [
+          {
+            "from": "external:x402scan",
+            "relation": "seeds-aliases",
+            "to": "shadow-catalog"
+          },
+          {
+            "from": "external:agentcash",
+            "relation": "seeds-aliases",
+            "to": "shadow-catalog"
+          },
+          {
+            "from": "external:web-discovery",
+            "relation": "verifies",
+            "to": "shadow-catalog"
+          },
+          {
+            "from": "shadow-catalog",
+            "relation": "promotes-two-signal",
+            "to": "store:postgresql"
+          }
+        ],
+        "summary": "Untrusted upstream identities remain aliases while independently sourced signal kinds gate canonical catalog visibility.",
+        "title": "Discovery seeds to verified catalog"
       },
       {
         "authority": "specified",
@@ -5498,6 +5637,20 @@
         "page": "projection"
       },
       {
+        "component": "shadow-catalog-schema",
+        "evidence": [
+          {
+            "excerpt": "CREATE TABLE agent_economy.catalog_candidates (",
+            "line": 7,
+            "path": "migrations/0003_shadow_catalog.up.sql"
+          }
+        ],
+        "id": "shadow-catalog",
+        "kind": "schema",
+        "label": "Shadow catalog and two-signal promotion",
+        "page": "canonical"
+      },
+      {
         "component": "architecture-policy",
         "evidence": [
           {
@@ -5561,14 +5714,16 @@
         "components": [
           "architecture-policy",
           "knowledge-graph-schema",
-          "operational-analytics-schema"
+          "operational-analytics-schema",
+          "shadow-catalog-schema"
         ],
         "id": "canonical",
         "label": "Canonical knowledge",
         "roots": [
           "reducers",
           "canonical-knowledge-schema",
-          "operational-analytics-schema"
+          "operational-analytics-schema",
+          "shadow-catalog"
         ]
       },
       {
@@ -5598,8 +5753,8 @@
   },
   "inventory": {
     "declarations": 291,
-    "files": 63,
-    "lines": 14612
+    "files": 66,
+    "lines": 15448
   },
   "layers": [
     {
@@ -5640,7 +5795,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "c68d6f7e1493e8840203f00f4bec2c5958924163c5aca7be0cfab18c1a6b0634",
+  "source_tree_sha256": "719aa3776601ea04c737a32578adcaa5144e26edbcc715bb4ed50c176512e06f",
   "stores": {
     "count": 2,
     "items": [
