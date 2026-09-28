@@ -340,6 +340,8 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: Verify
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: ./scripts/verify
       - name: Qualify knowledge graph migration
         env:

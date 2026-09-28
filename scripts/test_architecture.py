@@ -214,6 +214,10 @@ class ArchitectureCompilerTests(unittest.TestCase):
         workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
         self.assertIn('RUN_KNOWLEDGE_GRAPH_LIVE: "1"', workflow)
         self.assertIn('RUN_OPERATIONAL_ANALYTICS_LIVE: "1"', workflow)
+        self.assertIn(
+            "      - name: Verify\n        env:\n          GH_TOKEN: ${{ github.token }}\n        run: ./scripts/verify",
+            workflow,
+        )
 
     def test_implemented_local_storage_is_not_reported_as_unresolved(self) -> None:
         architecture = load_compiler()

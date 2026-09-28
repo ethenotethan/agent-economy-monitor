@@ -305,7 +305,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5335
+      "line_count": 5341
     },
     {
       "declaration_count": 23,
@@ -352,7 +352,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 1755
+      "line_count": 1757
     },
     {
       "declaration_count": 0,
@@ -1338,7 +1338,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 44,
+        "line_count": 46,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -4097,7 +4097,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1361,
+        "line_count": 1363,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -4153,7 +4153,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1482,
+        "line_count": 1486,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -5599,7 +5599,7 @@
   "inventory": {
     "declarations": 291,
     "files": 63,
-    "lines": 14604
+    "lines": 14612
   },
   "layers": [
     {
@@ -5640,7 +5640,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "db62c8e9636de7c835203a9acb457dc067d3aa4fc48ba975141d2248153f3231",
+  "source_tree_sha256": "c68d6f7e1493e8840203f00f4bec2c5958924163c5aca7be0cfab18c1a6b0634",
   "stores": {
     "count": 2,
     "items": [
