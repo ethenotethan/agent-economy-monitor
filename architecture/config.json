@@ -77,7 +77,16 @@
       "label": "Canonical knowledge schema",
       "layer": "canonical",
       "patterns": [
-        "migrations/**"
+        "migrations/0001_knowledge_graph.*.sql"
+      ]
+    },
+    {
+      "description": "Partitioned PostgreSQL observations, canonical events, settlements, leases, feature windows, analytical read models, and measured scale thresholds.",
+      "id": "operational-analytics-schema",
+      "label": "Observation and analytics schema",
+      "layer": "canonical",
+      "patterns": [
+        "migrations/0002_operational_analytics.*.sql"
       ]
     },
     {
@@ -149,7 +158,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, and content-addressed filesystem evidence adapter are implemented at this revision; production PostgreSQL and Google Cloud Storage clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, and content-addressed filesystem evidence adapter are implemented at this revision; production PostgreSQL and Google Cloud Storage clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -296,6 +305,7 @@
     {"class": "structure", "relation": "initializes", "source": "local-development-stack", "target": "filesystem-evidence-store"},
     {"class": "structure", "relation": "implements-contract-of", "source": "filesystem-evidence-store", "target": "store:evidence"},
     {"class": "structure", "relation": "materializes-in", "source": "canonical-knowledge-schema", "target": "store:postgresql"},
+    {"class": "structure", "relation": "materializes-in", "source": "operational-analytics-schema", "target": "store:postgresql"},
     {"class": "structure", "relation": "exposes", "source": "runtime-service", "target": "http:healthz"},
     {"class": "structure", "relation": "exposes", "source": "runtime-service", "target": "http:status"}
   ],
@@ -371,6 +381,7 @@
     {"authority": "specified", "component": "evidence-store", "id": "filesystem-evidence-store", "kind": "adapter", "label": "Content-addressed filesystem evidence store", "origin": {"path": "crates/evidence-store/src/lib.rs", "search": "pub struct FilesystemEvidenceStore"}, "page": "evidence"},
     {"authority": "specified", "component": "development-stack", "id": "local-development-stack", "kind": "deployment", "label": "Lean local PostgreSQL stack", "origin": {"path": "compose.yaml", "search": "image: postgres:17.6-alpine"}, "page": "delivery"},
     {"authority": "specified", "component": "knowledge-graph-schema", "id": "canonical-knowledge-schema", "kind": "schema", "label": "Namespace-scoped canonical knowledge graph", "origin": {"path": "migrations/0001_knowledge_graph.up.sql", "search": "CREATE TABLE agent_economy.services ("}, "page": "canonical"},
+    {"authority": "specified", "component": "operational-analytics-schema", "id": "operational-analytics-schema", "kind": "schema", "label": "Partitioned observation and analytics schema", "origin": {"path": "migrations/0002_operational_analytics.up.sql", "search": "CREATE TABLE agent_economy.observations ("}, "page": "canonical"},
     {"authority": "specified", "component": "mpp-adapter", "id": "mpp-discovery-adapter", "kind": "adapter", "label": "MPP OpenAPI discovery adapter", "origin": {"path": "crates/mpp-adapter/src/lib.rs", "search": "impl ProtocolAdapter for MppDiscoveryAdapter"}, "page": "evidence"},
     {"authority": "specified", "component": "x402-adapter", "id": "protocol-adapters", "kind": "adapter", "label": "Stateless x402 discovery adapter", "origin": {"path": "crates/x402-adapter/src/lib.rs", "search": "pub struct X402Adapter"}, "page": "evidence"},
     {"authority": "specified", "component": "architecture-policy", "id": "reducers", "kind": "worker", "label": "Deterministic reducers", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Deterministic reducers"}, "page": "canonical"},
@@ -400,7 +411,7 @@
   "pages": [
     {"components": ["runtime"], "id": "experience", "label": "Private cockpit", "roots": ["cockpit"]},
     {"components": ["architecture-policy", "observation-contracts", "adapter-api", "evidence-store", "mpp-adapter", "x402-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "observation-contract", "adapter-boundary", "filesystem-evidence-store", "mpp-discovery-adapter", "protocol-adapters"]},
-    {"components": ["architecture-policy", "knowledge-graph-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "canonical-knowledge-schema"]},
+    {"components": ["architecture-policy", "knowledge-graph-schema", "operational-analytics-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "canonical-knowledge-schema", "operational-analytics-schema"]},
     {"components": ["architecture-policy"], "id": "projection", "label": "Semantic projection", "roots": ["evidence-snapshot"]},
     {"components": ["runtime", "development-stack"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service", "local-development-stack"]}
   ],
