@@ -1,0 +1,1 @@
+{"openapi":"3.1.0","paths":{"/premium":{"get":{"x-x402":{"x402Version":2,"accepts":[{"scheme":"exact","network":"eip155:8453","amount":"1100","asset":"USDC","payTo":"0x3333333333333333333333333333333333333333"}]}}}}}

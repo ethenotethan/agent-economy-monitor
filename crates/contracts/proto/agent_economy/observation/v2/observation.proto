@@ -19,12 +19,18 @@ message X402EventKey {
   string payment_identifier = 1;
   string request_fingerprint = 2;
   string scope = 3;
+  string discovery_fingerprint = 4;
 }
 
 message X402Observation {
   X402EventKey event_key = 1;
   string asset = 2;
   string amount_atomic = 3;
+  uint32 protocol_version = 4;
+  string scheme = 5;
+  string network = 6;
+  string pay_to = 7;
+  string resource = 8;
 }
 
 message ObservationEnvelope {

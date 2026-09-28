@@ -120,6 +120,23 @@ impl X402EventKey {
             payment_identifier,
             request_fingerprint,
             scope: required(scope.into(), "x402 scope")?,
+            discovery_fingerprint: String::new(),
+        }))
+    }
+
+    pub fn discovery(
+        request_fingerprint: impl Into<String>,
+        scope: impl Into<String>,
+    ) -> Result<Self, ObservationError> {
+        let request_fingerprint = request_fingerprint.into();
+        if !valid_content_id(&request_fingerprint) {
+            return Err(ObservationError::Invalid("x402 request fingerprint"));
+        }
+        Ok(Self(wire::X402EventKey {
+            payment_identifier: String::new(),
+            discovery_fingerprint: request_fingerprint.clone(),
+            request_fingerprint,
+            scope: required(scope.into(), "x402 scope")?,
         }))
     }
 }
@@ -222,12 +239,48 @@ impl X402Observation {
         asset: impl Into<String>,
         amount_atomic: impl Into<String>,
     ) -> Result<Self, ObservationError> {
+        if event_key.0.payment_identifier.is_empty() {
+            return Err(ObservationError::Invalid("x402 protocol fields"));
+        }
         let amount_atomic = amount_atomic.into();
         validate_amount(&amount_atomic, "x402 atomic amount")?;
         Ok(Self(wire::X402Observation {
             event_key: Some(event_key.0),
             asset: required(asset.into(), "x402 asset")?,
             amount_atomic,
+            protocol_version: 0,
+            scheme: String::new(),
+            network: String::new(),
+            pay_to: String::new(),
+            resource: String::new(),
+        }))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn discovery(
+        event_key: X402EventKey,
+        asset: impl Into<String>,
+        amount_atomic: impl Into<String>,
+        protocol_version: u32,
+        scheme: impl Into<String>,
+        network: impl Into<String>,
+        pay_to: impl Into<String>,
+        resource: impl Into<String>,
+    ) -> Result<Self, ObservationError> {
+        if !matches!(protocol_version, 1 | 2) {
+            return Err(ObservationError::Invalid("x402 protocol version"));
+        }
+        let amount_atomic = amount_atomic.into();
+        validate_amount(&amount_atomic, "x402 atomic amount")?;
+        Ok(Self(wire::X402Observation {
+            event_key: Some(event_key.0),
+            asset: required(asset.into(), "x402 asset")?,
+            amount_atomic,
+            protocol_version,
+            scheme: required(scheme.into(), "x402 scheme")?,
+            network: required(network.into(), "x402 network")?,
+            pay_to: required(pay_to.into(), "x402 pay to")?,
+            resource: required(resource.into(), "x402 resource")?,
         }))
     }
 
@@ -237,6 +290,26 @@ impl X402Observation {
 
     pub fn amount_atomic(&self) -> &str {
         &self.0.amount_atomic
+    }
+
+    pub fn protocol_version(&self) -> u32 {
+        self.0.protocol_version
+    }
+
+    pub fn scheme(&self) -> &str {
+        &self.0.scheme
+    }
+
+    pub fn network(&self) -> &str {
+        &self.0.network
+    }
+
+    pub fn pay_to(&self) -> &str {
+        &self.0.pay_to
+    }
+
+    pub fn resource(&self) -> &str {
+        &self.0.resource
     }
 }
 
@@ -558,11 +631,19 @@ fn protocol_event_key(key: &wire::CanonicalEventKey) -> Result<ProtocolEventKey,
         .ok_or_else(|| ObservationError::Decode("protocol event key is missing".into()))?
     {
         wire::canonical_event_key::Protocol::X402(value) => {
-            Ok(ProtocolEventKey::X402(X402EventKey::payment_identifier(
-                value.payment_identifier.clone(),
-                value.request_fingerprint.clone(),
-                value.scope.clone(),
-            )?))
+            validate_x402_event_key(value)?;
+            if value.payment_identifier.is_empty() {
+                Ok(ProtocolEventKey::X402(X402EventKey::discovery(
+                    value.discovery_fingerprint.clone(),
+                    value.scope.clone(),
+                )?))
+            } else {
+                Ok(ProtocolEventKey::X402(X402EventKey::payment_identifier(
+                    value.payment_identifier.clone(),
+                    value.request_fingerprint.clone(),
+                    value.scope.clone(),
+                )?))
+            }
         }
         wire::canonical_event_key::Protocol::Mpp(value) => {
             Ok(ProtocolEventKey::Mpp(MppEventKey::new(
@@ -615,21 +696,31 @@ fn validate_envelope(envelope: &wire::ObservationEnvelope) -> Result<(), Observa
                 .event_key
                 .as_ref()
                 .ok_or_else(|| ObservationError::Decode("x402 event key is missing".into()))?;
-            required(key.payment_identifier.clone(), "x402 payment identifier")?;
-            if !(16..=128).contains(&key.payment_identifier.len())
-                || !key
-                    .payment_identifier
-                    .bytes()
-                    .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
-            {
-                return Err(ObservationError::Invalid("x402 payment identifier"));
-            }
-            if !valid_content_id(&key.request_fingerprint) {
-                return Err(ObservationError::Invalid("x402 request fingerprint"));
-            }
-            required(key.scope.clone(), "x402 scope")?;
+            validate_x402_event_key(key)?;
             required(value.asset.clone(), "x402 asset")?;
             validate_amount(&value.amount_atomic, "x402 atomic amount")?;
+            if value.protocol_version == 0 {
+                if key.payment_identifier.is_empty()
+                    || [
+                        value.scheme.as_str(),
+                        value.network.as_str(),
+                        value.pay_to.as_str(),
+                        value.resource.as_str(),
+                    ]
+                    .iter()
+                    .any(|field| !field.is_empty())
+                {
+                    return Err(ObservationError::Invalid("x402 protocol fields"));
+                }
+            } else {
+                if !matches!(value.protocol_version, 1 | 2) {
+                    return Err(ObservationError::Invalid("x402 protocol version"));
+                }
+                required(value.scheme.clone(), "x402 scheme")?;
+                required(value.network.clone(), "x402 network")?;
+                required(value.pay_to.clone(), "x402 pay to")?;
+                required(value.resource.clone(), "x402 resource")?;
+            }
         }
         wire::observation_envelope::Protocol::Mpp(value) => {
             let key = value
@@ -668,6 +759,30 @@ fn validate_envelope(envelope: &wire::ObservationEnvelope) -> Result<(), Observa
             }
         }
     }
+    Ok(())
+}
+
+fn validate_x402_event_key(key: &wire::X402EventKey) -> Result<(), ObservationError> {
+    if key.payment_identifier.is_empty() {
+        if !valid_content_id(&key.discovery_fingerprint)
+            || key.request_fingerprint != key.discovery_fingerprint
+        {
+            return Err(ObservationError::Invalid("x402 event key mode"));
+        }
+    } else if !key.discovery_fingerprint.is_empty() {
+        return Err(ObservationError::Invalid("x402 event key mode"));
+    } else if !(16..=128).contains(&key.payment_identifier.len())
+        || !key
+            .payment_identifier
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+    {
+        return Err(ObservationError::Invalid("x402 payment identifier"));
+    }
+    if !valid_content_id(&key.request_fingerprint) {
+        return Err(ObservationError::Invalid("x402 request fingerprint"));
+    }
+    required(key.scope.clone(), "x402 scope")?;
     Ok(())
 }
 
@@ -835,9 +950,15 @@ mod tests {
                             "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                                 .into(),
                         scope: "merchant-1:/paid/weather".into(),
+                        discovery_fingerprint: String::new(),
                     }),
                     asset: "USDC".into(),
                     amount_atomic: "1000".into(),
+                    protocol_version: 0,
+                    scheme: String::new(),
+                    network: String::new(),
+                    pay_to: String::new(),
+                    resource: String::new(),
                 },
             )),
             future_note: "new additive field".into(),
@@ -852,5 +973,158 @@ mod tests {
 
         assert_eq!(decoded_by_v1.id(), envelope.observation_id);
         assert_eq!(decoded_by_v1.encode(), encoded);
+    }
+
+    #[test]
+    fn x402_event_key_modes_reject_ambiguous_cross_fields() {
+        let valid_fingerprint =
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let other_fingerprint =
+            "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+        for event_key in [
+            wire::X402EventKey {
+                payment_identifier: "pay_123456789012".into(),
+                request_fingerprint: valid_fingerprint.into(),
+                scope: "merchant-1:/paid/weather".into(),
+                discovery_fingerprint: other_fingerprint.into(),
+            },
+            wire::X402EventKey {
+                payment_identifier: String::new(),
+                request_fingerprint: valid_fingerprint.into(),
+                scope: "merchant-1:/paid/weather".into(),
+                discovery_fingerprint: other_fingerprint.into(),
+            },
+        ] {
+            let mut envelope = wire::ObservationEnvelope {
+                schema_version: SCHEMA_VERSION,
+                observation_id: String::new(),
+                provenance: Some(wire::Provenance {
+                    source_id: "runtime:test".into(),
+                    observed_at_unix_ms: 1_790_426_627_000,
+                    parser_version: "x402-adapter@1".into(),
+                }),
+                evidence: Some(wire::EvidenceRef {
+                    algorithm: "sha256".into(),
+                    digest: hex::encode(Sha256::digest(b"evidence")),
+                    media_type: "application/http".into(),
+                    byte_length: 8,
+                }),
+                protocol: Some(wire::observation_envelope::Protocol::X402(
+                    wire::X402Observation {
+                        event_key: Some(event_key),
+                        asset: "USDC".into(),
+                        amount_atomic: "1".into(),
+                        protocol_version: 0,
+                        scheme: String::new(),
+                        network: String::new(),
+                        pay_to: String::new(),
+                        resource: String::new(),
+                    },
+                )),
+            };
+            envelope.observation_id = content_id(&envelope);
+
+            assert!(matches!(
+                Observation::decode(&envelope.encode_to_vec()),
+                Err(ObservationError::Invalid("x402 event key mode"))
+            ));
+        }
+    }
+
+    #[test]
+    fn canonical_event_decode_rejects_ambiguous_x402_key_fields() {
+        let request_fingerprint =
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let key = X402EventKey::payment_identifier(
+            "pay_123456789012",
+            request_fingerprint,
+            "merchant-1:/paid/weather",
+        )
+        .expect("valid key");
+        let observation = Observation::new(
+            Provenance::new("runtime:test", 1_790_426_627_000, "x402-adapter@1")
+                .expect("valid provenance"),
+            EvidenceRef::sha256(b"evidence", "application/http").expect("valid evidence"),
+            ProtocolObservation::X402(
+                X402Observation::new(key.clone(), "USDC", "1").expect("valid observation"),
+            ),
+        )
+        .expect("valid envelope");
+        let event = wire::CanonicalEvent {
+            schema_version: SCHEMA_VERSION,
+            event_id: ProtocolEventKey::X402(key).canonical_id(),
+            event_key: Some(wire::CanonicalEventKey {
+                protocol: Some(wire::canonical_event_key::Protocol::X402(
+                    wire::X402EventKey {
+                        payment_identifier: "pay_123456789012".into(),
+                        request_fingerprint: request_fingerprint.into(),
+                        scope: "merchant-1:/paid/weather".into(),
+                        discovery_fingerprint: request_fingerprint.into(),
+                    },
+                )),
+            }),
+            supporting_observation_ids: vec![observation.id().into()],
+        };
+
+        assert!(matches!(
+            CanonicalEvent::decode(&event.encode_to_vec(), &[observation]),
+            Err(ObservationError::Invalid("x402 event key mode"))
+        ));
+    }
+
+    #[test]
+    fn legacy_x402_observation_rejects_discovery_only_fields() {
+        let fingerprint = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let mut envelope = wire::ObservationEnvelope {
+            schema_version: SCHEMA_VERSION,
+            observation_id: String::new(),
+            provenance: Some(wire::Provenance {
+                source_id: "runtime:test".into(),
+                observed_at_unix_ms: 1_790_426_627_000,
+                parser_version: "x402-adapter@1".into(),
+            }),
+            evidence: Some(wire::EvidenceRef {
+                algorithm: "sha256".into(),
+                digest: hex::encode(Sha256::digest(b"evidence")),
+                media_type: "application/http".into(),
+                byte_length: 8,
+            }),
+            protocol: Some(wire::observation_envelope::Protocol::X402(
+                wire::X402Observation {
+                    event_key: Some(wire::X402EventKey {
+                        payment_identifier: "pay_123456789012".into(),
+                        request_fingerprint: fingerprint.into(),
+                        scope: "merchant-1:/paid/weather".into(),
+                        discovery_fingerprint: String::new(),
+                    }),
+                    asset: "USDC".into(),
+                    amount_atomic: "1".into(),
+                    protocol_version: 0,
+                    scheme: "exact".into(),
+                    network: String::new(),
+                    pay_to: String::new(),
+                    resource: String::new(),
+                },
+            )),
+        };
+        envelope.observation_id = content_id(&envelope);
+
+        assert!(matches!(
+            Observation::decode(&envelope.encode_to_vec()),
+            Err(ObservationError::Invalid("x402 protocol fields"))
+        ));
+    }
+
+    #[test]
+    fn legacy_x402_observation_rejects_discovery_event_key() {
+        let fingerprint = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let key = X402EventKey::discovery(fingerprint, "https://merchant.example/premium")
+            .expect("valid discovery key");
+
+        assert!(matches!(
+            X402Observation::new(key, "USDC", "1"),
+            Err(ObservationError::Invalid("x402 protocol fields"))
+        ));
     }
 }
