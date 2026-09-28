@@ -1,0 +1,20 @@
+[package]
+name = "agent-economy-evidence-store"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Backend-neutral immutable evidence storage contract"
+
+[dependencies]
+cap-fs-ext = "=3.4.6"
+cap-primitives = "=3.4.6"
+cap-std = "=3.4.6"
+libc = "0.2"
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3"
+
+[[test]]
+name = "filesystem_store"
+path = "tests/filesystem_store.rs"

@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+compose_file="$root_dir/compose.yaml"
+env_file="${DEV_STACK_ENV_FILE:-$root_dir/.dev-stack.env}"
+evidence_directory="${EVIDENCE_DIRECTORY:-$root_dir/.local/evidence}"
+action="${1:-up}"
+
+reject_symlink_components() {
+    local path="$1" label="$2" absolute current component
+    local -a components
+    if [[ "$path" = /* ]]; then
+        absolute="$path"
+    else
+        absolute="$PWD/$path"
+    fi
+    IFS='/' read -r -a components <<<"${absolute#/}"
+    current="/"
+    for component in "${components[@]}"; do
+        case "$component" in
+            ""|.) continue ;;
+            ..)
+                current="$(dirname "$current")"
+                continue
+                ;;
+        esac
+        current="${current%/}/$component"
+        if [[ -L "$current" ]]; then
+            echo "$label path must not contain symlinks: $current" >&2
+            exit 1
+        fi
+    done
+}
+
+if ! command -v docker >/dev/null 2>&1; then
+    echo "docker is required to run the local PostgreSQL stack" >&2
+    exit 1
+fi
+
+create_env_file() {
+    local env_directory temporary_file postgres_password
+    if ! command -v openssl >/dev/null 2>&1; then
+        echo "openssl is required to generate local PostgreSQL credentials" >&2
+        exit 1
+    fi
+    env_directory="$(dirname "$env_file")"
+    mkdir -p "$env_directory"
+    postgres_password="$(openssl rand -hex 24)"
+    temporary_file="$(mktemp "$env_directory/.dev-stack.env.XXXXXX")"
+    chmod 600 "$temporary_file"
+    printf 'POSTGRES_PASSWORD=%s\n' "$postgres_password" >"$temporary_file"
+    mv "$temporary_file" "$env_file"
+    chmod 600 "$env_file"
+    echo "created local PostgreSQL credentials at $env_file"
+}
+
+reject_symlink_components "$env_file" "local PostgreSQL credential"
+if [[ ! -f "$env_file" ]]; then
+    create_env_file
+fi
+if [[ -L "$env_file" || ! -f "$env_file" ]]; then
+    echo "local PostgreSQL credential path must be a regular file, not a symlink: $env_file" >&2
+    exit 1
+fi
+chmod 600 "$env_file"
+reject_symlink_components "$evidence_directory" "local evidence"
+if [[ -e "$evidence_directory" ]]; then
+    if [[ ! -d "$evidence_directory" || -L "$evidence_directory" ]]; then
+        echo "local evidence path must be a directory, not a symlink: $evidence_directory" >&2
+        exit 1
+    fi
+else
+    mkdir -p "$evidence_directory"
+    chmod 700 "$evidence_directory"
+fi
+if mode="$(stat -c '%a' "$evidence_directory" 2>/dev/null)"; then
+    :
+else
+    mode="$(stat -f '%Lp' "$evidence_directory")"
+fi
+if [[ "$mode" != "700" ]]; then
+    echo "local evidence directory must have mode 0700: $evidence_directory" >&2
+    exit 1
+fi
+
+compose_command=(env -u POSTGRES_PASSWORD docker compose)
+"${compose_command[@]}" version >/dev/null
+compose=("${compose_command[@]}" --env-file "$env_file" -f "$compose_file")
+
+case "$action" in
+    up)
+        "${compose[@]}" up --detach --wait
+        echo "local evidence directory: $evidence_directory"
+        ;;
+    down)
+        "${compose[@]}" down
+        ;;
+    status)
+        "${compose[@]}" ps
+        ;;
+    logs)
+        "${compose[@]}" logs --follow
+        ;;
+    reset)
+        "${compose[@]}" down --volumes
+        echo "PostgreSQL volume removed; immutable evidence retained at $evidence_directory"
+        ;;
+    *)
+        echo "usage: $0 [up|down|status|logs|reset]" >&2
+        exit 64
+        ;;
+esac

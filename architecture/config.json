@@ -53,6 +53,25 @@
       ]
     },
     {
+      "description": "Backend-neutral immutable evidence contract and content-addressed filesystem development adapter.",
+      "id": "evidence-store",
+      "label": "Evidence storage contract",
+      "layer": "evidence",
+      "patterns": [
+        "crates/evidence-store/**"
+      ]
+    },
+    {
+      "description": "One-command lean local data plane with persistent ready PostgreSQL and filesystem evidence initialization.",
+      "id": "development-stack",
+      "label": "Local development stack",
+      "layer": "delivery",
+      "patterns": [
+        "compose.yaml",
+        "scripts/dev-stack"
+      ]
+    },
+    {
       "description": "Deterministic observation-only parser for MPP OpenAPI discovery metadata.",
       "id": "mpp-adapter",
       "label": "MPP discovery adapter",
@@ -121,7 +140,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "Only the Axum status surface, observation contracts, and deterministic MPP and x402 discovery adapters are implemented at this revision; the lean PostgreSQL and Google Cloud Storage data plane and other product pipeline nodes are specified and explicitly reported as unresolved implementation coverage.",
+      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, local PostgreSQL development stack, and content-addressed filesystem evidence adapter are implemented at this revision; production PostgreSQL and Google Cloud Storage clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -264,6 +283,9 @@
     {"class": "structure", "relation": "hosts", "source": "cloud-run-api", "target": "query-api"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "collector"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "reducers"},
+    {"class": "structure", "relation": "provisions", "source": "local-development-stack", "target": "store:postgresql"},
+    {"class": "structure", "relation": "initializes", "source": "local-development-stack", "target": "filesystem-evidence-store"},
+    {"class": "structure", "relation": "implements-contract-of", "source": "filesystem-evidence-store", "target": "store:evidence"},
     {"class": "structure", "relation": "exposes", "source": "runtime-service", "target": "http:healthz"},
     {"class": "structure", "relation": "exposes", "source": "runtime-service", "target": "http:status"}
   ],
@@ -303,6 +325,7 @@
     "architecture/config.json",
     "architecture/contract/*.json",
     "architecture/contract/*.py",
+    "compose.yaml",
     "crates/**/Cargo.toml",
     "crates/**/*.http",
     "crates/**/*.json",
@@ -312,11 +335,13 @@
     "scripts/build_architecture.py",
     "scripts/build_architecture_site.py",
     "scripts/check_architecture_contract.py",
+    "scripts/dev-stack",
     "scripts/test_architecture.py",
     "scripts/test_architecture_site.py",
     "scripts/verify",
     "site/*",
     "src/**/*.rs",
+    "tests/**/*_test.py",
     "tests/**/*.rs"
   ],
   "layers": [
@@ -332,6 +357,8 @@
     {"authority": "specified", "component": "architecture-policy", "id": "collector", "kind": "worker", "label": "Collectors", "origin": {"path": "docs/ARCHITECTURE.md", "search": "S[External RPC"}, "page": "evidence"},
     {"authority": "specified", "component": "observation-contracts", "id": "observation-contract", "kind": "contract", "label": "Immutable observation contract", "origin": {"path": "crates/contracts/src/lib.rs", "search": "pub struct Observation {"}, "page": "evidence"},
     {"authority": "specified", "component": "adapter-api", "id": "adapter-boundary", "kind": "boundary", "label": "Observation-only adapter API", "origin": {"path": "crates/adapter-api/src/lib.rs", "search": "pub trait ProtocolAdapter"}, "page": "evidence"},
+    {"authority": "specified", "component": "evidence-store", "id": "filesystem-evidence-store", "kind": "adapter", "label": "Content-addressed filesystem evidence store", "origin": {"path": "crates/evidence-store/src/lib.rs", "search": "pub struct FilesystemEvidenceStore"}, "page": "evidence"},
+    {"authority": "specified", "component": "development-stack", "id": "local-development-stack", "kind": "deployment", "label": "Lean local PostgreSQL stack", "origin": {"path": "compose.yaml", "search": "image: postgres:17.6-alpine"}, "page": "delivery"},
     {"authority": "specified", "component": "mpp-adapter", "id": "mpp-discovery-adapter", "kind": "adapter", "label": "MPP OpenAPI discovery adapter", "origin": {"path": "crates/mpp-adapter/src/lib.rs", "search": "impl ProtocolAdapter for MppDiscoveryAdapter"}, "page": "evidence"},
     {"authority": "specified", "component": "x402-adapter", "id": "protocol-adapters", "kind": "adapter", "label": "Stateless x402 discovery adapter", "origin": {"path": "crates/x402-adapter/src/lib.rs", "search": "pub struct X402Adapter"}, "page": "evidence"},
     {"authority": "specified", "component": "architecture-policy", "id": "reducers", "kind": "worker", "label": "Deterministic reducers", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Deterministic reducers"}, "page": "canonical"},
@@ -360,10 +387,10 @@
   ],
   "pages": [
     {"components": ["runtime"], "id": "experience", "label": "Private cockpit", "roots": ["cockpit"]},
-    {"components": ["architecture-policy", "observation-contracts", "adapter-api", "mpp-adapter", "x402-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "observation-contract", "adapter-boundary", "mpp-discovery-adapter", "protocol-adapters"]},
+    {"components": ["architecture-policy", "observation-contracts", "adapter-api", "evidence-store", "mpp-adapter", "x402-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "observation-contract", "adapter-boundary", "filesystem-evidence-store", "mpp-discovery-adapter", "protocol-adapters"]},
     {"components": ["architecture-policy"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers"]},
     {"components": ["architecture-policy"], "id": "projection", "label": "Semantic projection", "roots": ["evidence-snapshot"]},
-    {"components": ["runtime"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service"]}
+    {"components": ["runtime", "development-stack"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service", "local-development-stack"]}
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
@@ -375,6 +402,6 @@
   "unresolved": [
     {"id": "rust.runtime-mpp-adapter", "reason": "MPP OpenAPI and x402 discovery adapters exist, but no runtime MPP challenge parser exists yet."},
     {"id": "rust.workers", "reason": "No collect/reduce/classify/enrich/project-wiki process mode exists yet; worker topology is specified only."},
-    {"id": "runtime.storage-clients", "reason": "No Google Cloud Storage or PostgreSQL client exists yet; storage boundaries are specified only."}
+    {"id": "runtime.storage-clients", "reason": "The filesystem adapter implements the production evidence storage contract for local development; no Google Cloud Storage or PostgreSQL client exists yet."}
   ]
 }

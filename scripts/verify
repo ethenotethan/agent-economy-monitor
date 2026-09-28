@@ -3,6 +3,7 @@ set -euo pipefail
 
 python3 -m unittest scripts.test_architecture -v
 python3 -m unittest scripts.test_architecture_site -v
+python3 -m unittest discover -s tests -p '*_test.py' -v
 python3 scripts/check_architecture_contract.py
 python3 scripts/build_architecture.py --check
 

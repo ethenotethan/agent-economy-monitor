@@ -50,6 +50,20 @@ PostgreSQL transactional job leases own distributed record assignment. Workers c
 - Local semantic wiki: narrative projection authority only; separate from the research and life wikis
 - Published projection mirror: an allowlisted, read-only dashboard copy stored in Google Cloud Storage and indexed in PostgreSQL; never a canonical evidence source
 
+### Local development data plane
+
+Local development runs only PostgreSQL as an always-on service. `./scripts/dev-stack`
+creates a restricted local credential file, starts the persistent PostgreSQL container,
+waits for `pg_isready`, and initializes a restricted filesystem evidence directory. No
+broker, analytical database, or object-storage emulator runs in v1 development.
+
+The backend-neutral Rust evidence contract requires the filesystem adapter and future
+Google Cloud Storage implementation to use the same create-only and replay semantics. An
+object name is derived from source, observation date, and SHA-256. Filesystem publication uses an atomic
+create-without-replacement operation, matching Google Cloud Storage's
+`ifGenerationMatch=0`; an existing object is accepted only when its bytes match the
+addressed digest. Every read verifies SHA-256 before returning evidence to a parser.
+
 ## Partitioning
 
 - Evidence objects: content hash with source and observation-date prefixes

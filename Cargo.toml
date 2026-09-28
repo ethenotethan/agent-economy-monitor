@@ -9,6 +9,7 @@ description = "Private intelligence cockpit for x402 and MPP commerce activity"
 members = [
     "crates/adapter-api",
     "crates/contracts",
+    "crates/evidence-store",
     "crates/mpp-adapter",
     "crates/x402-adapter",
 ]
