@@ -303,7 +303,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5247
+      "line_count": 5265
     },
     {
       "declaration_count": 23,
@@ -712,7 +712,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "Only the Axum status surface, observation contracts, and deterministic MPP and x402 discovery adapters are implemented at this revision; the lean PostgreSQL and Google Cloud Storage data plane and other product pipeline nodes are specified and explicitly reported as unresolved implementation coverage.",
+      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, local PostgreSQL development stack, and content-addressed filesystem evidence adapter are implemented at this revision; production PostgreSQL and Google Cloud Storage clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -4033,7 +4033,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1429,
+        "line_count": 1447,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -5406,7 +5406,7 @@
   "inventory": {
     "declarations": 291,
     "files": 57,
-    "lines": 12680
+    "lines": 12698
   },
   "layers": [
     {
@@ -5447,7 +5447,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "a1e409334ec8461d41ad3eb927cf693c2b5ef8d2ecf72854f38fe25a3bcc8cf4",
+  "source_tree_sha256": "96bc0215a3ea19d68df7d175cd36528d1c036f55474098ca1fb23bdf06b37b63",
   "stores": {
     "count": 2,
     "items": [

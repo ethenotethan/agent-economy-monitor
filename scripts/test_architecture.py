@@ -180,6 +180,24 @@ class ArchitectureCompilerTests(unittest.TestCase):
             edge_keys,
         )
 
+    def test_implemented_local_storage_is_not_reported_as_unresolved(self) -> None:
+        architecture = load_compiler()
+        model = architecture.compile_architecture(ROOT)
+
+        limitations = " ".join(model["evidence_metadata"]["limitations"])
+
+        self.assertIn("local PostgreSQL development stack", limitations)
+        self.assertIn("filesystem evidence adapter are implemented", limitations)
+        self.assertIn(
+            "production PostgreSQL and Google Cloud Storage clients",
+            limitations,
+        )
+        self.assertNotIn(
+            "lean PostgreSQL and Google Cloud Storage data plane and other product "
+            "pipeline nodes are specified",
+            limitations,
+        )
+
     def test_v1_mandatory_data_plane_is_postgresql_and_google_cloud_storage(self) -> None:
         architecture = load_compiler()
         config = architecture.load_json(ROOT / "architecture" / "config.json")
