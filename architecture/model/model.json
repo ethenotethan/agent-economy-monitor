@@ -265,7 +265,7 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 243
+      "line_count": 275
     },
     {
       "declaration_count": 0,
@@ -303,7 +303,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5188
+      "line_count": 5247
     },
     {
       "declaration_count": 23,
@@ -334,19 +334,96 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 6,
+      "file_count": 8,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
         ".gitignore",
         "scripts/verify",
         "tests/adapter_boundary.rs",
+        "tests/dev_stack_live_test.py",
+        "tests/dev_stack_test.py",
         "tests/observation_contracts.rs"
       ],
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 414
+      "line_count": 809
+    },
+    {
+      "declaration_count": 0,
+      "declarations": [],
+      "description": "One-command lean local data plane with persistent ready PostgreSQL and filesystem evidence initialization.",
+      "external": false,
+      "file_count": 2,
+      "files": [
+        "compose.yaml",
+        "scripts/dev-stack"
+      ],
+      "id": "development-stack",
+      "label": "Local development stack",
+      "layer": "delivery",
+      "line_count": 135
+    },
+    {
+      "declaration_count": 43,
+      "declarations": [
+        "CreateDisposition",
+        "CreateReceipt",
+        "EvidenceContext",
+        "EvidenceObject",
+        "EvidenceStore",
+        "FilesystemEvidenceStore",
+        "StoreError",
+        "TEMP_FILE_SEQUENCE",
+        "context",
+        "create",
+        "final_object_fifo_is_rejected_promptly",
+        "final_object_symlink_is_never_followed",
+        "fmt",
+        "for_bytes",
+        "from",
+        "hex_digest",
+        "name",
+        "new",
+        "open",
+        "open_directory_nofollow",
+        "open_or_create_directory",
+        "open_regular_file_nofollow",
+        "parse",
+        "parse_hex_digest",
+        "persisted_object_name_can_be_replayed_after_process_restart",
+        "pins_the_opened_root_when_its_ambient_path_is_replaced",
+        "read",
+        "read_verified",
+        "rejects_symlinked_ancestors_of_the_evidence_root",
+        "rejects_symlinked_path_components_beneath_the_evidence_root",
+        "rejects_unsafe_source_and_date_prefixes",
+        "repeated_identical_write_is_an_idempotent_noop",
+        "replay_rejects_tampered_content",
+        "secure_parent",
+        "secure_path",
+        "sha256",
+        "source",
+        "store",
+        "sync_directory",
+        "tests",
+        "valid_date",
+        "valid_source",
+        "writes_content_addressed_evidence_and_replays_verified_bytes"
+      ],
+      "description": "Backend-neutral immutable evidence contract and content-addressed filesystem development adapter.",
+      "external": false,
+      "file_count": 3,
+      "files": [
+        "crates/evidence-store/Cargo.toml",
+        "crates/evidence-store/src/lib.rs",
+        "crates/evidence-store/tests/filesystem_store.rs"
+      ],
+      "id": "evidence-store",
+      "label": "Evidence storage contract",
+      "layer": "evidence",
+      "line_count": 649
     },
     {
       "declaration_count": 41,
@@ -520,7 +597,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 1160
+      "line_count": 1372
     },
     {
       "declaration_count": 83,
@@ -702,7 +779,7 @@
       "unresolved": [
         {
           "id": "runtime.storage-clients",
-          "reason": "No Google Cloud Storage or PostgreSQL client exists yet; storage boundaries are specified only."
+          "reason": "The filesystem adapter implements the production evidence storage contract for local development; no Google Cloud Storage or PostgreSQL client exists yet."
         },
         {
           "id": "rust.runtime-mpp-adapter",
@@ -927,6 +1004,21 @@
         ]
       },
       {
+        "component": "evidence-store",
+        "id": "filesystem-evidence-store",
+        "kind": "adapter",
+        "label": "Content-addressed filesystem evidence store",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 120,
+            "path": "crates/evidence-store/src/lib.rs",
+            "rule": "declared.topology",
+            "via": "pub struct FilesystemEvidenceStore {"
+          }
+        ]
+      },
+      {
         "component": "runtime",
         "id": "http:healthz",
         "kind": "endpoint",
@@ -968,6 +1060,21 @@
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
             "via": "M[LLM projector]"
+          }
+        ]
+      },
+      {
+        "component": "development-stack",
+        "id": "local-development-stack",
+        "kind": "deployment",
+        "label": "Lean local PostgreSQL stack",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 5,
+            "path": "compose.yaml",
+            "rule": "declared.topology",
+            "via": "image: postgres:17.6-alpine"
           }
         ]
       },
@@ -1153,7 +1260,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 12,
+        "line_count": 13,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1195,7 +1302,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 8,
+        "line_count": 10,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1237,7 +1344,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1078,
+        "line_count": 1288,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1251,7 +1358,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 27,
+        "line_count": 28,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1265,7 +1372,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 36,
+        "line_count": 54,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1279,7 +1386,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 380,
+        "line_count": 407,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1329,6 +1436,20 @@
         "path": "architecture/contract/pins.json",
         "semantic_citations": 0,
         "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "development-stack",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 22,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "compose.yaml",
+        "semantic_citations": 0,
+        "touched": true
       },
       {
         "citations": 0,
@@ -2158,6 +2279,410 @@
         "path": "crates/contracts/src/lib.rs",
         "semantic_citations": 0,
         "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "evidence-store",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 20,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "crates/evidence-store/Cargo.toml",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "evidence-store",
+        "declaration_count": 35,
+        "declarations": [
+          {
+            "kind": "static",
+            "line": 19,
+            "name": "TEMP_FILE_SEQUENCE",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 23,
+            "name": "EvidenceContext",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 29,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 44,
+            "name": "EvidenceObject",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 50,
+            "name": "parse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 72,
+            "name": "name",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 76,
+            "name": "sha256",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 80,
+            "name": "for_bytes",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 98,
+            "name": "CreateDisposition",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 104,
+            "name": "CreateReceipt",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 108,
+            "name": "EvidenceStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 110,
+            "name": "create",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 115,
+            "name": "read",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 120,
+            "name": "FilesystemEvidenceStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 125,
+            "name": "open",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 152,
+            "name": "secure_parent",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 170,
+            "name": "secure_path",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 178,
+            "name": "read_verified",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 197,
+            "name": "create",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 239,
+            "name": "read",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 246,
+            "name": "StoreError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 262,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 279,
+            "name": "source",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 288,
+            "name": "from",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 292,
+            "name": "valid_source",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 308,
+            "name": "valid_date",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 325,
+            "name": "hex_digest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 335,
+            "name": "parse_hex_digest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 348,
+            "name": "open_or_create_directory",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 367,
+            "name": "open_directory_nofollow",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 389,
+            "name": "open_regular_file_nofollow",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 408,
+            "name": "sync_directory",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "mod",
+            "line": 415,
+            "name": "tests",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 421,
+            "name": "final_object_symlink_is_never_followed",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 440,
+            "name": "final_object_fifo_is_rejected_promptly",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 464,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/evidence-store/src/lib.rs",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "evidence-store",
+        "declaration_count": 10,
+        "declarations": [
+          {
+            "kind": "fn",
+            "line": 7,
+            "name": "context",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 11,
+            "name": "store",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 18,
+            "name": "writes_content_addressed_evidence_and_replays_verified_bytes",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 40,
+            "name": "repeated_identical_write_is_an_idempotent_noop",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 56,
+            "name": "replay_rejects_tampered_content",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 73,
+            "name": "rejects_unsafe_source_and_date_prefixes",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 80,
+            "name": "persisted_object_name_can_be_replayed_after_process_restart",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 106,
+            "name": "rejects_symlinked_path_components_beneath_the_evidence_root",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 127,
+            "name": "rejects_symlinked_ancestors_of_the_evidence_root",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 146,
+            "name": "pins_the_opened_root_when_its_ambient_path_is_replaced",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 165,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/evidence-store/tests/filesystem_store.rs",
+        "semantic_citations": 0,
+        "touched": false
       },
       {
         "citations": 0,
@@ -3424,7 +3949,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 85,
+        "line_count": 99,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3491,10 +4016,24 @@
       },
       {
         "citations": 0,
+        "component": "development-stack",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 113,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "scripts/dev-stack",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1397,
+        "line_count": 1429,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3522,7 +4061,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 16,
+        "line_count": 17,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3664,6 +4203,34 @@
           "rust.declaration"
         ],
         "path": "tests/adapter_boundary.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 114,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/dev_stack_live_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 278,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/dev_stack_test.py",
         "semantic_citations": 0,
         "touched": false
       },
@@ -3836,17 +4403,17 @@
         "id": "ci.workflow"
       },
       {
-        "citations": 26,
+        "citations": 28,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
-        "files": 8,
+        "files": 10,
         "id": "declared.topology"
       },
       {
-        "citations": 246,
+        "citations": 291,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 10,
+        "files": 12,
         "id": "rust.declaration"
       },
       {
@@ -3859,10 +4426,10 @@
     ],
     "summary": {
       "by_kind": {
-        "adapter": 2,
+        "adapter": 3,
         "boundary": 2,
         "contract": 1,
-        "deployment": 2,
+        "deployment": 3,
         "endpoint": 2,
         "external": 4,
         "projection": 2,
@@ -3873,16 +4440,16 @@
         "surface": 1,
         "worker": 6
       },
-      "citations": 28,
-      "declarations": 246,
-      "entities": 28,
-      "entities_with_origin": 28,
-      "files": 50,
+      "citations": 30,
+      "declarations": 291,
+      "entities": 30,
+      "entities_with_origin": 30,
+      "files": 57,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
-      "touched_files": 8,
-      "untouched_files": 42
+      "touched_files": 10,
+      "untouched_files": 47
     }
   },
   "interplay": {
@@ -3989,10 +4556,28 @@
         "target": "collector"
       },
       {
+        "class": "structure",
+        "relation": "implements-contract-of",
+        "source": "filesystem-evidence-store",
+        "target": "store:evidence"
+      },
+      {
         "class": "lifecycle",
         "relation": "writes-cited-projection",
         "source": "llm-projector",
         "target": "semantic-wiki"
+      },
+      {
+        "class": "structure",
+        "relation": "initializes",
+        "source": "local-development-stack",
+        "target": "filesystem-evidence-store"
+      },
+      {
+        "class": "structure",
+        "relation": "provisions",
+        "source": "local-development-stack",
+        "target": "store:postgresql"
       },
       {
         "class": "boundary",
@@ -4528,6 +5113,20 @@
         "page": null
       },
       {
+        "component": "evidence-store",
+        "evidence": [
+          {
+            "excerpt": "pub struct FilesystemEvidenceStore {",
+            "line": 120,
+            "path": "crates/evidence-store/src/lib.rs"
+          }
+        ],
+        "id": "filesystem-evidence-store",
+        "kind": "adapter",
+        "label": "Content-addressed filesystem evidence store",
+        "page": "evidence"
+      },
+      {
         "component": "runtime",
         "evidence": [
           {
@@ -4568,6 +5167,20 @@
         "kind": "projector",
         "label": "LLM projector",
         "page": "projection"
+      },
+      {
+        "component": "development-stack",
+        "evidence": [
+          {
+            "excerpt": "image: postgres:17.6-alpine",
+            "line": 5,
+            "path": "compose.yaml"
+          }
+        ],
+        "id": "local-development-stack",
+        "kind": "deployment",
+        "label": "Lean local PostgreSQL stack",
+        "page": "delivery"
       },
       {
         "component": "architecture-policy",
@@ -4740,6 +5353,7 @@
           "architecture-policy",
           "observation-contracts",
           "adapter-api",
+          "evidence-store",
           "mpp-adapter",
           "x402-adapter"
         ],
@@ -4749,6 +5363,7 @@
           "collector",
           "observation-contract",
           "adapter-boundary",
+          "filesystem-evidence-store",
           "mpp-discovery-adapter",
           "protocol-adapters"
         ]
@@ -4775,21 +5390,23 @@
       },
       {
         "components": [
-          "runtime"
+          "runtime",
+          "development-stack"
         ],
         "id": "delivery",
         "label": "Runtime delivery",
         "roots": [
-          "runtime-service"
+          "runtime-service",
+          "local-development-stack"
         ]
       }
     ],
     "triggers": []
   },
   "inventory": {
-    "declarations": 246,
-    "files": 50,
-    "lines": 11195
+    "declarations": 291,
+    "files": 57,
+    "lines": 12677
   },
   "layers": [
     {
@@ -4830,7 +5447,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "fd4341dead581fdf120db7d4dd3357681d8a9b85a1cc879e9f8ce7b418bc5354",
+  "source_tree_sha256": "1062516b19e88b4d38d220bac6243a9e9bd5b4fe442909f9bf50938caa988d73",
   "stores": {
     "count": 2,
     "items": [

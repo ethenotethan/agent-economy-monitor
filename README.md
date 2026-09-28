@@ -27,6 +27,24 @@ Bitcoin Lightning is an adapter slot but is not part of v1.
 
 ## Development
 
+Start the lean local data plane with one command:
+
+```bash
+./scripts/dev-stack
+```
+
+The launcher generates a mode-`0600`, Git-ignored PostgreSQL credential file, starts
+only PostgreSQL, waits for its real readiness check, and initializes the mode-`0700`
+filesystem evidence root at `.local/evidence`. The named PostgreSQL volume and local
+evidence survive ordinary `./scripts/dev-stack down` / `./scripts/dev-stack` restarts.
+Use `status` or `logs` to inspect the stack; `reset` removes only the derived PostgreSQL
+volume and deliberately retains immutable evidence.
+
+The filesystem evidence adapter implements the production create-only storage contract:
+objects are addressed by SHA-256 beneath source and observation-date prefixes, repeated
+identical writes are idempotent, and every replay verifies the digest before returning
+bytes. Production uses the same object names and semantics with Google Cloud Storage.
+
 ```bash
 ./scripts/verify
 cargo run

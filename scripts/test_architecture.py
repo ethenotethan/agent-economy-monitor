@@ -148,6 +148,38 @@ class ArchitectureCompilerTests(unittest.TestCase):
         self.assertIn("adapter-boundary", entity_ids)
         self.assertIn("mpp-discovery-adapter", entity_ids)
 
+    def test_local_data_plane_and_evidence_store_are_explicit_system_map_components(self) -> None:
+        architecture = load_compiler()
+        model = architecture.compile_architecture(ROOT)
+
+        component_ids = {component["id"] for component in model["components"]}
+        entity_ids = {entity["id"] for entity in model["extraction"]["entities"]}
+
+        self.assertIn("evidence-store", component_ids)
+        self.assertIn("development-stack", component_ids)
+        self.assertIn("filesystem-evidence-store", entity_ids)
+        evidence_store = next(
+            node for node in model["interplay"]["nodes"]
+            if node["id"] == "filesystem-evidence-store"
+        )
+        self.assertEqual("evidence", evidence_store["page"])
+        edge_keys = {
+            (edge["source"], edge["target"], edge["relation"])
+            for edge in model["interplay"]["edges"]
+        }
+        self.assertIn(
+            ("local-development-stack", "store:postgresql", "provisions"),
+            edge_keys,
+        )
+        self.assertIn(
+            ("local-development-stack", "filesystem-evidence-store", "initializes"),
+            edge_keys,
+        )
+        self.assertIn(
+            ("filesystem-evidence-store", "store:evidence", "implements-contract-of"),
+            edge_keys,
+        )
+
     def test_v1_mandatory_data_plane_is_postgresql_and_google_cloud_storage(self) -> None:
         architecture = load_compiler()
         config = architecture.load_json(ROOT / "architecture" / "config.json")
