@@ -341,6 +341,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Verify
         run: ./scripts/verify
+      - name: Qualify knowledge graph migration
+        env:
+          RUN_KNOWLEDGE_GRAPH_LIVE: "1"
+        run: python3 tests/knowledge_graph_schema_test.py KnowledgeGraphMigrationLiveTest -v
 """
     # Accept one auditable workflow grammar instead of trying to security-parse
     # arbitrary YAML with regular expressions. Workflow changes must update this
@@ -580,7 +584,10 @@ jobs:
             "python3 scripts/check_architecture_contract.py",
             "python3 scripts/build_architecture.py --check",
         ],
-        "verify": ["./scripts/verify"],
+        "verify": [
+            "./scripts/verify",
+            "python3 tests/knowledge_graph_schema_test.py KnowledgeGraphMigrationLiveTest -v",
+        ],
     }
     by_id = {job["id"]: job for job in jobs}
     for job_id, expected_commands in required_commands.items():
