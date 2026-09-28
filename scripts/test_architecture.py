@@ -15,6 +15,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = ROOT / "scripts" / "build_architecture.py"
 CHECKER_PATH = ROOT / "scripts" / "check_architecture_contract.py"
+REMOVED_V1_INFRASTRUCTURE_ALIASES = (
+    "redpanda",
+    "clickhouse",
+    "nomad",
+    "seaweedfs",
+    "minio",
+    "s3-compatible",
+    "s3 emulator",
+    "s3 emulation",
+    "s3 endpoint",
+    "s3_endpoint",
+)
 
 
 def load_compiler():
@@ -134,6 +146,110 @@ class ArchitectureCompilerTests(unittest.TestCase):
         self.assertIn("observation-contract", entity_ids)
         self.assertIn("adapter-boundary", entity_ids)
         self.assertIn("mpp-discovery-adapter", entity_ids)
+
+    def test_v1_mandatory_data_plane_is_postgresql_and_google_cloud_storage(self) -> None:
+        architecture = load_compiler()
+        config = architecture.load_json(ROOT / "architecture" / "config.json")
+
+        self.assertEqual({"evidence", "postgresql"}, {store["id"] for store in config["stores"]})
+        self.assertEqual(
+            {"store:evidence", "store:postgresql"},
+            {node["id"] for node in config["nodes"] if node["kind"] == "store"},
+        )
+        evidence = next(store for store in config["stores"] if store["id"] == "evidence")
+        postgres = next(store for store in config["stores"] if store["id"] == "postgresql")
+        self.assertEqual("Google Cloud Storage", evidence["label"])
+        self.assertEqual("object-storage", evidence["kind"])
+        self.assertEqual(
+            {
+                "append-only-observations",
+                "canonical-events",
+                "transactional-job-leases",
+                "entities",
+                "edges",
+                "claims",
+                "features",
+                "provenance",
+            },
+            set(postgres["persistence"]),
+        )
+
+    def test_lean_v1_contract_rejects_removed_infrastructure_and_models_cloud_delivery(self) -> None:
+        architecture = load_compiler()
+        config = architecture.load_json(ROOT / "architecture" / "config.json")
+
+        def removed_infrastructure(root: Path) -> dict[str, list[str]]:
+            candidates = [root / ".env.example", root / "architecture" / "config.json"]
+            candidates.extend(root.glob("*.md"))
+            candidates.extend((root / "docs").rglob("*.md"))
+            findings = {}
+            for path in sorted(set(candidates)):
+                if not path.is_file():
+                    continue
+                text = path.read_text(encoding="utf-8").lower()
+                matches = [dependency for dependency in REMOVED_V1_INFRASTRUCTURE_ALIASES if dependency in text]
+                if matches:
+                    findings[str(path.relative_to(root))] = matches
+            return findings
+
+        self.assertEqual({}, removed_infrastructure(ROOT))
+        for alias in REMOVED_V1_INFRASTRUCTURE_ALIASES:
+            with self.subTest(alias=alias), tempfile.TemporaryDirectory() as directory:
+                adversarial_root = Path(directory)
+                if alias == "s3_endpoint":
+                    path = adversarial_root / ".env.example"
+                    path.write_text("S3_ENDPOINT=https://example.invalid\n", encoding="utf-8")
+                    expected_path = ".env.example"
+                else:
+                    path = adversarial_root / "docs" / "PRODUCT.md"
+                    path.parent.mkdir()
+                    path.write_text(f"{alias} is a mandatory deployed v1 dependency.\n", encoding="utf-8")
+                    expected_path = "docs/PRODUCT.md"
+                self.assertEqual(
+                    {expected_path: [alias]},
+                    removed_infrastructure(adversarial_root),
+                )
+
+        config_text = json.dumps(config).lower()
+        self.assertNotIn("pub/sub", config_text)
+        self.assertNotIn("bigquery", config_text)
+
+        node_ids = {node["id"] for node in config["nodes"]}
+        self.assertTrue(
+            {
+                "cloud-run-api",
+                "cloud-run-jobs",
+                "cloud-scheduler",
+                "local-wiki-projector",
+                "projection-mirror",
+            }.issubset(node_ids)
+        )
+        edge_keys = {
+            (edge["source"], edge["target"], edge["relation"])
+            for edge in config["interplay_edges"]
+        }
+        self.assertTrue(
+            {
+                ("runtime-service", "cloud-run-api", "deployed-as"),
+                ("runtime-service", "cloud-run-jobs", "executes-as"),
+                ("cloud-scheduler", "cloud-run-jobs", "invokes"),
+                ("local-wiki-projector", "semantic-wiki", "writes-native"),
+                ("semantic-wiki", "projection-mirror", "publishes-approved"),
+                ("projection-mirror", "query-api", "serves"),
+            }.issubset(edge_keys)
+        )
+
+        architecture_doc = (ROOT / "docs" / "ARCHITECTURE.md").read_text(encoding="utf-8")
+        for control in (
+            "locked retention policy",
+            "ifGenerationMatch=0",
+            "create-only",
+            "read-time SHA-256 verification",
+            "no inbound connection",
+            "p95 job-pickup latency exceeds 60 seconds",
+            "p95 analytical query latency exceeds 2 seconds",
+        ):
+            self.assertIn(control, architecture_doc)
 
     def test_ci_extraction_rejects_named_jobs_that_do_not_run_the_gates(self) -> None:
         architecture = load_compiler()

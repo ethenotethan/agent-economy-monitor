@@ -12,14 +12,12 @@
       ]
     },
     {
-      "description": "Durable infrastructure is independently supervised and is not duplicated as an application runtime.",
+      "description": "Cloud SQL and Google Cloud Storage are independently supervised and are not duplicated as application runtimes.",
       "id": "data-infrastructure",
       "label": "Data infrastructure",
       "members": [
-        "store:clickhouse",
         "store:evidence",
-        "store:postgresql",
-        "store:redpanda"
+        "store:postgresql"
       ]
     }
   ],
@@ -123,7 +121,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "Only the Axum status surface, observation contracts, and deterministic MPP and x402 discovery adapters are implemented at this revision; other product pipeline nodes are specified and explicitly reported as unresolved implementation coverage.",
+      "Only the Axum status surface, observation contracts, and deterministic MPP and x402 discovery adapters are implemented at this revision; the lean PostgreSQL and Google Cloud Storage data plane and other product pipeline nodes are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -172,11 +170,12 @@
       "page": "evidence",
       "steps": [
         {"from": "external:rpc-provider", "relation": "observes", "to": "collector"},
-        {"from": "collector", "relation": "appends", "to": "store:redpanda"},
-        {"from": "store:redpanda", "relation": "retains", "to": "store:evidence"},
-        {"from": "store:redpanda", "relation": "feeds", "to": "protocol-adapters"},
+        {"from": "collector", "relation": "archives", "to": "store:evidence"},
+        {"from": "collector", "relation": "enqueues", "to": "store:postgresql"},
+        {"from": "store:postgresql", "relation": "leases", "to": "protocol-adapters"},
+        {"from": "store:evidence", "relation": "supplies", "to": "protocol-adapters"},
         {"from": "protocol-adapters", "relation": "emits-observations", "to": "reducers"},
-        {"from": "reducers", "relation": "writes-events", "to": "store:clickhouse"},
+        {"from": "reducers", "relation": "writes-events", "to": "store:postgresql"},
         {"from": "reducers", "relation": "feeds", "to": "attribution"},
         {"from": "attribution", "relation": "writes-claims", "to": "store:postgresql"}
       ],
@@ -188,21 +187,46 @@
       "evidence": [
         {
           "path": "docs/ARCHITECTURE.md",
-          "search": "CH --> P[Bounded evidence snapshots]"
+          "search": "PG --> P[Bounded evidence snapshots]"
         }
       ],
       "id": "canonical-to-semantic-projection",
       "page": "projection",
       "steps": [
-        {"from": "store:clickhouse", "relation": "bounds", "to": "evidence-snapshot"},
         {"from": "store:postgresql", "relation": "bounds", "to": "evidence-snapshot"},
         {"from": "store:evidence", "relation": "cites", "to": "evidence-snapshot"},
-        {"from": "evidence-snapshot", "relation": "constrains", "to": "llm-projector"},
+        {"from": "local-wiki-projector", "relation": "pulls", "to": "evidence-snapshot"},
+        {"from": "local-wiki-projector", "relation": "runs", "to": "llm-projector"},
         {"from": "llm-projector", "relation": "writes-cited-projection", "to": "semantic-wiki"},
-        {"from": "semantic-wiki", "relation": "serves", "to": "query-api"}
+        {"from": "local-wiki-projector", "relation": "writes-native", "to": "semantic-wiki"},
+        {"from": "semantic-wiki", "relation": "publishes-approved", "to": "projection-mirror"},
+        {"from": "projection-mirror", "relation": "archives", "to": "store:evidence"},
+        {"from": "projection-mirror", "relation": "indexes", "to": "store:postgresql"},
+        {"from": "projection-mirror", "relation": "serves", "to": "query-api"}
       ],
       "summary": "Bounded deterministic snapshots constrain cited narrative projection without granting canonical authority.",
       "title": "Canonical knowledge to semantic projection"
+    },
+    {
+      "authority": "specified",
+      "evidence": [
+        {
+          "path": "docs/ARCHITECTURE.md",
+          "search": "I[One Rust image]"
+        }
+      ],
+      "id": "cloud-runtime-to-dashboard",
+      "page": "delivery",
+      "steps": [
+        {"from": "runtime-service", "relation": "deployed-as", "to": "cloud-run-api"},
+        {"from": "runtime-service", "relation": "executes-as", "to": "cloud-run-jobs"},
+        {"from": "cloud-scheduler", "relation": "invokes", "to": "cloud-run-jobs"},
+        {"from": "cloud-run-api", "relation": "hosts", "to": "query-api"},
+        {"from": "cloud-run-jobs", "relation": "hosts", "to": "collector"},
+        {"from": "cloud-run-jobs", "relation": "hosts", "to": "reducers"}
+      ],
+      "summary": "One Rust image serves the scale-to-zero dashboard and bounded scheduled workers without creating another product authority.",
+      "title": "Cloud runtime to dashboard"
     }
   ],
   "interplay_edges": [
@@ -210,26 +234,36 @@
     {"class": "boundary", "relation": "seeds", "source": "external:x402scan", "target": "collector"},
     {"class": "boundary", "relation": "seeds", "source": "external:agentcash", "target": "collector"},
     {"class": "boundary", "relation": "discovers", "source": "external:web-discovery", "target": "collector"},
-    {"class": "lifecycle", "relation": "appends", "source": "collector", "target": "store:redpanda"},
-    {"class": "lifecycle", "relation": "retains", "source": "store:redpanda", "target": "store:evidence"},
-    {"class": "interplay", "relation": "feeds", "source": "store:redpanda", "target": "protocol-adapters"},
+    {"class": "lifecycle", "relation": "archives", "source": "collector", "target": "store:evidence"},
+    {"class": "lifecycle", "relation": "enqueues", "source": "collector", "target": "store:postgresql"},
+    {"class": "interplay", "relation": "leases", "source": "store:postgresql", "target": "protocol-adapters"},
+    {"class": "interplay", "relation": "supplies", "source": "store:evidence", "target": "protocol-adapters"},
     {"class": "interplay", "relation": "emits-observations", "source": "protocol-adapters", "target": "reducers"},
-    {"class": "lifecycle", "relation": "writes-events", "source": "reducers", "target": "store:clickhouse"},
+    {"class": "lifecycle", "relation": "writes-events", "source": "reducers", "target": "store:postgresql"},
     {"class": "interplay", "relation": "feeds", "source": "reducers", "target": "attribution"},
     {"class": "lifecycle", "relation": "writes-claims", "source": "attribution", "target": "store:postgresql"},
-    {"class": "interplay", "relation": "derives-features", "source": "store:clickhouse", "target": "classification"},
+    {"class": "interplay", "relation": "derives-features", "source": "store:postgresql", "target": "classification"},
     {"class": "lifecycle", "relation": "writes-versioned-claims", "source": "classification", "target": "store:postgresql"},
     {"class": "interplay", "relation": "targets", "source": "store:postgresql", "target": "enrichment"},
     {"class": "boundary", "relation": "queries", "source": "enrichment", "target": "external:rpc-provider"},
-    {"class": "interplay", "relation": "reads", "source": "query-api", "target": "store:clickhouse"},
     {"class": "interplay", "relation": "reads", "source": "query-api", "target": "store:postgresql"},
     {"class": "interplay", "relation": "serves", "source": "query-api", "target": "cockpit"},
-    {"class": "interplay", "relation": "bounds", "source": "store:clickhouse", "target": "evidence-snapshot"},
     {"class": "interplay", "relation": "bounds", "source": "store:postgresql", "target": "evidence-snapshot"},
     {"class": "interplay", "relation": "cites", "source": "store:evidence", "target": "evidence-snapshot"},
-    {"class": "interplay", "relation": "constrains", "source": "evidence-snapshot", "target": "llm-projector"},
+    {"class": "boundary", "relation": "pulls", "source": "local-wiki-projector", "target": "evidence-snapshot"},
+    {"class": "interplay", "relation": "runs", "source": "local-wiki-projector", "target": "llm-projector"},
     {"class": "lifecycle", "relation": "writes-cited-projection", "source": "llm-projector", "target": "semantic-wiki"},
-    {"class": "interplay", "relation": "serves", "source": "semantic-wiki", "target": "query-api"},
+    {"class": "lifecycle", "relation": "writes-native", "source": "local-wiki-projector", "target": "semantic-wiki"},
+    {"class": "boundary", "relation": "publishes-approved", "source": "semantic-wiki", "target": "projection-mirror"},
+    {"class": "lifecycle", "relation": "archives", "source": "projection-mirror", "target": "store:evidence"},
+    {"class": "lifecycle", "relation": "indexes", "source": "projection-mirror", "target": "store:postgresql"},
+    {"class": "interplay", "relation": "serves", "source": "projection-mirror", "target": "query-api"},
+    {"class": "structure", "relation": "deployed-as", "source": "runtime-service", "target": "cloud-run-api"},
+    {"class": "structure", "relation": "executes-as", "source": "runtime-service", "target": "cloud-run-jobs"},
+    {"class": "interplay", "relation": "invokes", "source": "cloud-scheduler", "target": "cloud-run-jobs"},
+    {"class": "structure", "relation": "hosts", "source": "cloud-run-api", "target": "query-api"},
+    {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "collector"},
+    {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "reducers"},
     {"class": "structure", "relation": "exposes", "source": "runtime-service", "target": "http:healthz"},
     {"class": "structure", "relation": "exposes", "source": "runtime-service", "target": "http:status"}
   ],
@@ -250,7 +284,7 @@
       "id": "single-runtime-identity",
       "kind": "runtime-identity",
       "status": "holds",
-      "why": "Exactly one runtime-service construction represents agent-economy-monitor; infrastructure remains boundary or store nodes."
+      "why": "Exactly one runtime-service construction represents agent-economy-monitor; Cloud Run service and job nodes are deployment forms of that image, not additional product identities."
     },
     {
       "id": "no-shared-core-fallback",
@@ -309,13 +343,16 @@
     {"authority": "specified", "component": "architecture-policy", "id": "evidence-snapshot", "kind": "boundary", "label": "Bounded evidence snapshots", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Bounded evidence snapshots"}, "page": "projection"},
     {"authority": "specified", "component": "architecture-policy", "id": "llm-projector", "kind": "projector", "label": "LLM projector", "origin": {"path": "docs/ARCHITECTURE.md", "search": "LLM projector"}, "page": "projection"},
     {"authority": "specified", "component": "architecture-policy", "id": "semantic-wiki", "kind": "projection", "label": "Agentic Commerce Intelligence wiki", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Agentic Commerce Intelligence wiki"}, "page": "projection"},
+    {"authority": "specified", "component": "architecture-policy", "id": "local-wiki-projector", "kind": "worker", "label": "Local Hermes projection worker", "origin": {"path": "docs/ARCHITECTURE.md", "search": "H[Local Hermes projection worker]"}, "page": "projection"},
+    {"authority": "specified", "component": "architecture-policy", "id": "projection-mirror", "kind": "projection", "label": "Approved read-only projection mirror", "origin": {"path": "docs/ARCHITECTURE.md", "search": "B[Approved read-only projection mirror]"}, "page": "projection"},
     {"authority": "specified", "component": "runtime", "id": "runtime-service", "kind": "service", "label": "agent-economy-monitor", "origin": {"path": "src/main.rs", "search": "agent economy monitor listening"}, "page": "delivery"},
+    {"authority": "specified", "component": "architecture-policy", "id": "cloud-run-api", "kind": "deployment", "label": "Cloud Run dashboard service", "origin": {"path": "docs/ARCHITECTURE.md", "search": "API[Cloud Run service]"}, "page": "delivery"},
+    {"authority": "specified", "component": "architecture-policy", "id": "cloud-run-jobs", "kind": "deployment", "label": "Cloud Run worker jobs", "origin": {"path": "docs/ARCHITECTURE.md", "search": "J[Cloud Run jobs]"}, "page": "delivery"},
+    {"authority": "specified", "component": "architecture-policy", "id": "cloud-scheduler", "kind": "scheduler", "label": "Cloud Scheduler", "origin": {"path": "docs/ARCHITECTURE.md", "search": "CS[Cloud Scheduler]"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:healthz", "kind": "endpoint", "label": "GET /healthz", "origin": {"method": "get", "path": "src/main.rs", "route": "/healthz"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:status", "kind": "endpoint", "label": "GET /api/v1/status", "origin": {"method": "get", "path": "src/main.rs", "route": "/api/v1/status"}, "page": "delivery"},
-    {"authority": "specified", "component": "architecture-policy", "id": "store:redpanda", "kind": "store", "label": "Redpanda replay log", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Redpanda replay log"}, "page": "evidence"},
-    {"authority": "specified", "component": "architecture-policy", "id": "store:evidence", "kind": "store", "label": "S3 immutable evidence", "origin": {"path": "docs/ARCHITECTURE.md", "search": "S3 immutable evidence"}, "page": "evidence"},
-    {"authority": "specified", "component": "architecture-policy", "id": "store:clickhouse", "kind": "store", "label": "ClickHouse observations and events", "origin": {"path": "docs/ARCHITECTURE.md", "search": "ClickHouse observations"}, "page": "canonical"},
-    {"authority": "specified", "component": "architecture-policy", "id": "store:postgresql", "kind": "store", "label": "PostgreSQL entities and claims", "origin": {"path": "docs/ARCHITECTURE.md", "search": "PostgreSQL entities"}, "page": "canonical"},
+    {"authority": "specified", "component": "architecture-policy", "id": "store:evidence", "kind": "store", "label": "Google Cloud Storage", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Google Cloud Storage immutable evidence"}, "page": "evidence"},
+    {"authority": "specified", "component": "architecture-policy", "id": "store:postgresql", "kind": "store", "label": "PostgreSQL operational and analytical store", "origin": {"path": "docs/ARCHITECTURE.md", "search": "PostgreSQL jobs"}, "page": "canonical"},
     {"authority": "specified", "component": null, "id": "external:rpc-provider", "kind": "external", "label": "External RPC provider", "origin": {"path": "README.md", "search": "through one external RPC provider"}, "page": null},
     {"authority": "specified", "component": null, "id": "external:x402scan", "kind": "external", "label": "x402scan", "origin": {"path": "docs/PRODUCT.md", "search": "x402scan and AgentCash"}, "page": null},
     {"authority": "specified", "component": null, "id": "external:agentcash", "kind": "external", "label": "AgentCash", "origin": {"path": "docs/PRODUCT.md", "search": "x402scan and AgentCash"}, "page": null},
@@ -331,15 +368,13 @@
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
   "stores": [
-    {"component": "architecture-policy", "id": "redpanda", "kind": "replay-log", "label": "Redpanda", "node": "store:redpanda", "persistence": ["durable-operational-log"]},
-    {"component": "architecture-policy", "id": "evidence", "kind": "object-storage", "label": "S3-compatible evidence", "node": "store:evidence", "persistence": ["immutable-raw-evidence"]},
-    {"component": "architecture-policy", "id": "clickhouse", "kind": "analytical-database", "label": "ClickHouse", "node": "store:clickhouse", "persistence": ["observations", "canonical-events", "features"]},
-    {"component": "architecture-policy", "id": "postgresql", "kind": "relational-database", "label": "PostgreSQL", "node": "store:postgresql", "persistence": ["entities", "edges", "claims", "provenance"]}
+    {"component": "architecture-policy", "id": "evidence", "kind": "object-storage", "label": "Google Cloud Storage", "node": "store:evidence", "persistence": ["immutable-raw-evidence"]},
+    {"component": "architecture-policy", "id": "postgresql", "kind": "relational-database", "label": "PostgreSQL", "node": "store:postgresql", "persistence": ["append-only-observations", "canonical-events", "transactional-job-leases", "entities", "edges", "claims", "features", "provenance"]}
   ],
   "title": "Agent Economy Monitor Architecture",
   "unresolved": [
     {"id": "rust.runtime-mpp-adapter", "reason": "MPP OpenAPI and x402 discovery adapters exist, but no runtime MPP challenge parser exists yet."},
     {"id": "rust.workers", "reason": "No collect/reduce/classify/enrich/project-wiki process mode exists yet; worker topology is specified only."},
-    {"id": "runtime.storage-clients", "reason": "No Redpanda, object storage, ClickHouse, or PostgreSQL client exists yet; storage boundaries are specified only."}
+    {"id": "runtime.storage-clients", "reason": "No Google Cloud Storage or PostgreSQL client exists yet; storage boundaries are specified only."}
   ]
 }

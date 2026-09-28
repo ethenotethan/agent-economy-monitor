@@ -265,7 +265,7 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 221
+      "line_count": 243
     },
     {
       "declaration_count": 0,
@@ -303,7 +303,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5025
+      "line_count": 5176
     },
     {
       "declaration_count": 23,
@@ -520,7 +520,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 1159
+      "line_count": 1160
     },
     {
       "declaration_count": 83,
@@ -635,7 +635,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "Only the Axum status surface, observation contracts, and deterministic MPP and x402 discovery adapters are implemented at this revision; other product pipeline nodes are specified and explicitly reported as unresolved implementation coverage.",
+      "Only the Axum status surface, observation contracts, and deterministic MPP and x402 discovery adapters are implemented at this revision; the lean PostgreSQL and Google Cloud Storage data plane and other product pipeline nodes are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -702,7 +702,7 @@
       "unresolved": [
         {
           "id": "runtime.storage-clients",
-          "reason": "No Redpanda, object storage, ClickHouse, or PostgreSQL client exists yet; storage boundaries are specified only."
+          "reason": "No Google Cloud Storage or PostgreSQL client exists yet; storage boundaries are specified only."
         },
         {
           "id": "rust.runtime-mpp-adapter",
@@ -739,7 +739,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 13,
+            "line": 14,
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
             "via": "D --> AT[Attribution engine]"
@@ -754,10 +754,55 @@
         "origins": [
           {
             "family": "specified",
-            "line": 15,
+            "line": 16,
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
-            "via": "CH --> F[Behavioral features and rule classifiers]"
+            "via": "PG --> F[Behavioral features and rule classifiers]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "cloud-run-api",
+        "kind": "deployment",
+        "label": "Cloud Run dashboard service",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 20,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "I[One Rust image] --> API[Cloud Run service]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "cloud-run-jobs",
+        "kind": "deployment",
+        "label": "Cloud Run worker jobs",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 21,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "I --> J[Cloud Run jobs]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "cloud-scheduler",
+        "kind": "scheduler",
+        "label": "Cloud Scheduler",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 22,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "CS[Cloud Scheduler] --> J"
           }
         ]
       },
@@ -769,7 +814,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 21,
+            "line": 27,
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
             "via": "Q --> L[Leptos private cockpit]"
@@ -799,7 +844,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 17,
+            "line": 18,
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
             "via": "PG --> E[Targeted buyer enrichment]"
@@ -814,10 +859,10 @@
         "origins": [
           {
             "family": "specified",
-            "line": 22,
+            "line": 28,
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
-            "via": "CH --> P[Bounded evidence snapshots]"
+            "via": "PG --> P[Bounded evidence snapshots]"
           }
         ]
       },
@@ -919,10 +964,25 @@
         "origins": [
           {
             "family": "specified",
-            "line": 25,
+            "line": 32,
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
-            "via": "P --> M[LLM projector]"
+            "via": "M[LLM projector]"
+          }
+        ]
+      },
+      {
+        "component": "architecture-policy",
+        "id": "local-wiki-projector",
+        "kind": "worker",
+        "label": "Local Hermes projection worker",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 30,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "H[Local Hermes projection worker] -->|outbound pull| P"
           }
         ]
       },
@@ -957,6 +1017,21 @@
         ]
       },
       {
+        "component": "architecture-policy",
+        "id": "projection-mirror",
+        "kind": "projection",
+        "label": "Approved read-only projection mirror",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 34,
+            "path": "docs/ARCHITECTURE.md",
+            "rule": "declared.topology",
+            "via": "W --> B[Approved read-only projection mirror]"
+          }
+        ]
+      },
+      {
         "component": "x402-adapter",
         "id": "protocol-adapters",
         "kind": "adapter",
@@ -979,10 +1054,10 @@
         "origins": [
           {
             "family": "specified",
-            "line": 19,
+            "line": 26,
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
-            "via": "CH --> Q[Axum query API and dashboard read models]"
+            "via": "PG --> Q[Axum query API and dashboard read models]"
           }
         ]
       },
@@ -994,7 +1069,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 11,
+            "line": 12,
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
             "via": "A --> D[Deterministic reducers: keys · finality · reconciliation]"
@@ -1024,7 +1099,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 26,
+            "line": 33,
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
             "via": "M --> W[Agentic Commerce Intelligence wiki]"
@@ -1033,31 +1108,16 @@
       },
       {
         "component": "architecture-policy",
-        "id": "store:clickhouse",
-        "kind": "store",
-        "label": "ClickHouse observations and events",
-        "origins": [
-          {
-            "family": "specified",
-            "line": 12,
-            "path": "docs/ARCHITECTURE.md",
-            "rule": "declared.topology",
-            "via": "D --> CH[ClickHouse observations · events · features]"
-          }
-        ]
-      },
-      {
-        "component": "architecture-policy",
         "id": "store:evidence",
         "kind": "store",
-        "label": "S3 immutable evidence",
+        "label": "Google Cloud Storage",
         "origins": [
           {
             "family": "specified",
-            "line": 9,
+            "line": 8,
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
-            "via": "R --> O[S3 immutable evidence]"
+            "via": "C --> O[Google Cloud Storage immutable evidence]"
           }
         ]
       },
@@ -1065,29 +1125,14 @@
         "component": "architecture-policy",
         "id": "store:postgresql",
         "kind": "store",
-        "label": "PostgreSQL entities and claims",
+        "label": "PostgreSQL operational and analytical store",
         "origins": [
           {
             "family": "specified",
-            "line": 14,
+            "line": 9,
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
-            "via": "AT --> PG[PostgreSQL entities · edges · claims]"
-          }
-        ]
-      },
-      {
-        "component": "architecture-policy",
-        "id": "store:redpanda",
-        "kind": "store",
-        "label": "Redpanda replay log",
-        "origins": [
-          {
-            "family": "specified",
-            "line": 8,
-            "path": "docs/ARCHITECTURE.md",
-            "rule": "declared.topology",
-            "via": "C --> R[Redpanda replay log]"
+            "via": "C --> PG[PostgreSQL jobs · observations · canonical knowledge]"
           }
         ]
       }
@@ -1108,7 +1153,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 11,
+        "line_count": 12,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1234,7 +1279,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 345,
+        "line_count": 380,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3375,11 +3420,11 @@
         "touched": false
       },
       {
-        "citations": 14,
+        "citations": 17,
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 63,
+        "line_count": 85,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3449,7 +3494,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1269,
+        "line_count": 1385,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3791,7 +3836,7 @@
         "id": "ci.workflow"
       },
       {
-        "citations": 23,
+        "citations": 26,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
         "files": 8,
@@ -3817,19 +3862,21 @@
         "adapter": 2,
         "boundary": 2,
         "contract": 1,
+        "deployment": 2,
         "endpoint": 2,
         "external": 4,
-        "projection": 1,
+        "projection": 2,
         "projector": 1,
+        "scheduler": 1,
         "service": 2,
-        "store": 4,
+        "store": 2,
         "surface": 1,
-        "worker": 5
+        "worker": 6
       },
-      "citations": 25,
+      "citations": 28,
       "declarations": 246,
-      "entities": 25,
-      "entities_with_origin": 25,
+      "entities": 28,
+      "entities_with_origin": 28,
       "files": 50,
       "mapped_declarations": 0,
       "passes": 4,
@@ -3841,14 +3888,12 @@
   "interplay": {
     "boundary_groups": [
       {
-        "description": "Durable infrastructure is independently supervised and is not duplicated as an application runtime.",
+        "description": "Cloud SQL and Google Cloud Storage are independently supervised and are not duplicated as application runtimes.",
         "id": "data-infrastructure",
         "label": "Data infrastructure",
         "members": [
-          "store:clickhouse",
           "store:evidence",
-          "store:postgresql",
-          "store:redpanda"
+          "store:postgresql"
         ]
       },
       {
@@ -3878,22 +3923,46 @@
         "target": "store:postgresql"
       },
       {
+        "class": "structure",
+        "relation": "hosts",
+        "source": "cloud-run-api",
+        "target": "query-api"
+      },
+      {
+        "class": "structure",
+        "relation": "hosts",
+        "source": "cloud-run-jobs",
+        "target": "collector"
+      },
+      {
+        "class": "structure",
+        "relation": "hosts",
+        "source": "cloud-run-jobs",
+        "target": "reducers"
+      },
+      {
+        "class": "interplay",
+        "relation": "invokes",
+        "source": "cloud-scheduler",
+        "target": "cloud-run-jobs"
+      },
+      {
         "class": "lifecycle",
-        "relation": "appends",
+        "relation": "archives",
         "source": "collector",
-        "target": "store:redpanda"
+        "target": "store:evidence"
+      },
+      {
+        "class": "lifecycle",
+        "relation": "enqueues",
+        "source": "collector",
+        "target": "store:postgresql"
       },
       {
         "class": "boundary",
         "relation": "queries",
         "source": "enrichment",
         "target": "external:rpc-provider"
-      },
-      {
-        "class": "interplay",
-        "relation": "constrains",
-        "source": "evidence-snapshot",
-        "target": "llm-projector"
       },
       {
         "class": "boundary",
@@ -3926,6 +3995,42 @@
         "target": "semantic-wiki"
       },
       {
+        "class": "boundary",
+        "relation": "pulls",
+        "source": "local-wiki-projector",
+        "target": "evidence-snapshot"
+      },
+      {
+        "class": "interplay",
+        "relation": "runs",
+        "source": "local-wiki-projector",
+        "target": "llm-projector"
+      },
+      {
+        "class": "lifecycle",
+        "relation": "writes-native",
+        "source": "local-wiki-projector",
+        "target": "semantic-wiki"
+      },
+      {
+        "class": "interplay",
+        "relation": "serves",
+        "source": "projection-mirror",
+        "target": "query-api"
+      },
+      {
+        "class": "lifecycle",
+        "relation": "archives",
+        "source": "projection-mirror",
+        "target": "store:evidence"
+      },
+      {
+        "class": "lifecycle",
+        "relation": "indexes",
+        "source": "projection-mirror",
+        "target": "store:postgresql"
+      },
+      {
         "class": "interplay",
         "relation": "emits-observations",
         "source": "protocol-adapters",
@@ -3936,12 +4041,6 @@
         "relation": "serves",
         "source": "query-api",
         "target": "cockpit"
-      },
-      {
-        "class": "interplay",
-        "relation": "reads",
-        "source": "query-api",
-        "target": "store:clickhouse"
       },
       {
         "class": "interplay",
@@ -3959,7 +4058,19 @@
         "class": "lifecycle",
         "relation": "writes-events",
         "source": "reducers",
-        "target": "store:clickhouse"
+        "target": "store:postgresql"
+      },
+      {
+        "class": "structure",
+        "relation": "deployed-as",
+        "source": "runtime-service",
+        "target": "cloud-run-api"
+      },
+      {
+        "class": "structure",
+        "relation": "executes-as",
+        "source": "runtime-service",
+        "target": "cloud-run-jobs"
       },
       {
         "class": "structure",
@@ -3974,28 +4085,28 @@
         "target": "http:status"
       },
       {
-        "class": "interplay",
-        "relation": "serves",
+        "class": "boundary",
+        "relation": "publishes-approved",
         "source": "semantic-wiki",
-        "target": "query-api"
-      },
-      {
-        "class": "interplay",
-        "relation": "derives-features",
-        "source": "store:clickhouse",
-        "target": "classification"
-      },
-      {
-        "class": "interplay",
-        "relation": "bounds",
-        "source": "store:clickhouse",
-        "target": "evidence-snapshot"
+        "target": "projection-mirror"
       },
       {
         "class": "interplay",
         "relation": "cites",
         "source": "store:evidence",
         "target": "evidence-snapshot"
+      },
+      {
+        "class": "interplay",
+        "relation": "supplies",
+        "source": "store:evidence",
+        "target": "protocol-adapters"
+      },
+      {
+        "class": "interplay",
+        "relation": "derives-features",
+        "source": "store:postgresql",
+        "target": "classification"
       },
       {
         "class": "interplay",
@@ -4011,15 +4122,9 @@
       },
       {
         "class": "interplay",
-        "relation": "feeds",
-        "source": "store:redpanda",
+        "relation": "leases",
+        "source": "store:postgresql",
         "target": "protocol-adapters"
-      },
-      {
-        "class": "lifecycle",
-        "relation": "retains",
-        "source": "store:redpanda",
-        "target": "store:evidence"
       }
     ],
     "flows": [
@@ -4027,19 +4132,14 @@
         "authority": "specified",
         "evidence": [
           {
-            "excerpt": "CH --> P[Bounded evidence snapshots]",
-            "line": 22,
+            "excerpt": "PG --> P[Bounded evidence snapshots]",
+            "line": 28,
             "path": "docs/ARCHITECTURE.md"
           }
         ],
         "id": "canonical-to-semantic-projection",
         "page": "projection",
         "steps": [
-          {
-            "from": "store:clickhouse",
-            "relation": "bounds",
-            "to": "evidence-snapshot"
-          },
           {
             "from": "store:postgresql",
             "relation": "bounds",
@@ -4051,8 +4151,13 @@
             "to": "evidence-snapshot"
           },
           {
-            "from": "evidence-snapshot",
-            "relation": "constrains",
+            "from": "local-wiki-projector",
+            "relation": "pulls",
+            "to": "evidence-snapshot"
+          },
+          {
+            "from": "local-wiki-projector",
+            "relation": "runs",
             "to": "llm-projector"
           },
           {
@@ -4061,13 +4166,79 @@
             "to": "semantic-wiki"
           },
           {
+            "from": "local-wiki-projector",
+            "relation": "writes-native",
+            "to": "semantic-wiki"
+          },
+          {
             "from": "semantic-wiki",
+            "relation": "publishes-approved",
+            "to": "projection-mirror"
+          },
+          {
+            "from": "projection-mirror",
+            "relation": "archives",
+            "to": "store:evidence"
+          },
+          {
+            "from": "projection-mirror",
+            "relation": "indexes",
+            "to": "store:postgresql"
+          },
+          {
+            "from": "projection-mirror",
             "relation": "serves",
             "to": "query-api"
           }
         ],
         "summary": "Bounded deterministic snapshots constrain cited narrative projection without granting canonical authority.",
         "title": "Canonical knowledge to semantic projection"
+      },
+      {
+        "authority": "specified",
+        "evidence": [
+          {
+            "excerpt": "I[One Rust image] --> API[Cloud Run service]",
+            "line": 20,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "cloud-runtime-to-dashboard",
+        "page": "delivery",
+        "steps": [
+          {
+            "from": "runtime-service",
+            "relation": "deployed-as",
+            "to": "cloud-run-api"
+          },
+          {
+            "from": "runtime-service",
+            "relation": "executes-as",
+            "to": "cloud-run-jobs"
+          },
+          {
+            "from": "cloud-scheduler",
+            "relation": "invokes",
+            "to": "cloud-run-jobs"
+          },
+          {
+            "from": "cloud-run-api",
+            "relation": "hosts",
+            "to": "query-api"
+          },
+          {
+            "from": "cloud-run-jobs",
+            "relation": "hosts",
+            "to": "collector"
+          },
+          {
+            "from": "cloud-run-jobs",
+            "relation": "hosts",
+            "to": "reducers"
+          }
+        ],
+        "summary": "One Rust image serves the scale-to-zero dashboard and bounded scheduled workers without creating another product authority.",
+        "title": "Cloud runtime to dashboard"
       },
       {
         "authority": "specified",
@@ -4088,17 +4259,22 @@
           },
           {
             "from": "collector",
-            "relation": "appends",
-            "to": "store:redpanda"
-          },
-          {
-            "from": "store:redpanda",
-            "relation": "retains",
+            "relation": "archives",
             "to": "store:evidence"
           },
           {
-            "from": "store:redpanda",
-            "relation": "feeds",
+            "from": "collector",
+            "relation": "enqueues",
+            "to": "store:postgresql"
+          },
+          {
+            "from": "store:postgresql",
+            "relation": "leases",
+            "to": "protocol-adapters"
+          },
+          {
+            "from": "store:evidence",
+            "relation": "supplies",
             "to": "protocol-adapters"
           },
           {
@@ -4109,7 +4285,7 @@
           {
             "from": "reducers",
             "relation": "writes-events",
-            "to": "store:clickhouse"
+            "to": "store:postgresql"
           },
           {
             "from": "reducers",
@@ -4149,7 +4325,7 @@
         "id": "single-runtime-identity",
         "kind": "runtime-identity",
         "status": "holds",
-        "why": "Exactly one runtime-service construction represents agent-economy-monitor; infrastructure remains boundary or store nodes."
+        "why": "Exactly one runtime-service construction represents agent-economy-monitor; Cloud Run service and job nodes are deployment forms of that image, not additional product identities."
       }
     ],
     "launch": {},
@@ -4174,7 +4350,7 @@
         "evidence": [
           {
             "excerpt": "D --> AT[Attribution engine]",
-            "line": 13,
+            "line": 14,
             "path": "docs/ARCHITECTURE.md"
           }
         ],
@@ -4187,8 +4363,8 @@
         "component": "architecture-policy",
         "evidence": [
           {
-            "excerpt": "CH --> F[Behavioral features and rule classifiers]",
-            "line": 15,
+            "excerpt": "PG --> F[Behavioral features and rule classifiers]",
+            "line": 16,
             "path": "docs/ARCHITECTURE.md"
           }
         ],
@@ -4201,8 +4377,50 @@
         "component": "architecture-policy",
         "evidence": [
           {
-            "excerpt": "Q --> L[Leptos private cockpit]",
+            "excerpt": "I[One Rust image] --> API[Cloud Run service]",
+            "line": 20,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "cloud-run-api",
+        "kind": "deployment",
+        "label": "Cloud Run dashboard service",
+        "page": "delivery"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "I --> J[Cloud Run jobs]",
             "line": 21,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "cloud-run-jobs",
+        "kind": "deployment",
+        "label": "Cloud Run worker jobs",
+        "page": "delivery"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "CS[Cloud Scheduler] --> J",
+            "line": 22,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "cloud-scheduler",
+        "kind": "scheduler",
+        "label": "Cloud Scheduler",
+        "page": "delivery"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "Q --> L[Leptos private cockpit]",
+            "line": 27,
             "path": "docs/ARCHITECTURE.md"
           }
         ],
@@ -4230,7 +4448,7 @@
         "evidence": [
           {
             "excerpt": "PG --> E[Targeted buyer enrichment]",
-            "line": 17,
+            "line": 18,
             "path": "docs/ARCHITECTURE.md"
           }
         ],
@@ -4243,8 +4461,8 @@
         "component": "architecture-policy",
         "evidence": [
           {
-            "excerpt": "CH --> P[Bounded evidence snapshots]",
-            "line": 22,
+            "excerpt": "PG --> P[Bounded evidence snapshots]",
+            "line": 28,
             "path": "docs/ARCHITECTURE.md"
           }
         ],
@@ -4341,14 +4559,28 @@
         "component": "architecture-policy",
         "evidence": [
           {
-            "excerpt": "P --> M[LLM projector]",
-            "line": 25,
+            "excerpt": "M[LLM projector]",
+            "line": 32,
             "path": "docs/ARCHITECTURE.md"
           }
         ],
         "id": "llm-projector",
         "kind": "projector",
         "label": "LLM projector",
+        "page": "projection"
+      },
+      {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "H[Local Hermes projection worker] -->|outbound pull| P",
+            "line": 30,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "local-wiki-projector",
+        "kind": "worker",
+        "label": "Local Hermes projection worker",
         "page": "projection"
       },
       {
@@ -4380,6 +4612,20 @@
         "page": "evidence"
       },
       {
+        "component": "architecture-policy",
+        "evidence": [
+          {
+            "excerpt": "W --> B[Approved read-only projection mirror]",
+            "line": 34,
+            "path": "docs/ARCHITECTURE.md"
+          }
+        ],
+        "id": "projection-mirror",
+        "kind": "projection",
+        "label": "Approved read-only projection mirror",
+        "page": "projection"
+      },
+      {
         "component": "x402-adapter",
         "evidence": [
           {
@@ -4397,8 +4643,8 @@
         "component": "architecture-policy",
         "evidence": [
           {
-            "excerpt": "CH --> Q[Axum query API and dashboard read models]",
-            "line": 19,
+            "excerpt": "PG --> Q[Axum query API and dashboard read models]",
+            "line": 26,
             "path": "docs/ARCHITECTURE.md"
           }
         ],
@@ -4412,7 +4658,7 @@
         "evidence": [
           {
             "excerpt": "A --> D[Deterministic reducers: keys · finality · reconciliation]",
-            "line": 11,
+            "line": 12,
             "path": "docs/ARCHITECTURE.md"
           }
         ],
@@ -4440,7 +4686,7 @@
         "evidence": [
           {
             "excerpt": "M --> W[Agentic Commerce Intelligence wiki]",
-            "line": 26,
+            "line": 33,
             "path": "docs/ARCHITECTURE.md"
           }
         ],
@@ -4453,57 +4699,29 @@
         "component": "architecture-policy",
         "evidence": [
           {
-            "excerpt": "D --> CH[ClickHouse observations · events · features]",
-            "line": 12,
-            "path": "docs/ARCHITECTURE.md"
-          }
-        ],
-        "id": "store:clickhouse",
-        "kind": "store",
-        "label": "ClickHouse observations and events",
-        "page": "canonical"
-      },
-      {
-        "component": "architecture-policy",
-        "evidence": [
-          {
-            "excerpt": "R --> O[S3 immutable evidence]",
-            "line": 9,
+            "excerpt": "C --> O[Google Cloud Storage immutable evidence]",
+            "line": 8,
             "path": "docs/ARCHITECTURE.md"
           }
         ],
         "id": "store:evidence",
         "kind": "store",
-        "label": "S3 immutable evidence",
+        "label": "Google Cloud Storage",
         "page": "evidence"
       },
       {
         "component": "architecture-policy",
         "evidence": [
           {
-            "excerpt": "AT --> PG[PostgreSQL entities · edges · claims]",
-            "line": 14,
+            "excerpt": "C --> PG[PostgreSQL jobs · observations · canonical knowledge]",
+            "line": 9,
             "path": "docs/ARCHITECTURE.md"
           }
         ],
         "id": "store:postgresql",
         "kind": "store",
-        "label": "PostgreSQL entities and claims",
+        "label": "PostgreSQL operational and analytical store",
         "page": "canonical"
-      },
-      {
-        "component": "architecture-policy",
-        "evidence": [
-          {
-            "excerpt": "C --> R[Redpanda replay log]",
-            "line": 8,
-            "path": "docs/ARCHITECTURE.md"
-          }
-        ],
-        "id": "store:redpanda",
-        "kind": "store",
-        "label": "Redpanda replay log",
-        "page": "evidence"
       }
     ],
     "pages": [
@@ -4571,7 +4789,7 @@
   "inventory": {
     "declarations": 246,
     "files": 50,
-    "lines": 11009
+    "lines": 11183
   },
   "layers": [
     {
@@ -4612,36 +4830,20 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "5eacdd6588adfe8a2f4d8a014f06049900f6c5f55829d1d30baf0ed28531a97c",
+  "source_tree_sha256": "c052c6aa53a5c4c9444dd0e1497c76aa96c16e9140687782beaa2e9607b8fa93",
   "stores": {
-    "count": 4,
+    "count": 2,
     "items": [
       {
         "component": "architecture-policy",
         "evidence": {
-          "excerpt": "D --> CH[ClickHouse observations · events · features]",
-          "line": 12,
-          "path": "docs/ARCHITECTURE.md"
-        },
-        "id": "clickhouse",
-        "kind": "analytical-database",
-        "label": "ClickHouse",
-        "persistence": [
-          "observations",
-          "canonical-events",
-          "features"
-        ]
-      },
-      {
-        "component": "architecture-policy",
-        "evidence": {
-          "excerpt": "R --> O[S3 immutable evidence]",
-          "line": 9,
+          "excerpt": "C --> O[Google Cloud Storage immutable evidence]",
+          "line": 8,
           "path": "docs/ARCHITECTURE.md"
         },
         "id": "evidence",
         "kind": "object-storage",
-        "label": "S3-compatible evidence",
+        "label": "Google Cloud Storage",
         "persistence": [
           "immutable-raw-evidence"
         ]
@@ -4649,32 +4851,22 @@
       {
         "component": "architecture-policy",
         "evidence": {
-          "excerpt": "AT --> PG[PostgreSQL entities · edges · claims]",
-          "line": 14,
+          "excerpt": "C --> PG[PostgreSQL jobs · observations · canonical knowledge]",
+          "line": 9,
           "path": "docs/ARCHITECTURE.md"
         },
         "id": "postgresql",
         "kind": "relational-database",
         "label": "PostgreSQL",
         "persistence": [
+          "append-only-observations",
+          "canonical-events",
+          "transactional-job-leases",
           "entities",
           "edges",
           "claims",
+          "features",
           "provenance"
-        ]
-      },
-      {
-        "component": "architecture-policy",
-        "evidence": {
-          "excerpt": "C --> R[Redpanda replay log]",
-          "line": 8,
-          "path": "docs/ARCHITECTURE.md"
-        },
-        "id": "redpanda",
-        "kind": "replay-log",
-        "label": "Redpanda",
-        "persistence": [
-          "durable-operational-log"
         ]
       }
     ]
