@@ -407,6 +407,9 @@ fn open_regular_file_nofollow(directory: &Dir, path: &Path) -> std::io::Result<c
 }
 
 fn sync_directory(directory: &Dir) -> Result<(), StoreError> {
+    #[cfg(unix)]
+    directory.open(".")?.sync_all()?;
+    #[cfg(not(unix))]
     directory.try_clone()?.into_std_file().sync_all()?;
     Ok(())
 }

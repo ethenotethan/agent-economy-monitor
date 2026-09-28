@@ -423,7 +423,7 @@
       "id": "evidence-store",
       "label": "Evidence storage contract",
       "layer": "evidence",
-      "line_count": 649
+      "line_count": 652
     },
     {
       "declaration_count": 41,
@@ -2557,7 +2557,7 @@
           },
           {
             "kind": "mod",
-            "line": 415,
+            "line": 418,
             "name": "tests",
             "passes": [
               "rust.declaration"
@@ -2565,7 +2565,7 @@
           },
           {
             "kind": "fn",
-            "line": 421,
+            "line": 424,
             "name": "final_object_symlink_is_never_followed",
             "passes": [
               "rust.declaration"
@@ -2573,14 +2573,14 @@
           },
           {
             "kind": "fn",
-            "line": 440,
+            "line": 443,
             "name": "final_object_fifo_is_rejected_promptly",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 464,
+        "line_count": 467,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -5406,7 +5406,7 @@
   "inventory": {
     "declarations": 291,
     "files": 57,
-    "lines": 12677
+    "lines": 12680
   },
   "layers": [
     {
@@ -5447,7 +5447,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "1062516b19e88b4d38d220bac6243a9e9bd5b4fe442909f9bf50938caa988d73",
+  "source_tree_sha256": "a1e409334ec8461d41ad3eb927cf693c2b5ef8d2ecf72854f38fe25a3bcc8cf4",
   "stores": {
     "count": 2,
     "items": [
