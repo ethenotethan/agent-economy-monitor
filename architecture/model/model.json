@@ -373,7 +373,7 @@
       "line_count": 2487
     },
     {
-      "declaration_count": 70,
+      "declaration_count": 72,
       "declarations": [
         "ChainFinalityEvidence",
         "Conflict",
@@ -413,6 +413,7 @@
         "encode_snapshot",
         "events",
         "evidence_id",
+        "evm_delayed_orphan_for_old_inclusion_preserves_newer_reinclusion",
         "evm_finality_progression_preserves_reorg_history",
         "evm_finality_rejects_positions_that_postgres_cannot_persist",
         "evm_finality_replays_reinclusion_after_orphaning_in_any_input_order",
@@ -423,6 +424,7 @@
         "fingerprint",
         "fn",
         "id",
+        "inclusion_key",
         "independent_observations_and_conflicts_remain_inspectable",
         "new",
         "observation",
@@ -459,7 +461,7 @@
       "id": "deterministic-reducer",
       "label": "Deterministic reducer and finality engine",
       "layer": "canonical",
-      "line_count": 1540
+      "line_count": 1673
     },
     {
       "declaration_count": 0,
@@ -1580,7 +1582,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 524,
+            "line": 545,
             "path": "crates/reducer/src/lib.rs",
             "rule": "declared.topology",
             "via": "pub struct Reducer {"
@@ -3542,7 +3544,7 @@
       {
         "citations": 1,
         "component": "deterministic-reducer",
-        "declaration_count": 97,
+        "declaration_count": 98,
         "declarations": [
           {
             "kind": "enum",
@@ -4010,7 +4012,7 @@
           },
           {
             "kind": "fn",
-            "line": 370,
+            "line": 371,
             "name": "updates",
             "passes": [
               "rust.declaration"
@@ -4018,7 +4020,7 @@
           },
           {
             "kind": "fn",
-            "line": 373,
+            "line": 374,
             "name": "conflicts",
             "passes": [
               "rust.declaration"
@@ -4026,7 +4028,7 @@
           },
           {
             "kind": "fn",
-            "line": 376,
+            "line": 377,
             "name": "current",
             "passes": [
               "rust.declaration"
@@ -4034,7 +4036,7 @@
           },
           {
             "kind": "fn",
-            "line": 379,
+            "line": 382,
             "name": "encode",
             "passes": [
               "rust.declaration"
@@ -4042,7 +4044,7 @@
           },
           {
             "kind": "fn",
-            "line": 382,
+            "line": 385,
             "name": "state_hash",
             "passes": [
               "rust.declaration"
@@ -4050,7 +4052,7 @@
           },
           {
             "kind": "struct",
-            "line": 388,
+            "line": 391,
             "name": "FinalityEngine",
             "passes": [
               "rust.declaration"
@@ -4058,7 +4060,7 @@
           },
           {
             "kind": "const",
-            "line": 393,
+            "line": 396,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -4066,7 +4068,7 @@
           },
           {
             "kind": "const",
-            "line": 398,
+            "line": 401,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -4074,7 +4076,7 @@
           },
           {
             "kind": "fn",
-            "line": 404,
+            "line": 407,
             "name": "reconcile_for",
             "passes": [
               "rust.declaration"
@@ -4082,7 +4084,7 @@
           },
           {
             "kind": "struct",
-            "line": 466,
+            "line": 487,
             "name": "Conflict",
             "passes": [
               "rust.declaration"
@@ -4090,7 +4092,7 @@
           },
           {
             "kind": "fn",
-            "line": 472,
+            "line": 493,
             "name": "fingerprint",
             "passes": [
               "rust.declaration"
@@ -4098,7 +4100,7 @@
           },
           {
             "kind": "fn",
-            "line": 475,
+            "line": 496,
             "name": "observation_ids",
             "passes": [
               "rust.declaration"
@@ -4106,7 +4108,7 @@
           },
           {
             "kind": "struct",
-            "line": 482,
+            "line": 503,
             "name": "ReducedEvent",
             "passes": [
               "rust.declaration"
@@ -4114,7 +4116,7 @@
           },
           {
             "kind": "fn",
-            "line": 489,
+            "line": 510,
             "name": "id",
             "passes": [
               "rust.declaration"
@@ -4122,7 +4124,7 @@
           },
           {
             "kind": "fn",
-            "line": 492,
+            "line": 513,
             "name": "observations",
             "passes": [
               "rust.declaration"
@@ -4130,7 +4132,7 @@
           },
           {
             "kind": "fn",
-            "line": 496,
+            "line": 517,
             "name": "conflicts",
             "passes": [
               "rust.declaration"
@@ -4138,7 +4140,7 @@
           },
           {
             "kind": "struct",
-            "line": 503,
+            "line": 524,
             "name": "ReductionSnapshot",
             "passes": [
               "rust.declaration"
@@ -4146,7 +4148,7 @@
           },
           {
             "kind": "fn",
-            "line": 510,
+            "line": 531,
             "name": "events",
             "passes": [
               "rust.declaration"
@@ -4154,7 +4156,7 @@
           },
           {
             "kind": "fn",
-            "line": 513,
+            "line": 534,
             "name": "encode",
             "passes": [
               "rust.declaration"
@@ -4162,7 +4164,7 @@
           },
           {
             "kind": "fn",
-            "line": 517,
+            "line": 538,
             "name": "state_hash",
             "passes": [
               "rust.declaration"
@@ -4170,7 +4172,7 @@
           },
           {
             "kind": "struct",
-            "line": 524,
+            "line": 545,
             "name": "Reducer",
             "passes": [
               "rust.declaration"
@@ -4178,7 +4180,7 @@
           },
           {
             "kind": "fn",
-            "line": 529,
+            "line": 550,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -4186,7 +4188,7 @@
           },
           {
             "kind": "fn",
-            "line": 534,
+            "line": 555,
             "name": "reduce",
             "passes": [
               "rust.declaration"
@@ -4194,7 +4196,7 @@
           },
           {
             "kind": "enum",
-            "line": 565,
+            "line": 586,
             "name": "ReducerError",
             "passes": [
               "rust.declaration"
@@ -4202,7 +4204,7 @@
           },
           {
             "kind": "fn",
-            "line": 577,
+            "line": 598,
             "name": "validate_finality_evidence",
             "passes": [
               "rust.declaration"
@@ -4210,7 +4212,7 @@
           },
           {
             "kind": "fn",
-            "line": 601,
+            "line": 622,
             "name": "derive_evm_status",
             "passes": [
               "rust.declaration"
@@ -4218,7 +4220,7 @@
           },
           {
             "kind": "const",
-            "line": 625,
+            "line": 646,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -4226,7 +4228,7 @@
           },
           {
             "kind": "fn",
-            "line": 635,
+            "line": 656,
             "name": "basis_order",
             "passes": [
               "rust.declaration"
@@ -4234,7 +4236,15 @@
           },
           {
             "kind": "fn",
-            "line": 672,
+            "line": 693,
+            "name": "inclusion_key",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 716,
             "name": "encode_finality_timeline",
             "passes": [
               "rust.declaration"
@@ -4242,7 +4252,7 @@
           },
           {
             "kind": "fn",
-            "line": 694,
+            "line": 745,
             "name": "encode_finality_update",
             "passes": [
               "rust.declaration"
@@ -4250,7 +4260,7 @@
           },
           {
             "kind": "const",
-            "line": 706,
+            "line": 757,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -4258,7 +4268,7 @@
           },
           {
             "kind": "const",
-            "line": 713,
+            "line": 764,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -4266,7 +4276,7 @@
           },
           {
             "kind": "const",
-            "line": 721,
+            "line": 772,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -4274,7 +4284,7 @@
           },
           {
             "kind": "fn",
-            "line": 742,
+            "line": 793,
             "name": "reconcile_event",
             "passes": [
               "rust.declaration"
@@ -4282,7 +4292,7 @@
           },
           {
             "kind": "const",
-            "line": 801,
+            "line": 852,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -4290,7 +4300,7 @@
           },
           {
             "kind": "fn",
-            "line": 808,
+            "line": 859,
             "name": "payload_fingerprint",
             "passes": [
               "rust.declaration"
@@ -4298,7 +4308,7 @@
           },
           {
             "kind": "fn",
-            "line": 842,
+            "line": 893,
             "name": "encode_snapshot",
             "passes": [
               "rust.declaration"
@@ -4306,7 +4316,7 @@
           },
           {
             "kind": "fn",
-            "line": 862,
+            "line": 913,
             "name": "append_optional",
             "passes": [
               "rust.declaration"
@@ -4314,14 +4324,14 @@
           },
           {
             "kind": "fn",
-            "line": 872,
+            "line": 923,
             "name": "append_field",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 876,
+        "line_count": 927,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -4333,7 +4343,7 @@
       {
         "citations": 0,
         "component": "deterministic-reducer",
-        "declaration_count": 13,
+        "declaration_count": 14,
         "declarations": [
           {
             "kind": "fn",
@@ -4386,6 +4396,14 @@
           {
             "kind": "fn",
             "line": 240,
+            "name": "evm_delayed_orphan_for_old_inclusion_preserves_newer_reinclusion",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 322,
             "name": "solana_finality_records_reverted_execution_and_conflicting_regression",
             "passes": [
               "rust.declaration"
@@ -4393,7 +4411,7 @@
           },
           {
             "kind": "fn",
-            "line": 306,
+            "line": 388,
             "name": "finality_replay_is_identical_when_provider_timestamps_tie",
             "passes": [
               "rust.declaration"
@@ -4401,7 +4419,7 @@
           },
           {
             "kind": "fn",
-            "line": 347,
+            "line": 429,
             "name": "finality_reconciliation_rejects_cross_event_evidence",
             "passes": [
               "rust.declaration"
@@ -4409,7 +4427,7 @@
           },
           {
             "kind": "fn",
-            "line": 381,
+            "line": 463,
             "name": "corroborating_finality_assertions_are_preserved",
             "passes": [
               "rust.declaration"
@@ -4417,7 +4435,7 @@
           },
           {
             "kind": "fn",
-            "line": 421,
+            "line": 503,
             "name": "finality_state_hash_commits_to_policy_basis",
             "passes": [
               "rust.declaration"
@@ -4425,7 +4443,7 @@
           },
           {
             "kind": "fn",
-            "line": 455,
+            "line": 537,
             "name": "evm_finality_rejects_positions_that_postgres_cannot_persist",
             "passes": [
               "rust.declaration"
@@ -4433,14 +4451,14 @@
           },
           {
             "kind": "fn",
-            "line": 478,
+            "line": 560,
             "name": "solana_finality_rejects_slots_that_postgres_cannot_persist",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 497,
+        "line_count": 579,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -8321,7 +8339,7 @@
         "id": "declared.topology"
       },
       {
-        "citations": 681,
+        "citations": 683,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
         "files": 20,
@@ -8353,7 +8371,7 @@
         "worker": 6
       },
       "citations": 34,
-      "declarations": 681,
+      "declarations": 683,
       "entities": 34,
       "entities_with_origin": 34,
       "files": 83,
@@ -9309,7 +9327,7 @@
         "evidence": [
           {
             "excerpt": "pub struct Reducer {",
-            "line": 524,
+            "line": 545,
             "path": "crates/reducer/src/lib.rs"
           }
         ],
@@ -9466,9 +9484,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 681,
+    "declarations": 683,
     "files": 83,
-    "lines": 22223
+    "lines": 22356
   },
   "layers": [
     {
@@ -9509,7 +9527,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "5c1783a398a6feb10c393c20f3215efd105a26eb4a7268a7a2177213500cd642",
+  "source_tree_sha256": "e6e52d759f65251da79934f9e810d3c02689663902e0939d18cef80e17952bab",
   "stores": {
     "count": 2,
     "items": [

@@ -362,6 +362,7 @@ impl FinalityConflict {
 pub struct FinalityTimeline {
     updates: Vec<FinalityUpdate>,
     conflicts: Vec<FinalityConflict>,
+    current_update_index: Option<usize>,
     encoded: Vec<u8>,
     state_hash: String,
 }
@@ -374,7 +375,9 @@ impl FinalityTimeline {
         &self.conflicts
     }
     pub fn current(&self) -> Option<FinalityStatus> {
-        self.updates.last().map(FinalityUpdate::status)
+        self.current_update_index
+            .and_then(|index| self.updates.get(index))
+            .map(FinalityUpdate::status)
     }
     pub fn encode(&self) -> &[u8] {
         &self.encoded
@@ -440,20 +443,38 @@ impl FinalityEngine {
         let mut timeline = FinalityTimeline {
             updates: Vec::new(),
             conflicts: Vec::new(),
+            current_update_index: None,
             encoded: Vec::new(),
             state_hash: String::new(),
         };
+        let mut inclusion_statuses = BTreeMap::<Vec<u8>, FinalityStatus>::new();
+        let mut active_inclusion = None::<Vec<u8>>;
         for update in updates {
-            match timeline.current() {
-                None => timeline.updates.push(update),
-                Some(current) if current == update.status => timeline.updates.push(update),
-                Some(current) if valid_finality_transition(current, update.status) => {
-                    timeline.updates.push(update)
-                }
-                Some(current) => timeline.conflicts.push(FinalityConflict {
+            let inclusion = inclusion_key(&update.basis);
+            let current_for_inclusion = inclusion_statuses.get(&inclusion).copied();
+            let accepted = current_for_inclusion.is_none_or(|current| {
+                current == update.status || valid_finality_transition(current, update.status)
+            });
+            if !accepted {
+                timeline.conflicts.push(FinalityConflict {
                     update,
-                    current_status: current,
-                }),
+                    current_status: current_for_inclusion
+                        .expect("a rejected transition has an inclusion status"),
+                });
+                continue;
+            }
+
+            let status = update.status;
+            timeline.updates.push(update);
+            inclusion_statuses.insert(inclusion.clone(), status);
+            let update_index = timeline.updates.len() - 1;
+            if status != FinalityStatus::Orphaned
+                || active_inclusion
+                    .as_ref()
+                    .is_none_or(|active| active == &inclusion)
+            {
+                active_inclusion = Some(inclusion);
+                timeline.current_update_index = Some(update_index);
             }
         }
         timeline.encoded = encode_finality_timeline(self.policy, &timeline);
@@ -670,6 +691,29 @@ fn basis_order(basis: &FinalityBasis) -> Vec<u8> {
     encoded
 }
 
+fn inclusion_key(basis: &FinalityBasis) -> Vec<u8> {
+    let mut encoded = Vec::new();
+    match basis {
+        FinalityBasis::Evm {
+            block_number,
+            block_hash,
+            ..
+        } => {
+            encoded.push(0);
+            encoded.extend_from_slice(&block_number.to_be_bytes());
+            append_field(&mut encoded, block_hash.as_bytes());
+        }
+        FinalityBasis::Solana {
+            slot, block_hash, ..
+        } => {
+            encoded.push(1);
+            encoded.extend_from_slice(&slot.to_be_bytes());
+            append_field(&mut encoded, block_hash.as_bytes());
+        }
+    }
+    encoded
+}
+
 fn encode_finality_timeline(policy: FinalityPolicy, timeline: &FinalityTimeline) -> Vec<u8> {
     let mut encoded = Vec::new();
     append_field(&mut encoded, b"agent-economy-finality-v1");
@@ -688,6 +732,13 @@ fn encode_finality_timeline(policy: FinalityPolicy, timeline: &FinalityTimeline)
         encoded.push(0);
         encode_finality_update(&mut encoded, &conflict.update);
         encoded.push(finality_order(conflict.current_status));
+    }
+    match timeline.current_update_index {
+        Some(index) => {
+            encoded.push(1);
+            encoded.extend_from_slice(&(index as u64).to_be_bytes());
+        }
+        None => encoded.push(0),
     }
     encoded
 }

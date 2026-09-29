@@ -237,6 +237,88 @@ fn evm_finality_replays_reinclusion_after_orphaning_in_any_input_order() {
 }
 
 #[test]
+fn evm_delayed_orphan_for_old_inclusion_preserves_newer_reinclusion() {
+    let engine = FinalityEngine::evm(5);
+    let subject = finality_subject();
+    let observed_in_block_a = EvmFinalityEvidence::new(
+        subject.clone(),
+        "rpc-primary",
+        "provenance:observed-a",
+        "evidence:observed-a",
+        100,
+        10,
+        "0xaaa",
+        "0xaaa",
+        10,
+        0,
+        ExecutionOutcome::Succeeded,
+    );
+    let confirmed_in_block_b = EvmFinalityEvidence::new(
+        subject.clone(),
+        "rpc-primary",
+        "provenance:confirmed-b",
+        "evidence:confirmed-b",
+        200,
+        12,
+        "0xccc",
+        "0xccc",
+        17,
+        0,
+        ExecutionOutcome::Succeeded,
+    );
+    let delayed_orphan_from_block_a = EvmFinalityEvidence::new(
+        subject.clone(),
+        "rpc-primary",
+        "provenance:orphaned-a",
+        "evidence:orphaned-a",
+        300,
+        10,
+        "0xaaa",
+        "0xbbb",
+        18,
+        0,
+        ExecutionOutcome::Succeeded,
+    );
+
+    let forward = engine
+        .reconcile_for(
+            &subject,
+            [
+                observed_in_block_a.clone(),
+                confirmed_in_block_b.clone(),
+                delayed_orphan_from_block_a.clone(),
+            ],
+        )
+        .expect("delayed orphan evidence remains valid history");
+    let reverse = engine
+        .reconcile_for(
+            &subject,
+            [
+                delayed_orphan_from_block_a,
+                confirmed_in_block_b,
+                observed_in_block_a,
+            ],
+        )
+        .expect("replay order does not change delayed-orphan handling");
+
+    assert_eq!(forward, reverse);
+    assert_eq!(
+        forward
+            .updates()
+            .iter()
+            .map(|update| update.status())
+            .collect::<Vec<_>>(),
+        vec![
+            FinalityStatus::Observed,
+            FinalityStatus::Confirmed,
+            FinalityStatus::Orphaned,
+        ]
+    );
+    assert_eq!(forward.current(), Some(FinalityStatus::Confirmed));
+    assert!(forward.conflicts().is_empty());
+}
+
+#[test]
 fn solana_finality_records_reverted_execution_and_conflicting_regression() {
     let engine = FinalityEngine::solana();
     let subject = finality_subject();
