@@ -305,7 +305,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5437
+      "line_count": 5450
     },
     {
       "declaration_count": 44,
@@ -371,6 +371,70 @@
       "line_count": 1320
     },
     {
+      "declaration_count": 45,
+      "declarations": [
+        "Activity",
+        "AutonomySignal",
+        "BehavioralClassifier",
+        "ClaimStatus",
+        "ClassificationClaim",
+        "ClassificationDrift",
+        "ClassificationError",
+        "ClassificationResult",
+        "FeatureEngine",
+        "FeatureMetric",
+        "FeatureSnapshot",
+        "LabelDefinition",
+        "LabelKind",
+        "Protocol",
+        "Rule",
+        "activity",
+        "added_labels",
+        "baseline_state_hash",
+        "cadence_handles_the_full_supported_timestamp_range_without_overflow",
+        "claim_key",
+        "claims",
+        "classifier_rejects_an_empty_label_set_that_cannot_be_persisted",
+        "classifier_version",
+        "classify",
+        "compute",
+        "computes_all_feature_families_deterministically",
+        "emits_versioned_core_and_extension_labels_as_inferred_claims",
+        "encode",
+        "encode_count",
+        "encode_field",
+        "evidence_ids",
+        "feature_version",
+        "fn",
+        "input_snapshot_hash",
+        "label_churn_count",
+        "label_id",
+        "label_set_hash",
+        "matches",
+        "measure_drift",
+        "measures_label_and_input_drift_between_replays",
+        "median",
+        "new",
+        "removed_labels",
+        "replay_state_hash",
+        "state_hash"
+      ],
+      "description": "Deterministic buyer spend, cadence, protocol, counterparty, and explicit-autonomy features with versioned core and extension labels plus replay drift measurement.",
+      "external": false,
+      "file_count": 5,
+      "files": [
+        "crates/classification/Cargo.toml",
+        "crates/classification/src/lib.rs",
+        "crates/classification/tests/classification.rs",
+        "migrations/0007_buyer_classification.down.sql",
+        "migrations/0007_buyer_classification.up.sql"
+      ],
+      "id": "buyer-classification",
+      "label": "Buyer behavioral classification",
+      "layer": "canonical",
+      "line_count": 1586
+    },
+    {
       "declaration_count": 0,
       "declarations": [],
       "description": "Chain-scoped buyer enrichment cursors, persisted hard-budget accounting, and immutable finalized public-history cache without protocol attribution.",
@@ -414,7 +478,7 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 14,
+      "file_count": 15,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -422,6 +486,7 @@
         "scripts/verify",
         "tests/adapter_boundary.rs",
         "tests/buyer_enrichment_schema_test.py",
+        "tests/classification_schema_test.py",
         "tests/dev_stack_live_test.py",
         "tests/dev_stack_test.py",
         "tests/knowledge_graph_schema_test.py",
@@ -434,7 +499,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 2830
+      "line_count": 3194
     },
     {
       "declaration_count": 73,
@@ -1008,7 +1073,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 2509
+      "line_count": 2519
     },
     {
       "declaration_count": 0,
@@ -1138,7 +1203,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, PostgreSQL cursor and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution schema, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, PostgreSQL cursor and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -1213,7 +1278,7 @@
         },
         {
           "id": "rust.workers",
-          "reason": "The external RPC collector, targeted buyer enrichment, deterministic reducer/finality engine, and settlement attribution engine are implemented as libraries, but no collect/reduce/attribute/classify/enrich/project-wiki process mode exists yet; the remaining worker topology is specified only."
+          "reason": "The external RPC collector, targeted buyer enrichment, deterministic reducer/finality engine, settlement attribution engine, and buyer classification engine are implemented as libraries, but no collect/reduce/attribute/classify/enrich/project-wiki process mode exists yet; the remaining worker topology is specified only."
         }
       ]
     },
@@ -1250,6 +1315,21 @@
         ]
       },
       {
+        "component": "buyer-classification",
+        "id": "buyer-classification-schema",
+        "kind": "schema",
+        "label": "Versioned classification and replay drift schema",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 15,
+            "path": "migrations/0007_buyer_classification.up.sql",
+            "rule": "declared.topology",
+            "via": "CREATE TABLE agent_economy.classification_runs ("
+          }
+        ]
+      },
+      {
         "component": "buyer-enrichment-schema",
         "id": "buyer-enrichment-schema",
         "kind": "schema",
@@ -1280,17 +1360,17 @@
         ]
       },
       {
-        "component": "architecture-policy",
+        "component": "buyer-classification",
         "id": "classification",
         "kind": "worker",
         "label": "Behavioral classification",
         "origins": [
           {
             "family": "specified",
-            "line": 16,
-            "path": "docs/ARCHITECTURE.md",
+            "line": 488,
+            "path": "crates/classification/src/lib.rs",
             "rule": "declared.topology",
-            "via": "PG --> F[Behavioral features and rule classifiers]"
+            "via": "pub struct BehavioralClassifier {"
           }
         ]
       },
@@ -1830,7 +1910,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 2422,
+        "line_count": 2431,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1844,7 +1924,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 31,
+        "line_count": 32,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1872,7 +1952,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 507,
+        "line_count": 520,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -2431,6 +2511,618 @@
           "rust.declaration"
         ],
         "path": "crates/attribution/tests/attribution.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "buyer-classification",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 11,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "crates/classification/Cargo.toml",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "buyer-classification",
+        "declaration_count": 65,
+        "declarations": [
+          {
+            "kind": "enum",
+            "line": 6,
+            "name": "Protocol",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 12,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 21,
+            "name": "AutonomySignal",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 28,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 38,
+            "name": "Activity",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 48,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 72,
+            "name": "FeatureSnapshot",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 90,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 93,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 97,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 101,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 108,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 112,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 116,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 120,
+            "name": "feature_version",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 124,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 128,
+            "name": "evidence_ids",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 132,
+            "name": "input_snapshot_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 139,
+            "name": "FeatureEngine",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 144,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 151,
+            "name": "compute",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 239,
+            "name": "median",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 251,
+            "name": "input_snapshot_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 284,
+            "name": "encode_field",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 289,
+            "name": "encode_count",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 295,
+            "name": "LabelKind",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 301,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 310,
+            "name": "FeatureMetric",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 322,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 334,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 353,
+            "name": "Rule",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 359,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 362,
+            "name": "matches",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 369,
+            "name": "LabelDefinition",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 377,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 397,
+            "name": "ClaimStatus",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 404,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 414,
+            "name": "ClassificationClaim",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 422,
+            "name": "label_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 425,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 429,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 433,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 440,
+            "name": "ClassificationResult",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 454,
+            "name": "classifier_version",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 457,
+            "name": "feature_version",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 461,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 465,
+            "name": "input_snapshot_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 469,
+            "name": "label_set_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 473,
+            "name": "claims",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 477,
+            "name": "encode",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 481,
+            "name": "state_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 488,
+            "name": "BehavioralClassifier",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 495,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 521,
+            "name": "classify",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 573,
+            "name": "label_set_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 593,
+            "name": "ClassificationDrift",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 602,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 605,
+            "name": "added_labels",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 609,
+            "name": "removed_labels",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 613,
+            "name": "label_churn_count",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 617,
+            "name": "baseline_state_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 621,
+            "name": "replay_state_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 626,
+            "name": "measure_drift",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 657,
+            "name": "claim_key",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 663,
+            "name": "ClassificationError",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 680,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/classification/src/lib.rs",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "buyer-classification",
+        "declaration_count": 6,
+        "declarations": [
+          {
+            "kind": "fn",
+            "line": 5,
+            "name": "activity",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 26,
+            "name": "computes_all_feature_families_deterministically",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 84,
+            "name": "emits_versioned_core_and_extension_labels_as_inferred_claims",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 160,
+            "name": "measures_label_and_input_drift_between_replays",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 217,
+            "name": "cadence_handles_the_full_supported_timestamp_range_without_overflow",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 249,
+            "name": "classifier_rejects_an_empty_label_set_that_cannot_be_persisted",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 257,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/classification/tests/classification.rs",
         "semantic_citations": 0,
         "touched": false
       },
@@ -8181,7 +8873,7 @@
         "touched": false
       },
       {
-        "citations": 13,
+        "citations": 12,
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
@@ -8375,6 +9067,34 @@
         "path": "migrations/0006_settlement_attribution.up.sql",
         "semantic_citations": 0,
         "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "buyer-classification",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 44,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0007_buyer_classification.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "buyer-classification",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 594,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0007_buyer_classification.up.sql",
+        "semantic_citations": 0,
+        "touched": true
       },
       {
         "citations": 0,
@@ -8621,6 +9341,20 @@
           "declared.topology"
         ],
         "path": "tests/buyer_enrichment_schema_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 364,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/classification_schema_test.py",
         "semantic_citations": 0,
         "touched": false
       },
@@ -8891,17 +9625,17 @@
         "id": "ci.workflow"
       },
       {
-        "citations": 32,
+        "citations": 33,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
-        "files": 18,
+        "files": 20,
         "id": "declared.topology"
       },
       {
-        "citations": 734,
+        "citations": 805,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 22,
+        "files": 24,
         "id": "rust.declaration"
       },
       {
@@ -8923,22 +9657,22 @@
         "projection": 2,
         "projector": 1,
         "scheduler": 1,
-        "schema": 4,
+        "schema": 5,
         "service": 2,
         "store": 2,
         "surface": 1,
         "worker": 6
       },
-      "citations": 34,
-      "declarations": 734,
-      "entities": 34,
-      "entities_with_origin": 34,
-      "files": 89,
+      "citations": 35,
+      "declarations": 805,
+      "entities": 35,
+      "entities_with_origin": 35,
+      "files": 95,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
-      "touched_files": 18,
-      "untouched_files": 71
+      "touched_files": 20,
+      "untouched_files": 75
     }
   },
   "interplay": {
@@ -8975,6 +9709,12 @@
       {
         "class": "structure",
         "relation": "materializes-in",
+        "source": "buyer-classification-schema",
+        "target": "store:postgresql"
+      },
+      {
+        "class": "structure",
+        "relation": "materializes-in",
         "source": "buyer-enrichment-schema",
         "target": "store:postgresql"
       },
@@ -9001,6 +9741,12 @@
         "relation": "hosts",
         "source": "cloud-run-jobs",
         "target": "attribution"
+      },
+      {
+        "class": "structure",
+        "relation": "hosts",
+        "source": "cloud-run-jobs",
+        "target": "classification"
       },
       {
         "class": "structure",
@@ -9529,6 +10275,20 @@
         "page": "canonical"
       },
       {
+        "component": "buyer-classification",
+        "evidence": [
+          {
+            "excerpt": "CREATE TABLE agent_economy.classification_runs (",
+            "line": 15,
+            "path": "migrations/0007_buyer_classification.up.sql"
+          }
+        ],
+        "id": "buyer-classification-schema",
+        "kind": "schema",
+        "label": "Versioned classification and replay drift schema",
+        "page": "canonical"
+      },
+      {
         "component": "buyer-enrichment-schema",
         "evidence": [
           {
@@ -9557,12 +10317,12 @@
         "page": "canonical"
       },
       {
-        "component": "architecture-policy",
+        "component": "buyer-classification",
         "evidence": [
           {
-            "excerpt": "PG --> F[Behavioral features and rule classifiers]",
-            "line": 16,
-            "path": "docs/ARCHITECTURE.md"
+            "excerpt": "pub struct BehavioralClassifier {",
+            "line": 488,
+            "path": "crates/classification/src/lib.rs"
           }
         ],
         "id": "classification",
@@ -10013,6 +10773,7 @@
         "components": [
           "architecture-policy",
           "attribution-engine",
+          "buyer-classification",
           "buyer-enrichment-schema",
           "deterministic-reducer",
           "knowledge-graph-schema",
@@ -10024,6 +10785,8 @@
         "roots": [
           "reducers",
           "attribution",
+          "classification",
+          "buyer-classification-schema",
           "buyer-enrichment-schema",
           "canonical-knowledge-schema",
           "operational-analytics-schema",
@@ -10056,9 +10819,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 734,
-    "files": 89,
-    "lines": 24136
+    "declarations": 805,
+    "files": 95,
+    "lines": 26109
   },
   "layers": [
     {
@@ -10099,7 +10862,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "03e57c0493f8b5532645dfcff550758a934f2c8f2ef7e14ebd05144a563471c8",
+  "source_tree_sha256": "ca5b58862726b2602d593636e0eb788c51091b5a0c963b58b0e903f8614ad94d",
   "stores": {
     "count": 2,
     "items": [
