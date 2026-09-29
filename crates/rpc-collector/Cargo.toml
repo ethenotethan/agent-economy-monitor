@@ -1,0 +1,18 @@
+[package]
+name = "agent-economy-rpc-collector"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Evidence-first external RPC collection framework"
+
+[dependencies]
+agent-economy-evidence-store = { path = "../evidence-store" }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = "1"
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["time"] }
+tokio-postgres = "0.7"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt", "time"] }

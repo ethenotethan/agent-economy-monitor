@@ -74,6 +74,22 @@ addressed digest. Every read verifies SHA-256 before returning evidence to a par
 
 All workers are idempotent. Lease expiry and reassignment after failure are safe.
 
+### External RPC collection
+
+Ethereum, Base, Solana, and Tempo share one Alchemy collector contract. Each bounded
+run resumes a chain-scoped PostgreSQL cursor, applies an explicit request budget and
+bounded exponential retry policy, and fetches one deterministic block or slot at a
+time. Every provider response, including retryable HTTP responses, is written through
+the immutable evidence contract before status or JSON-RPC parsing. Only a successfully
+archived response whose reported height matches the requested height may advance the
+cursor through an atomic compare-and-set update. Missing or noncontiguous heights stop
+the run without skipping data and are exposed in the collection report alongside RPC
+budget, retry, and evidence-object metrics.
+
+RPC endpoint values are secret-bearing types whose debug representation is always
+redacted. Transport errors intentionally discard underlying URL-bearing error text,
+and request payloads are neither logged nor retained as fixtures.
+
 ## Deferred scale seams
 
 Pub/Sub and BigQuery are not v1 dependencies and do not appear as deployed System Map nodes. Pub/Sub may replace PostgreSQL job leasing only when p95 job-pickup latency exceeds 60 seconds for seven consecutive days while at least eight workers are available and Cloud SQL CPU exceeds 70%. BigQuery may receive an analytical projection only when p95 analytical query latency exceeds 2 seconds for fourteen consecutive days after indexes and materialized views are tuned, and either canonical event volume exceeds 100 million rows or analytical work consumes more than 30% of Cloud SQL CPU. Either promotion requires an owner-approved architecture issue and keeps Google Cloud Storage as the replay authority.

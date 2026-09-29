@@ -333,6 +333,20 @@ jobs:
   verify:
     name: verify
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_DB: agent_economy_test
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d agent_economy_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
@@ -342,6 +356,7 @@ jobs:
       - name: Verify
         env:
           GH_TOKEN: ${{ github.token }}
+          TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_economy_test
         run: ./scripts/verify
       - name: Qualify knowledge graph migration
         env:
