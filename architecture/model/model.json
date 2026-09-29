@@ -305,7 +305,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5415
+      "line_count": 5425
     },
     {
       "declaration_count": 0,
@@ -351,7 +351,7 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 12,
+      "file_count": 13,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -364,12 +364,105 @@
         "tests/knowledge_graph_schema_test.py",
         "tests/observation_contracts.rs",
         "tests/operational_analytics_schema_test.py",
+        "tests/reducer_finality_schema_test.py",
         "tests/shadow_catalog_schema_test.py"
       ],
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 2257
+      "line_count": 2487
+    },
+    {
+      "declaration_count": 73,
+      "declarations": [
+        "ChainFinalityEvidence",
+        "Conflict",
+        "EvmFinalityEvidence",
+        "ExecutionOutcome",
+        "FinalityBasis",
+        "FinalityConflict",
+        "FinalityEngine",
+        "FinalityPolicy",
+        "FinalityStatus",
+        "FinalitySubject",
+        "FinalityTimeline",
+        "FinalityUpdate",
+        "ObservationRole",
+        "ReducedEvent",
+        "Reducer",
+        "ReducerError",
+        "ReductionSnapshot",
+        "SolanaCommitment",
+        "SolanaFinalityEvidence",
+        "append_field",
+        "append_optional",
+        "asserted_at",
+        "basis",
+        "basis_order",
+        "block_hash",
+        "canonical_event_id",
+        "chain_scope",
+        "conflicts",
+        "corroborating_finality_assertions_are_preserved",
+        "current",
+        "derive_evm_status",
+        "derive_status",
+        "encode",
+        "encode_finality_timeline",
+        "encode_finality_update",
+        "encode_snapshot",
+        "events",
+        "evidence_id",
+        "evm_delayed_corroboration_for_old_inclusion_preserves_newer_reinclusion",
+        "evm_delayed_orphan_for_old_inclusion_preserves_newer_reinclusion",
+        "evm_finality_progression_preserves_reorg_history",
+        "evm_finality_rejects_positions_that_postgres_cannot_persist",
+        "evm_finality_replays_reinclusion_after_orphaning_in_any_input_order",
+        "finality_reconciliation_rejects_cross_event_evidence",
+        "finality_replay_is_identical_when_provider_timestamps_tie",
+        "finality_state_hash_commits_to_policy_basis",
+        "finality_subject",
+        "fingerprint",
+        "fn",
+        "id",
+        "inclusion_key",
+        "independent_observations_and_conflicts_remain_inspectable",
+        "new",
+        "observation",
+        "observation_ids",
+        "observations",
+        "payload_fingerprint",
+        "position",
+        "provenance_id",
+        "reconcile_event",
+        "reconcile_for",
+        "reduce",
+        "replay_is_identical_across_input_order",
+        "solana_finality_records_reverted_execution_and_conflicting_regression",
+        "solana_finality_rejects_slots_that_postgres_cannot_persist",
+        "source_id",
+        "state_hash",
+        "subject",
+        "transaction_id",
+        "update",
+        "updates",
+        "validate",
+        "validate_finality_evidence"
+      ],
+      "description": "Deterministic canonical-event reconciliation and chain-specific finality engine with replay-stable state hashes, inspectable conflicts, and append-only reverted/orphaned history.",
+      "external": false,
+      "file_count": 5,
+      "files": [
+        "crates/reducer/Cargo.toml",
+        "crates/reducer/src/lib.rs",
+        "crates/reducer/tests/reducer.rs",
+        "migrations/0005_reducer_finality.down.sql",
+        "migrations/0005_reducer_finality.up.sql"
+      ],
+      "id": "deterministic-reducer",
+      "label": "Deterministic reducer and finality engine",
+      "layer": "canonical",
+      "line_count": 1759
     },
     {
       "declaration_count": 0,
@@ -851,7 +944,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 2488
+      "line_count": 2499
     },
     {
       "declaration_count": 0,
@@ -981,7 +1074,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, PostgreSQL cursor and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, PostgreSQL cursor and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -1056,7 +1149,7 @@
         },
         {
           "id": "rust.workers",
-          "reason": "The external RPC collector and targeted buyer enrichment are implemented as libraries, but no collect/reduce/classify/project-wiki process mode exists yet; the remaining worker topology is specified only."
+          "reason": "The external RPC collector, targeted buyer enrichment, and deterministic reducer/finality engine are implemented as libraries, but no collect/reduce/classify/enrich/project-wiki process mode exists yet; the remaining worker topology is specified only."
         }
       ]
     },
@@ -1483,17 +1576,17 @@
         ]
       },
       {
-        "component": "architecture-policy",
+        "component": "deterministic-reducer",
         "id": "reducers",
         "kind": "worker",
         "label": "Deterministic reducers",
         "origins": [
           {
             "family": "specified",
-            "line": 12,
-            "path": "docs/ARCHITECTURE.md",
+            "line": 549,
+            "path": "crates/reducer/src/lib.rs",
             "rule": "declared.topology",
-            "via": "A --> D[Deterministic reducers: keys · finality · reconciliation]"
+            "via": "pub struct Reducer {"
           }
         ]
       },
@@ -1673,7 +1766,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 2403,
+        "line_count": 2413,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1687,7 +1780,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 29,
+        "line_count": 30,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1715,7 +1808,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 485,
+        "line_count": 495,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3432,6 +3525,954 @@
           "declared.topology"
         ],
         "path": "crates/mpp-adapter/tests/fixtures/openapi-3.1-multi.json",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "deterministic-reducer",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 12,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "crates/reducer/Cargo.toml",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "deterministic-reducer",
+        "declaration_count": 98,
+        "declarations": [
+          {
+            "kind": "enum",
+            "line": 8,
+            "name": "ObservationRole",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 14,
+            "name": "ExecutionOutcome",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 20,
+            "name": "FinalityStatus",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 29,
+            "name": "FinalitySubject",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 36,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 55,
+            "name": "canonical_event_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 59,
+            "name": "chain_scope",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 62,
+            "name": "transaction_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 68,
+            "name": "EvmFinalityEvidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 84,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 114,
+            "name": "SolanaCommitment",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 121,
+            "name": "SolanaFinalityEvidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 136,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 164,
+            "name": "FinalityBasis",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 183,
+            "name": "FinalityPolicy",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 187,
+            "name": "ChainFinalityEvidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 189,
+            "name": "subject",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 190,
+            "name": "source_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 191,
+            "name": "provenance_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 192,
+            "name": "evidence_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 193,
+            "name": "asserted_at",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 194,
+            "name": "block_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 195,
+            "name": "position",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 196,
+            "name": "basis",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 197,
+            "name": "validate",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 198,
+            "name": "derive_status",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 202,
+            "name": "subject",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 205,
+            "name": "source_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 208,
+            "name": "provenance_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 211,
+            "name": "evidence_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 214,
+            "name": "asserted_at",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 217,
+            "name": "block_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 220,
+            "name": "position",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 223,
+            "name": "basis",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 233,
+            "name": "validate",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 236,
+            "name": "derive_status",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 245,
+            "name": "subject",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 248,
+            "name": "source_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 251,
+            "name": "provenance_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 254,
+            "name": "evidence_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 257,
+            "name": "asserted_at",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 260,
+            "name": "block_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 263,
+            "name": "position",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 266,
+            "name": "basis",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 275,
+            "name": "validate",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 293,
+            "name": "derive_status",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 312,
+            "name": "FinalityUpdate",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 323,
+            "name": "subject",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 326,
+            "name": "source_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 329,
+            "name": "provenance_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 332,
+            "name": "evidence_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 335,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 338,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 341,
+            "name": "basis",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 347,
+            "name": "FinalityConflict",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 353,
+            "name": "update",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 356,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 362,
+            "name": "FinalityTimeline",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 371,
+            "name": "updates",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 374,
+            "name": "conflicts",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 377,
+            "name": "current",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 382,
+            "name": "encode",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 385,
+            "name": "state_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 391,
+            "name": "FinalityEngine",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 396,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 401,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 407,
+            "name": "reconcile_for",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 491,
+            "name": "Conflict",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 497,
+            "name": "fingerprint",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 500,
+            "name": "observation_ids",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 507,
+            "name": "ReducedEvent",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 514,
+            "name": "id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 517,
+            "name": "observations",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 521,
+            "name": "conflicts",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 528,
+            "name": "ReductionSnapshot",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 535,
+            "name": "events",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 538,
+            "name": "encode",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 542,
+            "name": "state_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 549,
+            "name": "Reducer",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 554,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 559,
+            "name": "reduce",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 590,
+            "name": "ReducerError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 602,
+            "name": "validate_finality_evidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 626,
+            "name": "derive_evm_status",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 650,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 660,
+            "name": "basis_order",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 697,
+            "name": "inclusion_key",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 720,
+            "name": "encode_finality_timeline",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 749,
+            "name": "encode_finality_update",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 761,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 768,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 776,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 797,
+            "name": "reconcile_event",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 856,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 863,
+            "name": "payload_fingerprint",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 897,
+            "name": "encode_snapshot",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 917,
+            "name": "append_optional",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 927,
+            "name": "append_field",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 931,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/reducer/src/lib.rs",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "deterministic-reducer",
+        "declaration_count": 15,
+        "declarations": [
+          {
+            "kind": "fn",
+            "line": 9,
+            "name": "observation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 22,
+            "name": "finality_subject",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 33,
+            "name": "independent_observations_and_conflicts_remain_inspectable",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 59,
+            "name": "replay_is_identical_across_input_order",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 78,
+            "name": "evm_finality_progression_preserves_reorg_history",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 158,
+            "name": "evm_finality_replays_reinclusion_after_orphaning_in_any_input_order",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 240,
+            "name": "evm_delayed_orphan_for_old_inclusion_preserves_newer_reinclusion",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 322,
+            "name": "evm_delayed_corroboration_for_old_inclusion_preserves_newer_reinclusion",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 404,
+            "name": "solana_finality_records_reverted_execution_and_conflicting_regression",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 470,
+            "name": "finality_replay_is_identical_when_provider_timestamps_tie",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 511,
+            "name": "finality_reconciliation_rejects_cross_event_evidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 545,
+            "name": "corroborating_finality_assertions_are_preserved",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 585,
+            "name": "finality_state_hash_commits_to_policy_basis",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 619,
+            "name": "evm_finality_rejects_positions_that_postgres_cannot_persist",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 642,
+            "name": "solana_finality_rejects_slots_that_postgres_cannot_persist",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 661,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/reducer/tests/reducer.rs",
         "semantic_citations": 0,
         "touched": false
       },
@@ -6632,7 +7673,7 @@
         "touched": false
       },
       {
-        "citations": 15,
+        "citations": 14,
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
@@ -6770,6 +7811,34 @@
         "path": "migrations/0004_buyer_enrichment.up.sql",
         "semantic_citations": 0,
         "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "deterministic-reducer",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 30,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0005_reducer_finality.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "deterministic-reducer",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 125,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0005_reducer_finality.up.sql",
+        "semantic_citations": 0,
+        "touched": false
       },
       {
         "citations": 0,
@@ -7239,6 +8308,20 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
+        "line_count": 230,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/reducer_finality_schema_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
         "line_count": 433,
         "mapped_declarations": 0,
         "passes": [
@@ -7261,14 +8344,14 @@
         "citations": 32,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
-        "files": 16,
+        "files": 17,
         "id": "declared.topology"
       },
       {
-        "citations": 571,
+        "citations": 684,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 18,
+        "files": 20,
         "id": "rust.declaration"
       },
       {
@@ -7297,15 +8380,15 @@
         "worker": 6
       },
       "citations": 34,
-      "declarations": 571,
+      "declarations": 684,
       "entities": 34,
       "entities_with_origin": 34,
-      "files": 77,
+      "files": 83,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
-      "touched_files": 16,
-      "untouched_files": 61
+      "touched_files": 17,
+      "untouched_files": 66
     }
   },
   "interplay": {
@@ -8249,12 +9332,12 @@
         "page": "delivery"
       },
       {
-        "component": "architecture-policy",
+        "component": "deterministic-reducer",
         "evidence": [
           {
-            "excerpt": "A --> D[Deterministic reducers: keys · finality · reconciliation]",
-            "line": 12,
-            "path": "docs/ARCHITECTURE.md"
+            "excerpt": "pub struct Reducer {",
+            "line": 549,
+            "path": "crates/reducer/src/lib.rs"
           }
         ],
         "id": "reducers",
@@ -8369,6 +9452,7 @@
         "components": [
           "architecture-policy",
           "buyer-enrichment-schema",
+          "deterministic-reducer",
           "knowledge-graph-schema",
           "operational-analytics-schema",
           "shadow-catalog-schema"
@@ -8409,9 +9493,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 571,
-    "files": 77,
-    "lines": 20432
+    "declarations": 684,
+    "files": 83,
+    "lines": 22442
   },
   "layers": [
     {
@@ -8452,7 +9536,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "beedaa22246b2e0a07b707603bf83240100f2aba79045a8c87080f56967a990e",
+  "source_tree_sha256": "4c2be529e98f786b7c506e174340e5f297c1e7f02b12b9de37196187f2ba91c4",
   "stores": {
     "count": 2,
     "items": [
