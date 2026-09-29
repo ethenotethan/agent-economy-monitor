@@ -1,8 +1,10 @@
 use std::{env, net::SocketAddr};
 
+use agent_economy_monitor::query::{PostgresQueryStore, api_router};
 use axum::{Json, Router, routing::get};
 use serde::Serialize;
 use tokio::net::TcpListener;
+use tokio_postgres::NoTls;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
@@ -33,7 +35,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or(8080);
     let address = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = TcpListener::bind(address).await?;
-    let app = Router::new()
+    let database_url = env::var("DATABASE_URL")?;
+    let namespace_id = env::var("NAMESPACE_ID")?;
+    let (client, connection) = tokio_postgres::connect(&database_url, NoTls).await?;
+    tokio::spawn(async move {
+        if connection.await.is_err() {
+            tracing::error!("PostgreSQL query connection closed unexpectedly");
+        }
+    });
+    let query_store = PostgresQueryStore::new(client, namespace_id);
+    let app: Router = api_router(std::sync::Arc::new(query_store))
         .route("/healthz", get(status))
         .route("/api/v1/status", get(status));
 
