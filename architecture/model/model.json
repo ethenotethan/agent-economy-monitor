@@ -305,7 +305,22 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5414
+      "line_count": 5425
+    },
+    {
+      "declaration_count": 0,
+      "declarations": [],
+      "description": "Chain-scoped buyer enrichment cursors, persisted hard-budget accounting, and immutable finalized public-history cache without protocol attribution.",
+      "external": false,
+      "file_count": 2,
+      "files": [
+        "migrations/0004_buyer_enrichment.down.sql",
+        "migrations/0004_buyer_enrichment.up.sql"
+      ],
+      "id": "buyer-enrichment-schema",
+      "label": "Targeted buyer enrichment schema",
+      "layer": "canonical",
+      "line_count": 111
     },
     {
       "declaration_count": 23,
@@ -336,13 +351,14 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 12,
+      "file_count": 13,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
         ".gitignore",
         "scripts/verify",
         "tests/adapter_boundary.rs",
+        "tests/buyer_enrichment_schema_test.py",
         "tests/dev_stack_live_test.py",
         "tests/dev_stack_test.py",
         "tests/knowledge_graph_schema_test.py",
@@ -354,7 +370,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 2434
+      "line_count": 2487
     },
     {
       "declaration_count": 70,
@@ -437,8 +453,8 @@
         "crates/reducer/Cargo.toml",
         "crates/reducer/src/lib.rs",
         "crates/reducer/tests/reducer.rs",
-        "migrations/0004_reducer_finality.down.sql",
-        "migrations/0004_reducer_finality.up.sql"
+        "migrations/0005_reducer_finality.down.sql",
+        "migrations/0005_reducer_finality.up.sql"
       ],
       "id": "deterministic-reducer",
       "label": "Deterministic reducer and finality engine",
@@ -704,11 +720,15 @@
       "line_count": 430
     },
     {
-      "declaration_count": 111,
+      "declaration_count": 181,
       "declarations": [
         "ALL",
+        "ANALYTICS_SCHEMA",
+        "AlchemyHistoryRequest",
         "AlchemyRequest",
         "AlchemyTransport",
+        "BuyerHistoryEnricher",
+        "BuyerHistoryTarget",
         "Chain",
         "CollectRequest",
         "CollectionReport",
@@ -716,21 +736,53 @@
         "CollectorError",
         "CursorCheckpoint",
         "CursorStore",
+        "EMPTY_HEAD",
+        "EVM_TX",
+        "EnrichmentCandidate",
+        "EnrichmentCheckpoint",
+        "EnrichmentMode",
+        "EnrichmentReport",
+        "EnrichmentRequest",
+        "EnrichmentStateStore",
         "EvidenceArchive",
         "FakeArchive",
         "FakeCursorStore",
+        "FakeEnrichmentState",
+        "FakeFinalizedCache",
+        "FakeHistoryArchive",
+        "FakeHistoryTransport",
         "FakeTransport",
+        "FinalizedHistoryCache",
+        "FinalizedHistoryRecord",
         "Gap",
         "HEADER_LENGTH",
+        "HistoryEvidenceArchive",
+        "HistoryFinality",
+        "HistoryItem",
+        "HistoryPage",
+        "HistoryTransport",
+        "INVALID",
+        "KNOWLEDGE_SCHEMA",
         "MAGIC",
+        "MAX_AUTOMATIC_PAGES",
+        "MAX_AUTOMATIC_REQUESTS",
+        "MAX_HISTORY_CURSOR_BYTES",
+        "MAX_MANUAL_PAGES",
+        "MAX_MANUAL_REQUESTS",
         "MAX_RETRIES",
         "MAX_RETRY_AFTER_MILLISECONDS",
         "MAX_RPC_RESPONSE_BYTES",
         "MAX_RUN_BLOCKS",
         "MAX_RUN_REQUESTS",
         "NoDelay",
+        "PAGE_ONE",
+        "PAGE_TWO",
+        "POSTGRES_BUYER_ENRICHMENT_SCHEMA",
         "POSTGRES_CURSOR_SCHEMA",
         "PostgresCursorStore",
+        "PostgresEnrichmentStateStore",
+        "PostgresFinalizedHistoryCache",
+        "REPEATED",
         "RawRpcResponse",
         "RejectDuplicateMembers",
         "RetryDelay",
@@ -738,35 +790,57 @@
         "RpcEndpoint",
         "RpcEvidence",
         "RpcTransport",
+        "SOLANA_SIGNATURE",
         "StoreEvidenceArchive",
+        "TRANSACTION",
         "TokioRetryDelay",
         "Value",
         "alchemy_endpoints_must_match_their_configured_chain",
+        "alchemy_history_pages_decode_finality_and_opaque_cursors",
+        "alchemy_history_rejects_unrelated_buyers_and_malformed_identifiers",
+        "alchemy_history_requests_always_filter_by_the_target_buyer",
         "archive",
+        "archive_history",
         "archived_rpc_evidence_replays_provider_provenance_and_exact_body",
+        "assert_history_transport",
+        "automatic_and_manual_modes_are_targeted_and_hard_bounded",
+        "automatic_selection_prioritizes_only_discovered_buyers",
         "block",
+        "block_reference",
         "body",
+        "buyer_handle_id",
         "cause",
         "chain_from_code",
+        "checkpoint_from_enrichment_row",
         "checkpoint_from_row",
         "collect",
         "collect_request",
         "collector_resumes_and_advances_only_contiguous_archived_blocks",
         "compare_and_set",
+        "completed_enrichment_restarts_from_head_for_new_history",
+        "cursor",
         "cursor_height_overflow_fails_without_wrapping_or_committing",
         "database_integer",
         "decode",
+        "decode_alchemy",
         "decode_height",
         "default",
         "delay",
         "deserialize",
         "duplicate_json_members_are_archived_but_rejected",
         "encode",
+        "enrich",
+        "enrichment",
+        "enrichment_archives_pages_caches_only_finalized_history_and_persists_budget",
+        "enrichment_archives_provider_response_before_validation",
+        "enrichment_persists_hard_budget_for_transport_failures",
+        "enrichment_rejects_a_repeated_opaque_cursor_without_advancing_state",
         "evidence_objects",
         "evm_block",
         "expecting",
         "expose",
         "fetch_block",
+        "fetch_history",
         "fmt",
         "fn",
         "four_launch_chains_share_typed_alchemy_requests",
@@ -774,6 +848,10 @@
         "gap_is_reported_without_skipping_the_missing_height",
         "gaps",
         "initialize",
+        "is_canonical_evm_quantity",
+        "is_evm_hash",
+        "is_solana_signature",
+        "items",
         "load",
         "malformed_solana_block_cannot_advance_cursor",
         "matches_chain",
@@ -781,11 +859,15 @@
         "migrate",
         "mismatched_json_rpc_id_cannot_advance_cursor",
         "new",
+        "next_cursor",
         "noncanonical_evm_quantities_cannot_advance_cursor",
         "oversized_provider_response_is_rejected_before_allocation_contract_accepts_it",
         "parse",
         "postgres_cursor_compare_and_set_rejects_stale_writer",
+        "postgres_enrichment_is_chain_scoped_single_flight_and_finalized_cache_is_immutable",
+        "prioritize_automatic",
         "provider_retry_after_is_capped",
+        "record_request",
         "reject_duplicate_json_members",
         "report",
         "response",
@@ -799,7 +881,10 @@
         "solana_block",
         "solana_cursor_tracks_requested_slots_not_block_heights",
         "solana_skipped_slot_is_exposed_as_a_gap",
+        "store_finalized",
+        "target",
         "terminal_provider_failure_preserves_run_metrics",
+        "transaction_reference",
         "transport_retry_backoff_is_capped",
         "try_new",
         "visit_bool",
@@ -816,22 +901,26 @@
         "wait",
         "with_optional_retry_after",
         "with_report",
+        "with_reservation",
         "with_retry_after"
       ],
       "description": "Shared evidence-first Alchemy collector for Ethereum, Base, Solana, and Tempo with bounded retry, rate budgets, gap detection, and PostgreSQL compare-and-set cursors.",
       "external": false,
-      "file_count": 5,
+      "file_count": 8,
       "files": [
         "crates/rpc-collector/Cargo.toml",
         "crates/rpc-collector/migrations/0001_rpc_cursors.sql",
+        "crates/rpc-collector/src/enrichment.rs",
         "crates/rpc-collector/src/lib.rs",
+        "crates/rpc-collector/tests/buyer_enrichment.rs",
+        "crates/rpc-collector/tests/buyer_enrichment_postgres.rs",
         "crates/rpc-collector/tests/collector.rs",
         "crates/rpc-collector/tests/postgres_cursor.rs"
       ],
       "id": "rpc-collector",
       "label": "External RPC collector",
       "layer": "evidence",
-      "line_count": 1803
+      "line_count": 3628
     },
     {
       "declaration_count": 3,
@@ -852,7 +941,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 2487
+      "line_count": 2499
     },
     {
       "declaration_count": 0,
@@ -982,7 +1071,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, deterministic reducer and chain-specific finality engine, PostgreSQL cursor client, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, PostgreSQL cursor and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -1049,7 +1138,7 @@
       "unresolved": [
         {
           "id": "runtime.storage-clients",
-          "reason": "The filesystem evidence adapter and PostgreSQL RPC cursor client are implemented; no Google Cloud Storage client or remaining production PostgreSQL repositories exist yet."
+          "reason": "The filesystem evidence adapter and PostgreSQL RPC cursor and buyer-enrichment clients are implemented; no Google Cloud Storage client or remaining production PostgreSQL repositories exist yet."
         },
         {
           "id": "rust.runtime-mpp-adapter",
@@ -1057,7 +1146,7 @@
         },
         {
           "id": "rust.workers",
-          "reason": "The external RPC collector and deterministic reducer/finality engine are implemented as libraries, but no collect/reduce/classify/enrich/project-wiki process mode exists yet; the remaining worker topology is specified only."
+          "reason": "The external RPC collector, targeted buyer enrichment, and deterministic reducer/finality engine are implemented as libraries, but no collect/reduce/classify/enrich/project-wiki process mode exists yet; the remaining worker topology is specified only."
         }
       ]
     },
@@ -1090,6 +1179,21 @@
             "path": "docs/ARCHITECTURE.md",
             "rule": "declared.topology",
             "via": "D --> AT[Attribution engine]"
+          }
+        ]
+      },
+      {
+        "component": "buyer-enrichment-schema",
+        "id": "buyer-enrichment-schema",
+        "kind": "schema",
+        "label": "Chain-scoped enrichment state and finalized cache",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 7,
+            "path": "migrations/0004_buyer_enrichment.up.sql",
+            "rule": "declared.topology",
+            "via": "CREATE TABLE agent_economy.buyer_enrichment_cursors ("
           }
         ]
       },
@@ -1191,7 +1295,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 686,
+            "line": 696,
             "path": "crates/rpc-collector/src/lib.rs",
             "rule": "declared.topology",
             "via": "pub struct Collector<'a, T, A, C, D> {"
@@ -1199,17 +1303,17 @@
         ]
       },
       {
-        "component": "architecture-policy",
+        "component": "rpc-collector",
         "id": "enrichment",
         "kind": "worker",
         "label": "Targeted buyer enrichment",
         "origins": [
           {
             "family": "specified",
-            "line": 18,
-            "path": "docs/ARCHITECTURE.md",
+            "line": 933,
+            "path": "crates/rpc-collector/src/enrichment.rs",
             "rule": "declared.topology",
-            "via": "PG --> E[Targeted buyer enrichment]"
+            "via": "pub struct BuyerHistoryEnricher<'a, T, A, S, C> {"
           }
         ]
       },
@@ -1659,7 +1763,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 2401,
+        "line_count": 2413,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1701,7 +1805,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 484,
+        "line_count": 495,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -4350,7 +4454,7 @@
         "component": "rpc-collector",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 18,
+        "line_count": 19,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -4376,12 +4480,28 @@
       {
         "citations": 1,
         "component": "rpc-collector",
-        "declaration_count": 117,
+        "declaration_count": 85,
         "declarations": [
           {
             "kind": "const",
+            "line": 9,
+            "name": "MAX_AUTOMATIC_PAGES",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
             "line": 11,
-            "name": "MAX_RETRY_AFTER_MILLISECONDS",
+            "name": "MAX_AUTOMATIC_REQUESTS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 12,
+            "name": "MAX_MANUAL_PAGES",
             "passes": [
               "rust.declaration"
             ]
@@ -4389,7 +4509,7 @@
           {
             "kind": "const",
             "line": 13,
-            "name": "MAX_RPC_RESPONSE_BYTES",
+            "name": "MAX_MANUAL_REQUESTS",
             "passes": [
               "rust.declaration"
             ]
@@ -4397,175 +4517,111 @@
           {
             "kind": "const",
             "line": 14,
-            "name": "MAX_RETRIES",
+            "name": "MAX_HISTORY_CURSOR_BYTES",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 17,
+            "name": "BuyerHistoryTarget",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 25,
+            "name": "try_new",
             "passes": [
               "rust.declaration"
             ]
           },
           {
             "kind": "const",
-            "line": 15,
-            "name": "MAX_RUN_BLOCKS",
+            "line": 45,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 49,
+            "name": "buyer_handle_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 54,
+            "name": "AlchemyHistoryRequest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 61,
+            "name": "try_new",
             "passes": [
               "rust.declaration"
             ]
           },
           {
             "kind": "const",
-            "line": 16,
-            "name": "MAX_RUN_REQUESTS",
+            "line": 97,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 101,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 108,
+            "name": "EnrichmentCandidate",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 116,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 130,
+            "name": "prioritize_automatic",
             "passes": [
               "rust.declaration"
             ]
           },
           {
             "kind": "enum",
-            "line": 19,
-            "name": "Chain",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 27,
-            "name": "ALL",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 28,
-            "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 37,
-            "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 41,
-            "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 53,
-            "name": "fmt",
+            "line": 162,
+            "name": "EnrichmentMode",
             "passes": [
               "rust.declaration"
             ]
           },
           {
             "kind": "struct",
-            "line": 59,
-            "name": "RpcEndpoint",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 62,
-            "name": "parse",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 69,
-            "name": "expose",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 73,
-            "name": "matches_chain",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 83,
-            "name": "fmt",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "struct",
-            "line": 87,
-            "name": "AlchemyRequest",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 95,
-            "name": "block",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 120,
-            "name": "method",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 128,
-            "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "struct",
-            "line": 133,
-            "name": "AlchemyTransport",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 140,
-            "name": "new",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "struct",
-            "line": 159,
-            "name": "RawRpcResponse",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 167,
-            "name": "try_new",
+            "line": 168,
+            "name": "EnrichmentRequest",
             "passes": [
               "rust.declaration"
             ]
@@ -4573,70 +4629,54 @@
           {
             "kind": "fn",
             "line": 177,
-            "name": "with_retry_after",
+            "name": "try_new",
             "passes": [
               "rust.declaration"
             ]
           },
           {
-            "kind": "fn",
-            "line": 182,
-            "name": "with_optional_retry_after",
+            "kind": "const",
+            "line": 205,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 209,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 213,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 217,
+            "name": "fn",
             "passes": [
               "rust.declaration"
             ]
           },
           {
             "kind": "struct",
-            "line": 188,
-            "name": "RpcEvidence",
+            "line": 224,
+            "name": "EnrichmentCheckpoint",
             "passes": [
               "rust.declaration"
             ]
           },
           {
             "kind": "const",
-            "line": 199,
-            "name": "MAGIC",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 200,
-            "name": "HEADER_LENGTH",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 201,
-            "name": "from_response",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 217,
-            "name": "encode",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 231,
-            "name": "decode",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 261,
+            "line": 235,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -4644,7 +4684,7 @@
           },
           {
             "kind": "const",
-            "line": 265,
+            "line": 251,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -4652,48 +4692,16 @@
           },
           {
             "kind": "fn",
-            "line": 269,
-            "name": "method",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 273,
-            "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 277,
-            "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 281,
-            "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 285,
-            "name": "fn",
+            "line": 270,
+            "name": "with_reservation",
             "passes": [
               "rust.declaration"
             ]
           },
           {
             "kind": "fn",
-            "line": 289,
-            "name": "body",
+            "line": 290,
+            "name": "cursor",
             "passes": [
               "rust.declaration"
             ]
@@ -4707,8 +4715,807 @@
             ]
           },
           {
+            "kind": "const",
+            "line": 298,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 302,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 306,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 310,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 314,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 321,
+            "name": "HistoryFinality",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 328,
+            "name": "HistoryItem",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "fn",
-            "line": 303,
+            "line": 335,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 346,
+            "name": "transaction_reference",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 350,
+            "name": "block_reference",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 354,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 361,
+            "name": "HistoryPage",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 367,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 370,
+            "name": "decode_alchemy",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 467,
+            "name": "items",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 471,
+            "name": "next_cursor",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 476,
+            "name": "is_evm_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 484,
+            "name": "is_canonical_evm_quantity",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 494,
+            "name": "is_solana_signature",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 503,
+            "name": "FinalizedHistoryRecord",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 513,
+            "name": "try_new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 535,
+            "name": "transaction_reference",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 539,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 546,
+            "name": "HistoryTransport",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 547,
+            "name": "fetch_history",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 555,
+            "name": "fetch_history",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 593,
+            "name": "HistoryEvidenceArchive",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 595,
+            "name": "archive_history",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 605,
+            "name": "EnrichmentStateStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 606,
+            "name": "load",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 610,
+            "name": "initialize",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 615,
+            "name": "record_request",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 624,
+            "name": "compare_and_set",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 635,
+            "name": "FinalizedHistoryCache",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 636,
+            "name": "store_finalized",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 641,
+            "name": "POSTGRES_BUYER_ENRICHMENT_SCHEMA",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 644,
+            "name": "PostgresEnrichmentStateStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 650,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 653,
+            "name": "migrate",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 663,
+            "name": "load",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 686,
+            "name": "initialize",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 713,
+            "name": "record_request",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 758,
+            "name": "compare_and_set",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 799,
+            "name": "checkpoint_from_enrichment_row",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 818,
+            "name": "PostgresFinalizedHistoryCache",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 824,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 830,
+            "name": "store_finalized",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 903,
+            "name": "EnrichmentReport",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 912,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 915,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 919,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 923,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 927,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 932,
+            "name": "BuyerHistoryEnricher",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 947,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 960,
+            "name": "enrich",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 1048,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/rpc-collector/src/enrichment.rs",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 1,
+        "component": "rpc-collector",
+        "declaration_count": 118,
+        "declarations": [
+          {
+            "kind": "mod",
+            "line": 11,
+            "name": "enrichment",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 21,
+            "name": "MAX_RETRY_AFTER_MILLISECONDS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 23,
+            "name": "MAX_RPC_RESPONSE_BYTES",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 24,
+            "name": "MAX_RETRIES",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 25,
+            "name": "MAX_RUN_BLOCKS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 26,
+            "name": "MAX_RUN_REQUESTS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 29,
+            "name": "Chain",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 37,
+            "name": "ALL",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 38,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 47,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 51,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 63,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 69,
+            "name": "RpcEndpoint",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 72,
+            "name": "parse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 79,
+            "name": "expose",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 83,
+            "name": "matches_chain",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 93,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 97,
+            "name": "AlchemyRequest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 105,
+            "name": "block",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 130,
+            "name": "method",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 138,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 143,
+            "name": "AlchemyTransport",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 150,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 169,
+            "name": "RawRpcResponse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 177,
+            "name": "try_new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 187,
+            "name": "with_retry_after",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 192,
+            "name": "with_optional_retry_after",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 198,
+            "name": "RpcEvidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 209,
+            "name": "MAGIC",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 210,
+            "name": "HEADER_LENGTH",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 211,
+            "name": "from_response",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 227,
+            "name": "encode",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 241,
+            "name": "decode",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 271,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 275,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 279,
+            "name": "method",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 283,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 287,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 291,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 295,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 299,
+            "name": "body",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 304,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 313,
             "name": "chain_from_code",
             "passes": [
               "rust.declaration"
@@ -4716,7 +5523,7 @@
           },
           {
             "kind": "trait",
-            "line": 315,
+            "line": 325,
             "name": "RpcTransport",
             "passes": [
               "rust.declaration"
@@ -4724,7 +5531,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 316,
+            "line": 326,
             "name": "fetch_block",
             "passes": [
               "rust.declaration"
@@ -4732,7 +5539,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 324,
+            "line": 334,
             "name": "fetch_block",
             "passes": [
               "rust.declaration"
@@ -4740,7 +5547,7 @@
           },
           {
             "kind": "trait",
-            "line": 369,
+            "line": 379,
             "name": "EvidenceArchive",
             "passes": [
               "rust.declaration"
@@ -4748,7 +5555,7 @@
           },
           {
             "kind": "fn",
-            "line": 371,
+            "line": 381,
             "name": "archive",
             "passes": [
               "rust.declaration"
@@ -4756,7 +5563,7 @@
           },
           {
             "kind": "struct",
-            "line": 377,
+            "line": 387,
             "name": "StoreEvidenceArchive",
             "passes": [
               "rust.declaration"
@@ -4764,7 +5571,7 @@
           },
           {
             "kind": "const",
-            "line": 383,
+            "line": 393,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -4772,7 +5579,7 @@
           },
           {
             "kind": "fn",
-            "line": 389,
+            "line": 399,
             "name": "archive",
             "passes": [
               "rust.declaration"
@@ -4780,24 +5587,8 @@
           },
           {
             "kind": "struct",
-            "line": 406,
+            "line": 416,
             "name": "CursorCheckpoint",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 412,
-            "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 418,
-            "name": "fn",
             "passes": [
               "rust.declaration"
             ]
@@ -4811,8 +5602,24 @@
             ]
           },
           {
+            "kind": "const",
+            "line": 428,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 432,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "trait",
-            "line": 429,
+            "line": 439,
             "name": "CursorStore",
             "passes": [
               "rust.declaration"
@@ -4820,7 +5627,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 430,
+            "line": 440,
             "name": "load",
             "passes": [
               "rust.declaration"
@@ -4828,7 +5635,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 431,
+            "line": 441,
             "name": "initialize",
             "passes": [
               "rust.declaration"
@@ -4836,7 +5643,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 437,
+            "line": 447,
             "name": "compare_and_set",
             "passes": [
               "rust.declaration"
@@ -4844,7 +5651,7 @@
           },
           {
             "kind": "const",
-            "line": 445,
+            "line": 455,
             "name": "POSTGRES_CURSOR_SCHEMA",
             "passes": [
               "rust.declaration"
@@ -4852,7 +5659,7 @@
           },
           {
             "kind": "struct",
-            "line": 447,
+            "line": 457,
             "name": "PostgresCursorStore",
             "passes": [
               "rust.declaration"
@@ -4860,16 +5667,8 @@
           },
           {
             "kind": "const",
-            "line": 453,
+            "line": 463,
             "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 456,
-            "name": "migrate",
             "passes": [
               "rust.declaration"
             ]
@@ -4877,6 +5676,14 @@
           {
             "kind": "async-fn",
             "line": 466,
+            "name": "migrate",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 476,
             "name": "load",
             "passes": [
               "rust.declaration"
@@ -4884,7 +5691,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 477,
+            "line": 487,
             "name": "initialize",
             "passes": [
               "rust.declaration"
@@ -4892,7 +5699,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 496,
+            "line": 506,
             "name": "compare_and_set",
             "passes": [
               "rust.declaration"
@@ -4900,7 +5707,7 @@
           },
           {
             "kind": "fn",
-            "line": 526,
+            "line": 536,
             "name": "database_integer",
             "passes": [
               "rust.declaration"
@@ -4908,7 +5715,7 @@
           },
           {
             "kind": "fn",
-            "line": 530,
+            "line": 540,
             "name": "checkpoint_from_row",
             "passes": [
               "rust.declaration"
@@ -4916,7 +5723,7 @@
           },
           {
             "kind": "struct",
-            "line": 541,
+            "line": 551,
             "name": "RetryPolicy",
             "passes": [
               "rust.declaration"
@@ -4924,7 +5731,7 @@
           },
           {
             "kind": "const",
-            "line": 547,
+            "line": 557,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -4932,7 +5739,7 @@
           },
           {
             "kind": "fn",
-            "line": 559,
+            "line": 569,
             "name": "delay",
             "passes": [
               "rust.declaration"
@@ -4940,7 +5747,7 @@
           },
           {
             "kind": "fn",
-            "line": 567,
+            "line": 577,
             "name": "default",
             "passes": [
               "rust.declaration"
@@ -4948,7 +5755,7 @@
           },
           {
             "kind": "trait",
-            "line": 576,
+            "line": 586,
             "name": "RetryDelay",
             "passes": [
               "rust.declaration"
@@ -4956,7 +5763,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 577,
+            "line": 587,
             "name": "wait",
             "passes": [
               "rust.declaration"
@@ -4964,7 +5771,7 @@
           },
           {
             "kind": "struct",
-            "line": 581,
+            "line": 591,
             "name": "TokioRetryDelay",
             "passes": [
               "rust.declaration"
@@ -4972,7 +5779,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 584,
+            "line": 594,
             "name": "wait",
             "passes": [
               "rust.declaration"
@@ -4980,7 +5787,7 @@
           },
           {
             "kind": "struct",
-            "line": 590,
+            "line": 600,
             "name": "CollectRequest",
             "passes": [
               "rust.declaration"
@@ -4988,7 +5795,7 @@
           },
           {
             "kind": "fn",
-            "line": 599,
+            "line": 609,
             "name": "try_new",
             "passes": [
               "rust.declaration"
@@ -4996,7 +5803,7 @@
           },
           {
             "kind": "struct",
-            "line": 620,
+            "line": 630,
             "name": "Gap",
             "passes": [
               "rust.declaration"
@@ -5004,7 +5811,7 @@
           },
           {
             "kind": "const",
-            "line": 626,
+            "line": 636,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -5012,7 +5819,7 @@
           },
           {
             "kind": "const",
-            "line": 629,
+            "line": 639,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -5020,7 +5827,7 @@
           },
           {
             "kind": "struct",
-            "line": 636,
+            "line": 646,
             "name": "CollectionReport",
             "passes": [
               "rust.declaration"
@@ -5028,7 +5835,7 @@
           },
           {
             "kind": "const",
-            "line": 649,
+            "line": 659,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -5036,7 +5843,7 @@
           },
           {
             "kind": "const",
-            "line": 652,
+            "line": 662,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -5044,7 +5851,7 @@
           },
           {
             "kind": "const",
-            "line": 656,
+            "line": 666,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -5052,7 +5859,7 @@
           },
           {
             "kind": "const",
-            "line": 660,
+            "line": 670,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -5060,7 +5867,7 @@
           },
           {
             "kind": "const",
-            "line": 664,
+            "line": 674,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -5068,7 +5875,7 @@
           },
           {
             "kind": "fn",
-            "line": 668,
+            "line": 678,
             "name": "gaps",
             "passes": [
               "rust.declaration"
@@ -5076,7 +5883,7 @@
           },
           {
             "kind": "fn",
-            "line": 672,
+            "line": 682,
             "name": "evidence_objects",
             "passes": [
               "rust.declaration"
@@ -5084,7 +5891,7 @@
           },
           {
             "kind": "const",
-            "line": 676,
+            "line": 686,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -5092,7 +5899,7 @@
           },
           {
             "kind": "const",
-            "line": 680,
+            "line": 690,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -5100,7 +5907,7 @@
           },
           {
             "kind": "struct",
-            "line": 685,
+            "line": 695,
             "name": "Collector",
             "passes": [
               "rust.declaration"
@@ -5108,7 +5915,7 @@
           },
           {
             "kind": "fn",
-            "line": 701,
+            "line": 711,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -5116,7 +5923,7 @@
           },
           {
             "kind": "const",
-            "line": 715,
+            "line": 725,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -5124,7 +5931,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 720,
+            "line": 730,
             "name": "collect",
             "passes": [
               "rust.declaration"
@@ -5132,7 +5939,7 @@
           },
           {
             "kind": "fn",
-            "line": 844,
+            "line": 854,
             "name": "retryable_status",
             "passes": [
               "rust.declaration"
@@ -5140,7 +5947,7 @@
           },
           {
             "kind": "fn",
-            "line": 848,
+            "line": 858,
             "name": "decode_height",
             "passes": [
               "rust.declaration"
@@ -5148,7 +5955,7 @@
           },
           {
             "kind": "struct",
-            "line": 931,
+            "line": 941,
             "name": "RejectDuplicateMembers",
             "passes": [
               "rust.declaration"
@@ -5156,7 +5963,7 @@
           },
           {
             "kind": "type",
-            "line": 934,
+            "line": 944,
             "name": "Value",
             "passes": [
               "rust.declaration"
@@ -5164,7 +5971,7 @@
           },
           {
             "kind": "fn",
-            "line": 935,
+            "line": 945,
             "name": "deserialize",
             "passes": [
               "rust.declaration"
@@ -5172,7 +5979,7 @@
           },
           {
             "kind": "type",
-            "line": 945,
+            "line": 955,
             "name": "Value",
             "passes": [
               "rust.declaration"
@@ -5180,7 +5987,7 @@
           },
           {
             "kind": "fn",
-            "line": 946,
+            "line": 956,
             "name": "expecting",
             "passes": [
               "rust.declaration"
@@ -5188,7 +5995,7 @@
           },
           {
             "kind": "fn",
-            "line": 950,
+            "line": 960,
             "name": "visit_bool",
             "passes": [
               "rust.declaration"
@@ -5196,7 +6003,7 @@
           },
           {
             "kind": "fn",
-            "line": 954,
+            "line": 964,
             "name": "visit_i64",
             "passes": [
               "rust.declaration"
@@ -5204,7 +6011,7 @@
           },
           {
             "kind": "fn",
-            "line": 958,
+            "line": 968,
             "name": "visit_u64",
             "passes": [
               "rust.declaration"
@@ -5212,7 +6019,7 @@
           },
           {
             "kind": "fn",
-            "line": 962,
+            "line": 972,
             "name": "visit_f64",
             "passes": [
               "rust.declaration"
@@ -5220,7 +6027,7 @@
           },
           {
             "kind": "fn",
-            "line": 966,
+            "line": 976,
             "name": "visit_str",
             "passes": [
               "rust.declaration"
@@ -5228,7 +6035,7 @@
           },
           {
             "kind": "fn",
-            "line": 970,
+            "line": 980,
             "name": "visit_string",
             "passes": [
               "rust.declaration"
@@ -5236,7 +6043,7 @@
           },
           {
             "kind": "fn",
-            "line": 974,
+            "line": 984,
             "name": "visit_none",
             "passes": [
               "rust.declaration"
@@ -5244,7 +6051,7 @@
           },
           {
             "kind": "fn",
-            "line": 978,
+            "line": 988,
             "name": "visit_unit",
             "passes": [
               "rust.declaration"
@@ -5252,7 +6059,7 @@
           },
           {
             "kind": "fn",
-            "line": 982,
+            "line": 992,
             "name": "visit_some",
             "passes": [
               "rust.declaration"
@@ -5260,7 +6067,7 @@
           },
           {
             "kind": "fn",
-            "line": 989,
+            "line": 999,
             "name": "visit_seq",
             "passes": [
               "rust.declaration"
@@ -5268,7 +6075,7 @@
           },
           {
             "kind": "fn",
-            "line": 997,
+            "line": 1007,
             "name": "visit_map",
             "passes": [
               "rust.declaration"
@@ -5276,7 +6083,7 @@
           },
           {
             "kind": "fn",
-            "line": 1012,
+            "line": 1022,
             "name": "reject_duplicate_json_members",
             "passes": [
               "rust.declaration"
@@ -5284,7 +6091,7 @@
           },
           {
             "kind": "enum",
-            "line": 1024,
+            "line": 1034,
             "name": "CollectorError",
             "passes": [
               "rust.declaration"
@@ -5292,7 +6099,7 @@
           },
           {
             "kind": "fn",
-            "line": 1057,
+            "line": 1079,
             "name": "with_report",
             "passes": [
               "rust.declaration"
@@ -5300,7 +6107,7 @@
           },
           {
             "kind": "fn",
-            "line": 1063,
+            "line": 1085,
             "name": "cause",
             "passes": [
               "rust.declaration"
@@ -5308,14 +6115,14 @@
           },
           {
             "kind": "fn",
-            "line": 1070,
+            "line": 1092,
             "name": "report",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 1077,
+        "line_count": 1099,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -5323,6 +6130,348 @@
         "path": "crates/rpc-collector/src/lib.rs",
         "semantic_citations": 0,
         "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "rpc-collector",
+        "declaration_count": 31,
+        "declarations": [
+          {
+            "kind": "fn",
+            "line": 9,
+            "name": "target",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 21,
+            "name": "automatic_selection_prioritizes_only_discovered_buyers",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 40,
+            "name": "alchemy_history_requests_always_filter_by_the_target_buyer",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 41,
+            "name": "assert_history_transport",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 58,
+            "name": "alchemy_history_pages_decode_finality_and_opaque_cursors",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 59,
+            "name": "EVM_TX",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 60,
+            "name": "SOLANA_SIGNATURE",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 86,
+            "name": "alchemy_history_rejects_unrelated_buyers_and_malformed_identifiers",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 101,
+            "name": "automatic_and_manual_modes_are_targeted_and_hard_bounded",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 152,
+            "name": "FakeHistoryTransport",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 158,
+            "name": "fetch_history",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 175,
+            "name": "FakeHistoryArchive",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 181,
+            "name": "archive_history",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 195,
+            "name": "FakeEnrichmentState",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 200,
+            "name": "load",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 206,
+            "name": "initialize",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 216,
+            "name": "compare_and_set",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 238,
+            "name": "record_request",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 265,
+            "name": "FakeFinalizedCache",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 270,
+            "name": "store_finalized",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 280,
+            "name": "enrichment_archives_pages_caches_only_finalized_history_and_persists_budget",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 281,
+            "name": "TRANSACTION",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 282,
+            "name": "PAGE_ONE",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 283,
+            "name": "PAGE_TWO",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 336,
+            "name": "enrichment_rejects_a_repeated_opaque_cursor_without_advancing_state",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 337,
+            "name": "REPEATED",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 376,
+            "name": "enrichment_archives_provider_response_before_validation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 377,
+            "name": "INVALID",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 413,
+            "name": "enrichment_persists_hard_budget_for_transport_failures",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 450,
+            "name": "completed_enrichment_restarts_from_head_for_new_history",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 451,
+            "name": "EMPTY_HEAD",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 482,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/rpc-collector/tests/buyer_enrichment.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "rpc-collector",
+        "declaration_count": 8,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 9,
+            "name": "KNOWLEDGE_SCHEMA",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 11,
+            "name": "ANALYTICS_SCHEMA",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 13,
+            "name": "FakeHistoryTransport",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 19,
+            "name": "fetch_history",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 27,
+            "name": "FakeHistoryArchive",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 33,
+            "name": "archive_history",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 47,
+            "name": "postgres_enrichment_is_chain_scoped_single_flight_and_finalized_cache_is_immutable",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 180,
+            "name": "TRANSACTION",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 272,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/rpc-collector/tests/buyer_enrichment_postgres.rs",
+        "semantic_citations": 0,
+        "touched": false
       },
       {
         "citations": 0,
@@ -6497,7 +7646,7 @@
         "touched": false
       },
       {
-        "citations": 15,
+        "citations": 14,
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
@@ -6610,6 +7759,34 @@
       },
       {
         "citations": 0,
+        "component": "buyer-enrichment-schema",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 25,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0004_buyer_enrichment.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "buyer-enrichment-schema",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 86,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0004_buyer_enrichment.up.sql",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
         "component": "deterministic-reducer",
         "declaration_count": 0,
         "declarations": [],
@@ -6618,7 +7795,7 @@
         "passes": [
           "declared.topology"
         ],
-        "path": "migrations/0004_reducer_finality.down.sql",
+        "path": "migrations/0005_reducer_finality.down.sql",
         "semantic_citations": 0,
         "touched": false
       },
@@ -6632,7 +7809,7 @@
         "passes": [
           "declared.topology"
         ],
-        "path": "migrations/0004_reducer_finality.up.sql",
+        "path": "migrations/0005_reducer_finality.up.sql",
         "semantic_citations": 0,
         "touched": false
       },
@@ -6875,6 +8052,20 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
+        "line_count": 52,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/buyer_enrichment_schema_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
         "line_count": 114,
         "mapped_declarations": 0,
         "passes": [
@@ -7090,7 +8281,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 229,
+        "line_count": 230,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -7123,17 +8314,17 @@
         "id": "ci.workflow"
       },
       {
-        "citations": 31,
+        "citations": 32,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
-        "files": 15,
+        "files": 17,
         "id": "declared.topology"
       },
       {
-        "citations": 556,
+        "citations": 681,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 17,
+        "files": 20,
         "id": "rust.declaration"
       },
       {
@@ -7155,22 +8346,22 @@
         "projection": 2,
         "projector": 1,
         "scheduler": 1,
-        "schema": 3,
+        "schema": 4,
         "service": 2,
         "store": 2,
         "surface": 1,
         "worker": 6
       },
-      "citations": 33,
-      "declarations": 556,
-      "entities": 33,
-      "entities_with_origin": 33,
-      "files": 77,
+      "citations": 34,
+      "declarations": 681,
+      "entities": 34,
+      "entities_with_origin": 34,
+      "files": 83,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
-      "touched_files": 15,
-      "untouched_files": 62
+      "touched_files": 17,
+      "untouched_files": 66
     }
   },
   "interplay": {
@@ -7202,6 +8393,12 @@
         "class": "lifecycle",
         "relation": "writes-claims",
         "source": "attribution",
+        "target": "store:postgresql"
+      },
+      {
+        "class": "structure",
+        "relation": "materializes-in",
+        "source": "buyer-enrichment-schema",
         "target": "store:postgresql"
       },
       {
@@ -7744,6 +8941,20 @@
         "page": "canonical"
       },
       {
+        "component": "buyer-enrichment-schema",
+        "evidence": [
+          {
+            "excerpt": "CREATE TABLE agent_economy.buyer_enrichment_cursors (",
+            "line": 7,
+            "path": "migrations/0004_buyer_enrichment.up.sql"
+          }
+        ],
+        "id": "buyer-enrichment-schema",
+        "kind": "schema",
+        "label": "Chain-scoped enrichment state and finalized cache",
+        "page": "canonical"
+      },
+      {
         "component": "knowledge-graph-schema",
         "evidence": [
           {
@@ -7832,7 +9043,7 @@
         "evidence": [
           {
             "excerpt": "pub struct Collector<'a, T, A, C, D> {",
-            "line": 686,
+            "line": 696,
             "path": "crates/rpc-collector/src/lib.rs"
           }
         ],
@@ -7842,12 +9053,12 @@
         "page": "evidence"
       },
       {
-        "component": "architecture-policy",
+        "component": "rpc-collector",
         "evidence": [
           {
-            "excerpt": "PG --> E[Targeted buyer enrichment]",
-            "line": 18,
-            "path": "docs/ARCHITECTURE.md"
+            "excerpt": "pub struct BuyerHistoryEnricher<'a, T, A, S, C> {",
+            "line": 933,
+            "path": "crates/rpc-collector/src/enrichment.rs"
           }
         ],
         "id": "enrichment",
@@ -8213,6 +9424,7 @@
       {
         "components": [
           "architecture-policy",
+          "buyer-enrichment-schema",
           "deterministic-reducer",
           "knowledge-graph-schema",
           "operational-analytics-schema",
@@ -8222,6 +9434,7 @@
         "label": "Canonical knowledge",
         "roots": [
           "reducers",
+          "buyer-enrichment-schema",
           "canonical-knowledge-schema",
           "operational-analytics-schema",
           "shadow-catalog"
@@ -8253,9 +9466,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 556,
-    "files": 77,
-    "lines": 20211
+    "declarations": 681,
+    "files": 83,
+    "lines": 22223
   },
   "layers": [
     {
@@ -8296,7 +9509,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "7948292ed7aa02d9fe44beb383eed41b33dc1f6209ea330446895c01c9087dbc",
+  "source_tree_sha256": "5c1783a398a6feb10c393c20f3215efd105a26eb4a7268a7a2177213500cd642",
   "stores": {
     "count": 2,
     "items": [

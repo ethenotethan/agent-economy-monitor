@@ -7,12 +7,13 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-UP = ROOT / "migrations" / "0004_reducer_finality.up.sql"
-DOWN = ROOT / "migrations" / "0004_reducer_finality.down.sql"
+UP = ROOT / "migrations" / "0005_reducer_finality.up.sql"
+DOWN = ROOT / "migrations" / "0005_reducer_finality.down.sql"
 PREREQUISITES = [
     ROOT / "migrations" / "0001_knowledge_graph.up.sql",
     ROOT / "migrations" / "0002_operational_analytics.up.sql",
     ROOT / "migrations" / "0003_shadow_catalog.up.sql",
+    ROOT / "migrations" / "0004_buyer_enrichment.up.sql",
 ]
 
 
