@@ -215,7 +215,11 @@ class ArchitectureCompilerTests(unittest.TestCase):
         self.assertIn('RUN_KNOWLEDGE_GRAPH_LIVE: "1"', workflow)
         self.assertIn('RUN_OPERATIONAL_ANALYTICS_LIVE: "1"', workflow)
         self.assertIn(
-            "      - name: Verify\n        env:\n          GH_TOKEN: ${{ github.token }}\n        run: ./scripts/verify",
+            "      - name: Verify\n"
+            "        env:\n"
+            "          GH_TOKEN: ${{ github.token }}\n"
+            "          TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_economy_test\n"
+            "        run: ./scripts/verify",
             workflow,
         )
 
@@ -228,7 +232,7 @@ class ArchitectureCompilerTests(unittest.TestCase):
         self.assertIn("local PostgreSQL development stack", limitations)
         self.assertIn("filesystem evidence adapter are implemented", limitations)
         self.assertIn(
-            "production PostgreSQL and Google Cloud Storage clients",
+            "Google Cloud Storage and remaining production PostgreSQL clients",
             limitations,
         )
         self.assertNotIn(

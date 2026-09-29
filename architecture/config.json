@@ -99,6 +99,15 @@
       ]
     },
     {
+      "description": "Shared evidence-first Alchemy collector for Ethereum, Base, Solana, and Tempo with bounded retry, rate budgets, gap detection, and PostgreSQL compare-and-set cursors.",
+      "id": "rpc-collector",
+      "label": "External RPC collector",
+      "layer": "evidence",
+      "patterns": [
+        "crates/rpc-collector/**"
+      ]
+    },
+    {
       "description": "Deterministic observation-only parser for MPP OpenAPI discovery metadata.",
       "id": "mpp-adapter",
       "label": "MPP discovery adapter",
@@ -167,7 +176,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, and content-addressed filesystem evidence adapter are implemented at this revision; production PostgreSQL and Google Cloud Storage clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, PostgreSQL cursor client, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -384,6 +393,7 @@
     "crates/**/*.json",
     "crates/**/*.proto",
     "crates/**/*.rs",
+    "crates/**/*.sql",
     "docs/*.md",
     "migrations/*.sql",
     "scripts/build_architecture.py",
@@ -408,7 +418,7 @@
     {"id": "external", "label": "External systems", "order": 6}
   ],
   "nodes": [
-    {"authority": "specified", "component": "architecture-policy", "id": "collector", "kind": "worker", "label": "Collectors", "origin": {"path": "docs/ARCHITECTURE.md", "search": "S[External RPC"}, "page": "evidence"},
+    {"authority": "specified", "component": "rpc-collector", "id": "collector", "kind": "worker", "label": "External RPC collector", "origin": {"path": "crates/rpc-collector/src/lib.rs", "search": "pub struct Collector"}, "page": "evidence"},
     {"authority": "specified", "component": "observation-contracts", "id": "observation-contract", "kind": "contract", "label": "Immutable observation contract", "origin": {"path": "crates/contracts/src/lib.rs", "search": "pub struct Observation {"}, "page": "evidence"},
     {"authority": "specified", "component": "adapter-api", "id": "adapter-boundary", "kind": "boundary", "label": "Observation-only adapter API", "origin": {"path": "crates/adapter-api/src/lib.rs", "search": "pub trait ProtocolAdapter"}, "page": "evidence"},
     {"authority": "specified", "component": "evidence-store", "id": "filesystem-evidence-store", "kind": "adapter", "label": "Content-addressed filesystem evidence store", "origin": {"path": "crates/evidence-store/src/lib.rs", "search": "pub struct FilesystemEvidenceStore"}, "page": "evidence"},
@@ -444,7 +454,7 @@
   ],
   "pages": [
     {"components": ["runtime"], "id": "experience", "label": "Private cockpit", "roots": ["cockpit"]},
-    {"components": ["architecture-policy", "observation-contracts", "adapter-api", "evidence-store", "mpp-adapter", "x402-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "observation-contract", "adapter-boundary", "filesystem-evidence-store", "mpp-discovery-adapter", "protocol-adapters"]},
+    {"components": ["architecture-policy", "observation-contracts", "adapter-api", "evidence-store", "mpp-adapter", "rpc-collector", "x402-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "observation-contract", "adapter-boundary", "filesystem-evidence-store", "mpp-discovery-adapter", "protocol-adapters"]},
     {"components": ["architecture-policy", "knowledge-graph-schema", "operational-analytics-schema", "shadow-catalog-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "canonical-knowledge-schema", "operational-analytics-schema", "shadow-catalog"]},
     {"components": ["architecture-policy"], "id": "projection", "label": "Semantic projection", "roots": ["evidence-snapshot"]},
     {"components": ["runtime", "development-stack"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service", "local-development-stack"]}
@@ -458,7 +468,7 @@
   "title": "Agent Economy Monitor Architecture",
   "unresolved": [
     {"id": "rust.runtime-mpp-adapter", "reason": "MPP OpenAPI and x402 discovery adapters exist, but no runtime MPP challenge parser exists yet."},
-    {"id": "rust.workers", "reason": "No collect/reduce/classify/enrich/project-wiki process mode exists yet; worker topology is specified only."},
-    {"id": "runtime.storage-clients", "reason": "The filesystem adapter implements the production evidence storage contract for local development; no Google Cloud Storage or PostgreSQL client exists yet."}
+    {"id": "rust.workers", "reason": "The external RPC collector is implemented as a library, but no collect/reduce/classify/enrich/project-wiki process mode exists yet; the remaining worker topology is specified only."},
+    {"id": "runtime.storage-clients", "reason": "The filesystem evidence adapter and PostgreSQL RPC cursor client are implemented; no Google Cloud Storage client or remaining production PostgreSQL repositories exist yet."}
   ]
 }

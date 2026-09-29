@@ -11,6 +11,7 @@ members = [
     "crates/contracts",
     "crates/evidence-store",
     "crates/mpp-adapter",
+    "crates/rpc-collector",
     "crates/x402-adapter",
 ]
 resolver = "3"
