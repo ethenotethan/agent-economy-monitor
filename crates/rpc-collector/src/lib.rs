@@ -9,6 +9,16 @@ use serde_json::{Value, json};
 use thiserror::Error;
 use tokio_postgres::Client;
 
+mod enrichment;
+
+pub use enrichment::{
+    AlchemyHistoryRequest, BuyerHistoryEnricher, BuyerHistoryTarget, EnrichmentCandidate,
+    EnrichmentCheckpoint, EnrichmentMode, EnrichmentReport, EnrichmentRequest,
+    EnrichmentStateStore, FinalizedHistoryCache, FinalizedHistoryRecord, HistoryEvidenceArchive,
+    HistoryFinality, HistoryItem, HistoryPage, HistoryTransport, POSTGRES_BUYER_ENRICHMENT_SCHEMA,
+    PostgresEnrichmentStateStore, PostgresFinalizedHistoryCache, prioritize_automatic,
+};
+
 const MAX_RETRY_AFTER_MILLISECONDS: u64 = 60_000;
 const MAX_RPC_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
 const MAX_RETRIES: u32 = 20;
@@ -1046,6 +1056,18 @@ pub enum CollectorError {
     InvalidHeight,
     #[error("collector run configuration exceeds a bounded limit")]
     InvalidConfiguration,
+    #[error("buyer-history enrichment target is invalid")]
+    InvalidTarget,
+    #[error("no discovered buyer targets are eligible for enrichment")]
+    NoEnrichmentTargets,
+    #[error("buyer-history enrichment state storage failed")]
+    EnrichmentStateStorage,
+    #[error("finalized buyer-history cache storage failed")]
+    FinalizedHistoryStorage,
+    #[error("finalized buyer-history cache conflicts with immutable history")]
+    FinalizedHistoryConflict,
+    #[error("buyer-history provider returned an invalid page")]
+    InvalidHistoryPage,
     #[error("RPC collection failed: {error}")]
     RunFailed {
         error: Box<CollectorError>,
