@@ -267,7 +267,7 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 313
+      "line_count": 324
     },
     {
       "declaration_count": 0,
@@ -305,7 +305,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5473
+      "line_count": 5491
     },
     {
       "declaration_count": 44,
@@ -450,13 +450,34 @@
       "line_count": 111
     },
     {
-      "declaration_count": 38,
+      "declaration_count": 0,
+      "declarations": [],
+      "description": "Namespace-scoped PostgreSQL session hashes and atomic shared-password login admission state.",
+      "external": false,
+      "file_count": 2,
+      "files": [
+        "migrations/0009_cockpit_auth.down.sql",
+        "migrations/0009_cockpit_auth.up.sql"
+      ],
+      "id": "cockpit-auth-schema",
+      "label": "Cockpit authentication state",
+      "layer": "canonical",
+      "line_count": 27
+    },
+    {
+      "declaration_count": 52,
       "declarations": [
+        "CountingStore",
         "Error",
         "FixtureStore",
+        "PASSWORD",
         "X402Adapter",
         "adapters_emit_immutable_observations",
         "additive_unknown_fields_are_covered_by_the_content_address",
+        "app",
+        "app_with_auth",
+        "auth_config",
+        "auth_state",
         "buyer",
         "buyer_timeline",
         "buyers",
@@ -465,9 +486,14 @@
         "canonical_event_keys_are_protocol_defined",
         "canonical_event_rejects_mismatched_support",
         "collect",
+        "concurrent_bad_passwords_cannot_bypass_the_attempt_budget",
+        "configuration_requires_argon2id_and_bounded_session_lifetime",
         "fact",
         "graph",
         "list_queries_are_bounded_and_cacheable_with_provenance",
+        "login",
+        "login_body_is_bounded_before_password_verification",
+        "login_issues_secure_bounded_session_and_logout_requires_csrf",
         "mpp_discovery_contract_rejects_noncanonical_atomic_amounts",
         "mpp_event_key_rejects_invalid_method_grammar",
         "mpp_event_keys_are_scoped_by_required_realm",
@@ -477,6 +503,7 @@
         "observation_id_is_content_addressed",
         "observe",
         "postgres_store_is_the_runtime_query_backend",
+        "protected_api_rejects_before_extractors_and_store_access",
         "protobuf_replay_preserves_the_canonical_event",
         "protobuf_replay_preserves_the_observation",
         "protocol_observation_construction_rejects_invalid_amount",
@@ -484,24 +511,28 @@
         "pulse",
         "purpose_built_surface_is_documented_without_graphql_or_sql",
         "reducers_can_read_typed_observation_fields",
+        "repeated_bad_passwords_are_rate_limited",
         "search",
         "service",
         "services",
+        "sessions_and_rate_limits_are_shared_across_runtime_instances",
         "system",
         "x402_event_key_requires_protocol_identifier_binding",
         "x402_key"
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 17,
+      "file_count": 19,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
         ".gitignore",
         "scripts/verify",
+        "tests/access_control.rs",
         "tests/adapter_boundary.rs",
         "tests/buyer_enrichment_schema_test.py",
         "tests/classification_schema_test.py",
+        "tests/cockpit_auth_schema_test.py",
         "tests/dev_stack_live_test.py",
         "tests/dev_stack_test.py",
         "tests/knowledge_graph_schema_test.py",
@@ -516,7 +547,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 3511
+      "line_count": 3913
     },
     {
       "declaration_count": 73,
@@ -1087,63 +1118,104 @@
       "line_count": 3628
     },
     {
-      "declaration_count": 47,
+      "declaration_count": 87,
       "declarations": [
         "API_VERSION",
+        "AuthConfig",
+        "AuthConfigError",
+        "AuthState",
+        "AuthStore",
+        "AuthStoreError",
         "CACHE_CONTROL",
+        "COOKIE_NAME",
+        "CSRF_HEADER",
         "DEFAULT_PAGE_SIZE",
+        "DEFAULT_SESSION_TTL",
         "DashboardPage",
         "FACT_COLUMNS",
         "Fact",
         "GraphReadModel",
+        "InMemoryAuthStore",
+        "LOGIN_WINDOW",
+        "LoginAttempt",
+        "LoginAttempts",
+        "LoginRequest",
+        "LoginResponse",
+        "MAX_LOGIN_FAILURES",
         "MAX_PAGE_SIZE",
+        "MAX_SESSIONS",
+        "MAX_SESSION_TTL",
+        "MemoryState",
         "PageQuery",
+        "PostgresAuthStore",
         "PostgresQueryStore",
         "ProvenanceReadModel",
         "QueryError",
         "QueryStore",
         "SearchQuery",
+        "Session",
         "Status",
         "Store",
         "SystemReadModel",
         "Versioned",
         "api_router",
+        "auth",
+        "auth_error",
+        "authorize",
+        "begin_login",
         "bounded",
         "buyer",
         "buyer_timeline",
         "buyers",
         "cacheable",
         "composite_cursor_round_trips_delimiter_characters",
+        "constant_time_eq",
+        "cookie_value",
+        "create_session",
         "decode_cursor",
         "encode_cursor",
         "fact_page",
         "facts",
+        "finish_login",
+        "fmt",
+        "from_env",
+        "from_shared",
         "graph",
         "into_response",
+        "login",
+        "logout",
         "main",
         "malformed_composite_cursor_is_rejected",
         "new",
+        "no_store",
         "one_fact",
         "openapi",
         "page",
+        "protect_router",
         "provenance",
         "pulse",
         "query",
+        "random_token",
+        "remove_session",
+        "require_session",
         "row_to_fact",
         "search",
+        "secret_hash",
         "service",
         "services",
         "status",
         "system",
-        "tests"
+        "tests",
+        "with_store"
       ],
       "description": "Axum process entry point and versioned, bounded, provenance-bearing query API.",
       "external": false,
-      "file_count": 6,
+      "file_count": 7,
       "files": [
         ".env.example",
         "Cargo.lock",
         "Cargo.toml",
+        "src/auth.rs",
         "src/lib.rs",
         "src/main.rs",
         "src/query.rs"
@@ -1151,7 +1223,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 3190
+      "line_count": 3901
     },
     {
       "declaration_count": 0,
@@ -1513,6 +1585,36 @@
         ]
       },
       {
+        "component": "runtime",
+        "id": "cockpit-access-control",
+        "kind": "boundary",
+        "label": "Shared-password access control",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 106,
+            "path": "src/auth.rs",
+            "rule": "declared.topology",
+            "via": "pub struct AuthState {"
+          }
+        ]
+      },
+      {
+        "component": "cockpit-auth-schema",
+        "id": "cockpit-auth-state",
+        "kind": "schema",
+        "label": "Shared session and login-limit state",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 3,
+            "path": "migrations/0009_cockpit_auth.up.sql",
+            "rule": "declared.topology",
+            "via": "CREATE TABLE agent_economy.auth_sessions ("
+          }
+        ]
+      },
+      {
         "component": "rpc-collector",
         "id": "collector",
         "kind": "worker",
@@ -1655,7 +1757,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 438,
+            "line": 442,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/buyers/{id}\", get(buyer))"
@@ -1670,7 +1772,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 439,
+            "line": 443,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/buyers/{id}/timeline\", get(buyer_timeline))"
@@ -1685,7 +1787,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 437,
+            "line": 441,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/buyers\", get(buyers))"
@@ -1700,7 +1802,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 442,
+            "line": 446,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/graph/{kind}/{id}\", get(graph))"
@@ -1715,10 +1817,40 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 48,
+            "line": 56,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/healthz\", get(status))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:login",
+        "kind": "endpoint",
+        "label": "POST /auth/login",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 449,
+            "path": "src/auth.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/auth/login\", post(login))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:logout",
+        "kind": "endpoint",
+        "label": "POST /auth/logout",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 450,
+            "path": "src/auth.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/auth/logout\", post(logout))"
           }
         ]
       },
@@ -1730,7 +1862,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 435,
+            "line": 439,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/openapi.json\", get(openapi))"
@@ -1745,7 +1877,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 443,
+            "line": 447,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/provenance/{id}\", get(provenance))"
@@ -1760,7 +1892,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 436,
+            "line": 440,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/pulse\", get(pulse))"
@@ -1775,7 +1907,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 444,
+            "line": 448,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/search\", get(search))"
@@ -1790,7 +1922,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 441,
+            "line": 445,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/services/{id}\", get(service))"
@@ -1805,7 +1937,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 440,
+            "line": 444,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/services\", get(services))"
@@ -1820,7 +1952,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 49,
+            "line": 55,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/status\", get(status))"
@@ -1835,7 +1967,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 445,
+            "line": 449,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/system\", get(system))"
@@ -1970,7 +2102,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 433,
+            "line": 437,
             "path": "src/query.rs",
             "rule": "declared.topology",
             "via": "pub fn api_router(store: Store) -> Router {"
@@ -2000,7 +2132,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 51,
+            "line": 58,
             "path": "src/main.rs",
             "rule": "declared.topology",
             "via": "info!(%address, \"agent economy monitor listening\");"
@@ -2084,7 +2216,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 14,
+        "line_count": 15,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -2168,7 +2300,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 2436,
+        "line_count": 2488,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -2182,7 +2314,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 37,
+        "line_count": 41,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -2196,7 +2328,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 67,
+        "line_count": 77,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -2210,7 +2342,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 543,
+        "line_count": 561,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -9135,7 +9267,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 124,
+        "line_count": 125,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -9384,6 +9516,34 @@
       },
       {
         "citations": 0,
+        "component": "cockpit-auth-schema",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 6,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0009_cockpit_auth.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "cockpit-auth-schema",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 21,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0009_cockpit_auth.up.sql",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
@@ -9523,20 +9683,475 @@
         "touched": false
       },
       {
+        "citations": 3,
+        "component": "runtime",
+        "declaration_count": 54,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 27,
+            "name": "COOKIE_NAME",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 29,
+            "name": "CSRF_HEADER",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 30,
+            "name": "MAX_SESSION_TTL",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 31,
+            "name": "DEFAULT_SESSION_TTL",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 32,
+            "name": "MAX_SESSIONS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 33,
+            "name": "LOGIN_WINDOW",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 34,
+            "name": "MAX_LOGIN_FAILURES",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 37,
+            "name": "AuthConfigError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 40,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 48,
+            "name": "AuthConfig",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 54,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 89,
+            "name": "from_env",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 106,
+            "name": "AuthState",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 112,
+            "name": "AuthStoreError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 115,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 123,
+            "name": "AuthStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 124,
+            "name": "begin_login",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 125,
+            "name": "finish_login",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 126,
+            "name": "create_session",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 132,
+            "name": "authorize",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 137,
+            "name": "remove_session",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 141,
+            "name": "InMemoryAuthStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 146,
+            "name": "MemoryState",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 152,
+            "name": "LoginAttempts",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 155,
+            "name": "LoginAttempt",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 160,
+            "name": "Session",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 169,
+            "name": "begin_login",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 191,
+            "name": "finish_login",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 204,
+            "name": "create_session",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 236,
+            "name": "authorize",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 254,
+            "name": "remove_session",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 264,
+            "name": "PostgresAuthStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 271,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 281,
+            "name": "begin_login",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 308,
+            "name": "finish_login",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 327,
+            "name": "create_session",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 358,
+            "name": "authorize",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 381,
+            "name": "remove_session",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 396,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 399,
+            "name": "with_store",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 403,
+            "name": "from_env",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 407,
+            "name": "authorize",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 433,
+            "name": "LoginRequest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 438,
+            "name": "LoginResponse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 442,
+            "name": "protect_router",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 453,
+            "name": "login",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 551,
+            "name": "logout",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 574,
+            "name": "require_session",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 585,
+            "name": "auth_error",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 604,
+            "name": "no_store",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 611,
+            "name": "random_token",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 617,
+            "name": "secret_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 621,
+            "name": "cookie_value",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 631,
+            "name": "constant_time_eq",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 642,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "src/auth.rs",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
         "citations": 0,
         "component": "runtime",
-        "declaration_count": 1,
+        "declaration_count": 2,
         "declarations": [
           {
             "kind": "mod",
             "line": 1,
+            "name": "auth",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "mod",
+            "line": 2,
             "name": "query",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 1,
+        "line_count": 2,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -9552,7 +10167,7 @@
         "declarations": [
           {
             "kind": "struct",
-            "line": 12,
+            "line": 15,
             "name": "Status",
             "passes": [
               "rust.declaration"
@@ -9560,7 +10175,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 17,
+            "line": 20,
             "name": "status",
             "passes": [
               "rust.declaration"
@@ -9568,14 +10183,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 27,
+            "line": 30,
             "name": "main",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 54,
+        "line_count": 61,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -9587,7 +10202,7 @@
       {
         "citations": 12,
         "component": "runtime",
-        "declaration_count": 64,
+        "declaration_count": 65,
         "declarations": [
           {
             "kind": "const",
@@ -9798,8 +10413,16 @@
             ]
           },
           {
+            "kind": "fn",
+            "line": 149,
+            "name": "from_shared",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "async-fn",
-            "line": 152,
+            "line": 156,
             "name": "facts",
             "passes": [
               "rust.declaration"
@@ -9807,7 +10430,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 166,
+            "line": 170,
             "name": "fact_page",
             "passes": [
               "rust.declaration"
@@ -9815,7 +10438,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 182,
+            "line": 186,
             "name": "one_fact",
             "passes": [
               "rust.declaration"
@@ -9823,7 +10446,7 @@
           },
           {
             "kind": "fn",
-            "line": 194,
+            "line": 198,
             "name": "row_to_fact",
             "passes": [
               "rust.declaration"
@@ -9831,7 +10454,7 @@
           },
           {
             "kind": "fn",
-            "line": 210,
+            "line": 214,
             "name": "page",
             "passes": [
               "rust.declaration"
@@ -9839,7 +10462,7 @@
           },
           {
             "kind": "fn",
-            "line": 216,
+            "line": 220,
             "name": "encode_cursor",
             "passes": [
               "rust.declaration"
@@ -9847,7 +10470,7 @@
           },
           {
             "kind": "fn",
-            "line": 224,
+            "line": 228,
             "name": "decode_cursor",
             "passes": [
               "rust.declaration"
@@ -9855,7 +10478,7 @@
           },
           {
             "kind": "const",
-            "line": 241,
+            "line": 245,
             "name": "FACT_COLUMNS",
             "passes": [
               "rust.declaration"
@@ -9863,16 +10486,8 @@
           },
           {
             "kind": "async-fn",
-            "line": 246,
+            "line": 250,
             "name": "pulse",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 252,
-            "name": "buyers",
             "passes": [
               "rust.declaration"
             ]
@@ -9880,134 +10495,6 @@
           {
             "kind": "async-fn",
             "line": 256,
-            "name": "buyer",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 260,
-            "name": "buyer_timeline",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 293,
-            "name": "services",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 301,
-            "name": "service",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 305,
-            "name": "graph",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 346,
-            "name": "provenance",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 366,
-            "name": "search",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 395,
-            "name": "system",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "type",
-            "line": 405,
-            "name": "Store",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "struct",
-            "line": 409,
-            "name": "PageQuery",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 415,
-            "name": "bounded",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "struct",
-            "line": 427,
-            "name": "SearchQuery",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 432,
-            "name": "api_router",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 448,
-            "name": "openapi",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 505,
-            "name": "cacheable",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 530,
-            "name": "pulse",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 537,
             "name": "buyers",
             "passes": [
               "rust.declaration"
@@ -10015,7 +10502,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 545,
+            "line": 260,
             "name": "buyer",
             "passes": [
               "rust.declaration"
@@ -10023,7 +10510,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 553,
+            "line": 264,
             "name": "buyer_timeline",
             "passes": [
               "rust.declaration"
@@ -10031,7 +10518,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 562,
+            "line": 297,
             "name": "services",
             "passes": [
               "rust.declaration"
@@ -10039,7 +10526,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 570,
+            "line": 305,
             "name": "service",
             "passes": [
               "rust.declaration"
@@ -10047,7 +10534,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 581,
+            "line": 309,
             "name": "graph",
             "passes": [
               "rust.declaration"
@@ -10055,7 +10542,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 593,
+            "line": 350,
             "name": "provenance",
             "passes": [
               "rust.declaration"
@@ -10063,7 +10550,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 604,
+            "line": 370,
             "name": "search",
             "passes": [
               "rust.declaration"
@@ -10071,7 +10558,143 @@
           },
           {
             "kind": "async-fn",
-            "line": 622,
+            "line": 399,
+            "name": "system",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "type",
+            "line": 409,
+            "name": "Store",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 413,
+            "name": "PageQuery",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 419,
+            "name": "bounded",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 431,
+            "name": "SearchQuery",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 436,
+            "name": "api_router",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 452,
+            "name": "openapi",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 509,
+            "name": "cacheable",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 534,
+            "name": "pulse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 541,
+            "name": "buyers",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 549,
+            "name": "buyer",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 557,
+            "name": "buyer_timeline",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 566,
+            "name": "services",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 574,
+            "name": "service",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 585,
+            "name": "graph",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 597,
+            "name": "provenance",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 608,
+            "name": "search",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 626,
             "name": "system",
             "passes": [
               "rust.declaration"
@@ -10079,7 +10702,7 @@
           },
           {
             "kind": "mod",
-            "line": 631,
+            "line": 635,
             "name": "tests",
             "passes": [
               "rust.declaration"
@@ -10087,7 +10710,7 @@
           },
           {
             "kind": "fn",
-            "line": 635,
+            "line": 639,
             "name": "composite_cursor_round_trips_delimiter_characters",
             "passes": [
               "rust.declaration"
@@ -10095,14 +10718,14 @@
           },
           {
             "kind": "fn",
-            "line": 644,
+            "line": 648,
             "name": "malformed_composite_cursor_is_rejected",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 648,
+        "line_count": 652,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -10110,6 +10733,221 @@
         "path": "src/query.rs",
         "semantic_citations": 0,
         "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 25,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 25,
+            "name": "PASSWORD",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 27,
+            "name": "CountingStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 31,
+            "name": "fact",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 45,
+            "name": "pulse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 49,
+            "name": "buyers",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 58,
+            "name": "buyer",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 62,
+            "name": "buyer_timeline",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 71,
+            "name": "services",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 79,
+            "name": "service",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 83,
+            "name": "graph",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 92,
+            "name": "provenance",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 96,
+            "name": "search",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 105,
+            "name": "system",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 110,
+            "name": "auth_config",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 119,
+            "name": "auth_state",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 123,
+            "name": "app",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 127,
+            "name": "app_with_auth",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 131,
+            "name": "login",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 145,
+            "name": "protected_api_rejects_before_extractors_and_store_access",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 163,
+            "name": "login_issues_secure_bounded_session_and_logout_requires_csrf",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 246,
+            "name": "repeated_bad_passwords_are_rate_limited",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 260,
+            "name": "concurrent_bad_passwords_cannot_bypass_the_attempt_budget",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 282,
+            "name": "sessions_and_rate_limits_are_shared_across_runtime_instances",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 334,
+            "name": "login_body_is_bounded_before_password_verification",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 341,
+            "name": "configuration_requires_argon2id_and_bounded_session_lifetime",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 373,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/access_control.rs",
+        "semantic_citations": 0,
+        "touched": false
       },
       {
         "citations": 0,
@@ -10191,6 +11029,20 @@
           "declared.topology"
         ],
         "path": "tests/classification_schema_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 29,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/cockpit_auth_schema_test.py",
         "semantic_citations": 0,
         "touched": false
       },
@@ -10610,54 +11462,54 @@
         "id": "ci.workflow"
       },
       {
-        "citations": 34,
+        "citations": 36,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
-        "files": 22,
+        "files": 24,
         "id": "declared.topology"
       },
       {
-        "citations": 885,
+        "citations": 966,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 27,
+        "files": 29,
         "id": "rust.declaration"
       },
       {
-        "citations": 13,
+        "citations": 15,
         "class": "mechanical",
         "description": "Literal Axum method and path routes extracted from Rust source.",
-        "files": 2,
+        "files": 3,
         "id": "rust.http-route"
       }
     ],
     "summary": {
       "by_kind": {
         "adapter": 3,
-        "boundary": 2,
+        "boundary": 3,
         "contract": 1,
         "deployment": 3,
-        "endpoint": 13,
+        "endpoint": 15,
         "external": 4,
         "projection": 2,
         "projector": 1,
         "scheduler": 1,
-        "schema": 6,
+        "schema": 7,
         "service": 2,
         "store": 2,
         "surface": 1,
         "worker": 6
       },
-      "citations": 47,
-      "declarations": 885,
-      "entities": 47,
-      "entities_with_origin": 47,
-      "files": 101,
+      "citations": 51,
+      "declarations": 966,
+      "entities": 51,
+      "entities_with_origin": 51,
+      "files": 106,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
-      "touched_files": 22,
-      "untouched_files": 79
+      "touched_files": 24,
+      "untouched_files": 82
     }
   },
   "interplay": {
@@ -10750,6 +11602,36 @@
         "relation": "invokes",
         "source": "cloud-scheduler",
         "target": "cloud-run-jobs"
+      },
+      {
+        "class": "structure",
+        "relation": "persists-auth-state",
+        "source": "cockpit-access-control",
+        "target": "cockpit-auth-state"
+      },
+      {
+        "class": "structure",
+        "relation": "exposes",
+        "source": "cockpit-access-control",
+        "target": "http:login"
+      },
+      {
+        "class": "structure",
+        "relation": "exposes",
+        "source": "cockpit-access-control",
+        "target": "http:logout"
+      },
+      {
+        "class": "structure",
+        "relation": "exposes",
+        "source": "cockpit-access-control",
+        "target": "http:status"
+      },
+      {
+        "class": "boundary",
+        "relation": "protects",
+        "source": "cockpit-access-control",
+        "target": "query-api"
       },
       {
         "class": "lifecycle",
@@ -10927,15 +11809,15 @@
       },
       {
         "class": "structure",
-        "relation": "exposes",
+        "relation": "hosts",
         "source": "runtime-service",
-        "target": "http:healthz"
+        "target": "cockpit-access-control"
       },
       {
         "class": "structure",
         "relation": "exposes",
         "source": "runtime-service",
-        "target": "http:status"
+        "target": "http:healthz"
       },
       {
         "class": "boundary",
@@ -11384,6 +12266,34 @@
         "page": "experience"
       },
       {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": "pub struct AuthState {",
+            "line": 106,
+            "path": "src/auth.rs"
+          }
+        ],
+        "id": "cockpit-access-control",
+        "kind": "boundary",
+        "label": "Shared-password access control",
+        "page": "delivery"
+      },
+      {
+        "component": "cockpit-auth-schema",
+        "evidence": [
+          {
+            "excerpt": "CREATE TABLE agent_economy.auth_sessions (",
+            "line": 3,
+            "path": "migrations/0009_cockpit_auth.up.sql"
+          }
+        ],
+        "id": "cockpit-auth-state",
+        "kind": "schema",
+        "label": "Shared session and login-limit state",
+        "page": "canonical"
+      },
+      {
         "component": "rpc-collector",
         "evidence": [
           {
@@ -11514,7 +12424,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/buyers/{id}\", get(buyer))",
-            "line": 438,
+            "line": 442,
             "path": "src/query.rs"
           }
         ],
@@ -11528,7 +12438,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/buyers/{id}/timeline\", get(buyer_timeline))",
-            "line": 439,
+            "line": 443,
             "path": "src/query.rs"
           }
         ],
@@ -11542,7 +12452,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/buyers\", get(buyers))",
-            "line": 437,
+            "line": 441,
             "path": "src/query.rs"
           }
         ],
@@ -11556,7 +12466,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/graph/{kind}/{id}\", get(graph))",
-            "line": 442,
+            "line": 446,
             "path": "src/query.rs"
           }
         ],
@@ -11570,7 +12480,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/healthz\", get(status))",
-            "line": 48,
+            "line": 56,
             "path": "src/main.rs"
           }
         ],
@@ -11583,8 +12493,36 @@
         "component": "runtime",
         "evidence": [
           {
+            "excerpt": ".route(\"/auth/login\", post(login))",
+            "line": 449,
+            "path": "src/auth.rs"
+          }
+        ],
+        "id": "http:login",
+        "kind": "endpoint",
+        "label": "POST /auth/login",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/auth/logout\", post(logout))",
+            "line": 450,
+            "path": "src/auth.rs"
+          }
+        ],
+        "id": "http:logout",
+        "kind": "endpoint",
+        "label": "POST /auth/logout",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
             "excerpt": ".route(\"/api/v1/openapi.json\", get(openapi))",
-            "line": 435,
+            "line": 439,
             "path": "src/query.rs"
           }
         ],
@@ -11598,7 +12536,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/provenance/{id}\", get(provenance))",
-            "line": 443,
+            "line": 447,
             "path": "src/query.rs"
           }
         ],
@@ -11612,7 +12550,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/pulse\", get(pulse))",
-            "line": 436,
+            "line": 440,
             "path": "src/query.rs"
           }
         ],
@@ -11626,7 +12564,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/search\", get(search))",
-            "line": 444,
+            "line": 448,
             "path": "src/query.rs"
           }
         ],
@@ -11640,7 +12578,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/services/{id}\", get(service))",
-            "line": 441,
+            "line": 445,
             "path": "src/query.rs"
           }
         ],
@@ -11654,7 +12592,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/services\", get(services))",
-            "line": 440,
+            "line": 444,
             "path": "src/query.rs"
           }
         ],
@@ -11668,7 +12606,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/status\", get(status))",
-            "line": 49,
+            "line": 55,
             "path": "src/main.rs"
           }
         ],
@@ -11682,7 +12620,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/system\", get(system))",
-            "line": 445,
+            "line": 449,
             "path": "src/query.rs"
           }
         ],
@@ -11808,7 +12746,7 @@
         "evidence": [
           {
             "excerpt": "pub fn api_router(store: Store) -> Router {",
-            "line": 433,
+            "line": 437,
             "path": "src/query.rs"
           }
         ],
@@ -11836,7 +12774,7 @@
         "evidence": [
           {
             "excerpt": "info!(%address, \"agent economy monitor listening\");",
-            "line": 51,
+            "line": 58,
             "path": "src/main.rs"
           }
         ],
@@ -11940,6 +12878,7 @@
           "attribution-engine",
           "buyer-classification",
           "buyer-enrichment-schema",
+          "cockpit-auth-schema",
           "deterministic-reducer",
           "knowledge-graph-schema",
           "operational-analytics-schema",
@@ -11955,6 +12894,7 @@
           "buyer-classification-schema",
           "buyer-enrichment-schema",
           "canonical-knowledge-schema",
+          "cockpit-auth-state",
           "dashboard-read-models",
           "operational-analytics-schema",
           "shadow-catalog"
@@ -11987,9 +12927,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 885,
-    "files": 101,
-    "lines": 27257
+    "declarations": 966,
+    "files": 106,
+    "lines": 28426
   },
   "layers": [
     {
@@ -12030,7 +12970,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "8b051b2417c7bb8d62ec90668cc57fd3ec7c92e9e3066ba9a4e06d3007e9b87c",
+  "source_tree_sha256": "7d4a5e75c226becb1532be7d4d4d5ad487fb8f025a0a3111b0b844849eabb8e1",
   "stores": {
     "count": 2,
     "items": [

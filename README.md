@@ -57,11 +57,21 @@ cargo run
 curl http://127.0.0.1:8080/healthz
 ```
 
-The service requires `DATABASE_URL` and `NAMESPACE_ID`; every dashboard read is scoped
-to that exact namespace UUID. Its purpose-built API is documented at
-`/api/v1/openapi.json`; Pulse, buyers, buyer timelines, services, graph neighborhoods,
-provenance, search, and system read models live under `/api/v1`. List endpoints accept
-cursor pagination with a hard maximum of 100 records, and successful read models include
-private cache directives, deterministic ETags, and resolvable provenance identifiers.
+The service requires `DATABASE_URL`, `NAMESPACE_ID`, and an Argon2id PHC string supplied
+at runtime as `COCKPIT_PASSWORD_HASH`; `SESSION_TTL_SECONDS` defaults to 900 and cannot
+exceed 86400. `/healthz` remains public, while login at `/auth/login` issues a bounded
+Secure, HttpOnly, SameSite=Strict session for the dashboard API. Session and login-limit
+state is stored as namespace-scoped hashes in PostgreSQL so it survives instance turnover
+and is shared across Cloud Run instances. Unsafe authenticated
+requests require the login response's CSRF token in `X-CSRF-Token`. Login admission is
+service-wide and permits at most five failed or in-flight attempts per minute, which
+bounds Argon2 work without trusting proxy-supplied client addresses.
+
+Every dashboard read is scoped to the exact namespace UUID. The purpose-built API is
+documented at `/api/v1/openapi.json`; Pulse, buyers, buyer timelines, services, graph
+neighborhoods, provenance, search, and system read models live under `/api/v1`. List
+endpoints accept cursor pagination with a hard maximum of 100 records, and successful
+read models include private cache directives, deterministic ETags, and resolvable
+provenance identifiers.
 
 See [CONTEXT.md](CONTEXT.md), [docs/PRODUCT.md](docs/PRODUCT.md), and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

@@ -112,6 +112,7 @@ The local Hermes projection worker makes an outbound authenticated pull for boun
 ## Security
 
 - RPC and password secrets come from Google Secret Manager and Cloud Run secret bindings.
+- Shared-password sessions and the login-attempt window are namespace-scoped in PostgreSQL; only SHA-256 session and CSRF token digests are retained, so authentication remains consistent across Cloud Run instances and cold starts.
 - The evidence bucket has a locked retention policy of at least 365 days and no automatic deletion rule. Runtime writers have create-only `roles/storage.objectCreator`; deletion and retention administration belong to a separate owner-controlled identity.
 - Every content-addressed write uses `ifGenerationMatch=0`; an existing key is accepted only after its stored digest matches. Replay performs read-time SHA-256 verification before parsing.
 - Raw protocol text is untrusted data, never instruction.

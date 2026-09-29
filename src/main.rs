@@ -1,6 +1,9 @@
 use std::{env, net::SocketAddr};
 
-use agent_economy_monitor::query::{PostgresQueryStore, api_router};
+use agent_economy_monitor::{
+    auth::{AuthState, PostgresAuthStore, protect_router},
+    query::{PostgresQueryStore, api_router},
+};
 use axum::{Json, Router, routing::get};
 use serde::Serialize;
 use tokio::net::TcpListener;
@@ -43,10 +46,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tracing::error!("PostgreSQL query connection closed unexpectedly");
         }
     });
-    let query_store = PostgresQueryStore::new(client, namespace_id);
-    let app: Router = api_router(std::sync::Arc::new(query_store))
-        .route("/healthz", get(status))
-        .route("/api/v1/status", get(status));
+    let client = std::sync::Arc::new(client);
+    let auth_store =
+        std::sync::Arc::new(PostgresAuthStore::new(client.clone(), namespace_id.clone()));
+    let auth = AuthState::from_env(auth_store)?;
+    let query_store = PostgresQueryStore::from_shared(client, namespace_id);
+    let app: Router =
+        api_router(std::sync::Arc::new(query_store)).route("/api/v1/status", get(status));
+    let app = protect_router(app, auth).route("/healthz", get(status));
 
     info!(%address, "agent economy monitor listening");
     axum::serve(listener, app).await?;
