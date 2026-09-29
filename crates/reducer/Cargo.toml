@@ -1,0 +1,12 @@
+[package]
+name = "agent-economy-reducer"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Deterministic canonical event reconciliation and finality engine"
+
+[dependencies]
+agent-economy-contracts = { path = "../contracts" }
+hex = "0.4"
+sha2 = "0.10"
+thiserror = "2"
