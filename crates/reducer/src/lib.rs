@@ -448,7 +448,8 @@ impl FinalityEngine {
             state_hash: String::new(),
         };
         let mut inclusion_statuses = BTreeMap::<Vec<u8>, FinalityStatus>::new();
-        let mut active_inclusion = None::<Vec<u8>>;
+        let mut inclusion_first_asserted_at = BTreeMap::<Vec<u8>, i64>::new();
+        let mut active_inclusion = None::<(i64, Vec<u8>)>;
         for update in updates {
             let inclusion = inclusion_key(&update.basis);
             let current_for_inclusion = inclusion_statuses.get(&inclusion).copied();
@@ -465,15 +466,18 @@ impl FinalityEngine {
             }
 
             let status = update.status;
+            let first_asserted_at = *inclusion_first_asserted_at
+                .entry(inclusion.clone())
+                .or_insert(update.asserted_at);
             timeline.updates.push(update);
             inclusion_statuses.insert(inclusion.clone(), status);
             let update_index = timeline.updates.len() - 1;
-            if status != FinalityStatus::Orphaned
-                || active_inclusion
-                    .as_ref()
-                    .is_none_or(|active| active == &inclusion)
+            let inclusion_rank = (first_asserted_at, inclusion);
+            if active_inclusion
+                .as_ref()
+                .is_none_or(|active| active.1 == inclusion_rank.1 || active < &inclusion_rank)
             {
-                active_inclusion = Some(inclusion);
+                active_inclusion = Some(inclusion_rank);
                 timeline.current_update_index = Some(update_index);
             }
         }
