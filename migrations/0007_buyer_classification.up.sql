@@ -360,8 +360,10 @@ BEGIN
             'feature_version', run_row.feature_version,
             'label_set_hash', run_row.label_set_hash,
             'input_snapshot_hash', run_row.input_snapshot_hash,
-            'window_start', run_row.window_start,
-            'window_end', run_row.window_end
+            'window_start_epoch_micros',
+                (extract(epoch FROM run_row.window_start) * 1000000)::pg_catalog.int8,
+            'window_end_epoch_micros',
+                (extract(epoch FROM run_row.window_end) * 1000000)::pg_catalog.int8
         ),
         'label_definitions', (
             SELECT pg_catalog.jsonb_agg(

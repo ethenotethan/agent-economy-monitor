@@ -432,7 +432,7 @@
       "id": "buyer-classification",
       "label": "Buyer behavioral classification",
       "layer": "canonical",
-      "line_count": 1584
+      "line_count": 1586
     },
     {
       "declaration_count": 0,
@@ -499,7 +499,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 3168
+      "line_count": 3194
     },
     {
       "declaration_count": 73,
@@ -9087,7 +9087,7 @@
         "component": "buyer-classification",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 592,
+        "line_count": 594,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -9349,7 +9349,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 338,
+        "line_count": 364,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -10821,7 +10821,7 @@
   "inventory": {
     "declarations": 805,
     "files": 95,
-    "lines": 26081
+    "lines": 26109
   },
   "layers": [
     {
@@ -10862,7 +10862,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "1aeb84cfbd58de716092e2bd9c8f1cec53357062d9025d2588bdc33ed1ff9787",
+  "source_tree_sha256": "ca5b58862726b2602d593636e0eb788c51091b5a0c963b58b0e903f8614ad94d",
   "stores": {
     "count": 2,
     "items": [

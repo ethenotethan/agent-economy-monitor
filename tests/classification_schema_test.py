@@ -229,6 +229,32 @@ class BuyerClassificationMigrationLiveTest(unittest.TestCase):
                  label_id, label_version, status)
             VALUES ('{namespace}', 'run:baseline', 1, 'claim:high-spend', 1,
                     'local:high-spend', 7, 'inferred');
+            """
+        )
+        timezone_hashes = []
+        for timezone in ("UTC", "America/New_York"):
+            timezone_hashes.append(
+                self.psql(
+                    f"""
+                    SET TIME ZONE '{timezone}';
+                    BEGIN;
+                    INSERT INTO agent_economy.classification_run_seals
+                        (namespace_id, run_id, run_version, result_encoding, state_hash)
+                    VALUES ('{namespace}', 'run:baseline', 1,
+                            convert_to('same-result', 'UTF8'),
+                            encode(sha256(convert_to('same-result', 'UTF8')), 'hex'));
+                    SELECT content_hash
+                    FROM agent_economy.classification_run_seals
+                    WHERE namespace_id = '{namespace}'
+                      AND run_id = 'run:baseline'
+                      AND run_version = 1;
+                    ROLLBACK;
+                    """
+                ).stdout.strip()
+            )
+        self.assertEqual(timezone_hashes[0], timezone_hashes[1])
+        self.psql(
+            f"""
             INSERT INTO agent_economy.classification_run_seals
                 (namespace_id, run_id, run_version, result_encoding, state_hash)
             VALUES
