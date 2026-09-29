@@ -16,8 +16,11 @@ CREATE TABLE agent_economy.buyer_enrichment_cursors (
     last_run_requests_used bigint NOT NULL DEFAULT 0 CHECK (
         last_run_requests_used >= 0 AND last_run_requests_used <= last_run_budget
     ),
+    reservation_owner text CHECK (reservation_owner IS NULL OR reservation_owner <> ''),
+    reservation_expires_at timestamptz,
     complete boolean NOT NULL DEFAULT false,
     updated_at timestamptz NOT NULL DEFAULT now(),
+    CHECK ((reservation_owner IS NULL) = (reservation_expires_at IS NULL)),
     PRIMARY KEY (namespace_id, buyer_handle_id, chain_scope),
     FOREIGN KEY (namespace_id, buyer_handle_id, chain_scope, handle_value)
         REFERENCES agent_economy.buyer_handles (

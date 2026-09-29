@@ -44,7 +44,7 @@ impl HistoryEvidenceArchive for FakeHistoryArchive {
 }
 
 #[tokio::test]
-async fn postgres_enrichment_state_is_chain_scoped_and_finalized_cache_is_immutable() {
+async fn postgres_enrichment_is_chain_scoped_single_flight_and_finalized_cache_is_immutable() {
     let Ok(database_url) = std::env::var("TEST_DATABASE_URL") else {
         return;
     };
@@ -109,12 +109,18 @@ async fn postgres_enrichment_state_is_chain_scoped_and_finalized_cache_is_immuta
             .await
             .unwrap();
     tokio::spawn(async move { state_connection.await.unwrap() });
+    let (competing_state_client, competing_state_connection) =
+        tokio_postgres::connect(&database_url, tokio_postgres::NoTls)
+            .await
+            .unwrap();
+    tokio::spawn(async move { competing_state_connection.await.unwrap() });
     let (cache_client, cache_connection) =
         tokio_postgres::connect(&database_url, tokio_postgres::NoTls)
             .await
             .unwrap();
     tokio::spawn(async move { cache_connection.await.unwrap() });
     let mut state = PostgresEnrichmentStateStore::new(state_client);
+    let mut competing_state = PostgresEnrichmentStateStore::new(competing_state_client);
     let mut cache = PostgresFinalizedHistoryCache::new(cache_client);
     let base = BuyerHistoryTarget::try_new(
         "00000000-0000-0000-0000-000000000001",
@@ -142,15 +148,28 @@ async fn postgres_enrichment_state_is_chain_scoped_and_finalized_cache_is_immuta
     let base_initial = state.initialize(&base).await.unwrap();
     assert!(
         state
-            .record_request(&mismatched, &base_initial, 10, 1)
+            .record_request(&mismatched, &base_initial, 10, 1, "mismatched-owner")
             .await
             .is_err(),
         "a caller-selected handle value must remain bound at every CAS boundary"
     );
     let base_recorded = state
-        .record_request(&base, &base_initial, 10, 1)
+        .record_request(&base, &base_initial, 10, 1, "worker-a")
         .await
         .unwrap();
+    let competing_checkpoint = competing_state
+        .load(&base)
+        .await
+        .unwrap()
+        .expect("the competing client observes the persisted reservation");
+    assert_eq!(competing_checkpoint, base_recorded);
+    assert_eq!(
+        competing_state
+            .record_request(&base, &competing_checkpoint, 10, 1, "worker-b")
+            .await,
+        Err(CollectorError::CursorConflict),
+        "a second client must not reserve the same cursor while the first request is in flight"
+    );
     let base_next = state
         .compare_and_set(&base, &base_recorded, Some("base-next".to_owned()), false)
         .await

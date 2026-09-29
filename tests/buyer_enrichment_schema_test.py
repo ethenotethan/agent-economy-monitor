@@ -24,6 +24,8 @@ class BuyerEnrichmentMigrationContractTest(unittest.TestCase):
         self.assertIn("requests_used_total bigint NOT NULL DEFAULT 0", up)
         self.assertIn("last_run_budget bigint NOT NULL DEFAULT 0", up)
         self.assertIn("last_run_requests_used bigint NOT NULL DEFAULT 0", up)
+        self.assertIn("reservation_owner text", up)
+        self.assertIn("reservation_expires_at timestamptz", up)
         self.assertIn("CREATE TABLE agent_economy.buyer_finalized_history (", up)
         self.assertIn("CREATE TABLE agent_economy.buyer_finalized_history_evidence (", up)
         self.assertIn("finality text NOT NULL DEFAULT 'finalized' CHECK (finality = 'finalized')", up)

@@ -1,5 +1,6 @@
 use serde_json::{Value, json};
 use tokio_postgres::Client;
+use uuid::Uuid;
 
 use crate::{
     AlchemyTransport, Chain, CollectorError, MAX_RPC_RESPONSE_BYTES, RawRpcResponse,
@@ -226,6 +227,7 @@ pub struct EnrichmentCheckpoint {
     requests_used_total: u64,
     last_run_budget: u64,
     last_run_requests_used: u64,
+    reservation_owner: Option<String>,
     complete: bool,
 }
 
@@ -242,6 +244,7 @@ impl EnrichmentCheckpoint {
             requests_used_total,
             last_run_budget: 0,
             last_run_requests_used: 0,
+            reservation_owner: None,
             complete,
         }
     }
@@ -260,6 +263,27 @@ impl EnrichmentCheckpoint {
             requests_used_total,
             last_run_budget,
             last_run_requests_used,
+            reservation_owner: None,
+            complete,
+        }
+    }
+
+    pub fn with_reservation(
+        cursor: Option<String>,
+        version: u64,
+        requests_used_total: u64,
+        last_run_budget: u64,
+        last_run_requests_used: u64,
+        reservation_owner: Option<String>,
+        complete: bool,
+    ) -> Self {
+        Self {
+            cursor,
+            version,
+            requests_used_total,
+            last_run_budget,
+            last_run_requests_used,
+            reservation_owner,
             complete,
         }
     }
@@ -282,6 +306,10 @@ impl EnrichmentCheckpoint {
 
     pub const fn last_run_requests_used(&self) -> u64 {
         self.last_run_requests_used
+    }
+
+    pub const fn reservation_active(&self) -> bool {
+        self.reservation_owner.is_some()
     }
 
     pub const fn complete(&self) -> bool {
@@ -591,6 +619,7 @@ pub trait EnrichmentStateStore {
         expected: &EnrichmentCheckpoint,
         request_budget: u64,
         run_requests_used: u64,
+        reservation_owner: &str,
     ) -> Result<EnrichmentCheckpoint, CollectorError>;
 
     async fn compare_and_set(
@@ -638,7 +667,7 @@ impl EnrichmentStateStore for PostgresEnrichmentStateStore {
         self.client
             .query_opt(
                 "SELECT cursor, version, requests_used_total, last_run_budget, \
-                        last_run_requests_used, complete \
+                        last_run_requests_used, reservation_owner, complete \
                  FROM agent_economy.buyer_enrichment_cursors \
                  WHERE namespace_id = $1::text::uuid \
                    AND buyer_handle_id = $2 AND chain_scope = $3 AND handle_value = $4",
@@ -688,6 +717,7 @@ impl EnrichmentStateStore for PostgresEnrichmentStateStore {
         expected: &EnrichmentCheckpoint,
         request_budget: u64,
         run_requests_used: u64,
+        reservation_owner: &str,
     ) -> Result<EnrichmentCheckpoint, CollectorError> {
         let expected_version = database_integer(expected.version)?;
         let request_budget = database_integer(request_budget)?;
@@ -697,13 +727,17 @@ impl EnrichmentStateStore for PostgresEnrichmentStateStore {
             .query_opt(
                 "UPDATE agent_economy.buyer_enrichment_cursors \
                  SET version = version + 1, requests_used_total = requests_used_total + 1, \
-                     last_run_budget = $7, last_run_requests_used = $8, updated_at = now() \
+                     last_run_budget = $7, last_run_requests_used = $8, \
+                     reservation_owner = $9, \
+                     reservation_expires_at = now() + interval '5 minutes', \
+                     updated_at = now() \
                  WHERE namespace_id = $1::text::uuid \
                    AND buyer_handle_id = $2 AND chain_scope = $3 \
                    AND handle_value = $4 AND version = $5 \
                    AND cursor IS NOT DISTINCT FROM $6 \
+                   AND (reservation_owner IS NULL OR reservation_expires_at <= now()) \
                  RETURNING cursor, version, requests_used_total, last_run_budget, \
-                           last_run_requests_used, complete",
+                           last_run_requests_used, reservation_owner, complete",
                 &[
                     &target.namespace_id,
                     &target.buyer_handle_id,
@@ -713,6 +747,7 @@ impl EnrichmentStateStore for PostgresEnrichmentStateStore {
                     &expected.cursor,
                     &request_budget,
                     &run_requests_used,
+                    &reservation_owner,
                 ],
             )
             .await
@@ -733,13 +768,16 @@ impl EnrichmentStateStore for PostgresEnrichmentStateStore {
             .client
             .query_opt(
                 "UPDATE agent_economy.buyer_enrichment_cursors \
-                 SET cursor = $7, version = version + 1, complete = $8, updated_at = now() \
+                 SET cursor = $7, version = version + 1, complete = $8, \
+                     reservation_owner = NULL, reservation_expires_at = NULL, updated_at = now() \
                  WHERE namespace_id = $1::text::uuid \
                    AND buyer_handle_id = $2 AND chain_scope = $3 \
                    AND handle_value = $4 AND version = $5 \
                    AND cursor IS NOT DISTINCT FROM $6 \
+                   AND reservation_owner IS NOT DISTINCT FROM $9 \
+                   AND (reservation_owner IS NULL OR reservation_expires_at > now()) \
                  RETURNING cursor, version, requests_used_total, last_run_budget, \
-                           last_run_requests_used, complete",
+                           last_run_requests_used, reservation_owner, complete",
                 &[
                     &target.namespace_id,
                     &target.buyer_handle_id,
@@ -749,6 +787,7 @@ impl EnrichmentStateStore for PostgresEnrichmentStateStore {
                     &expected.cursor,
                     &next_cursor,
                     &complete,
+                    &expected.reservation_owner,
                 ],
             )
             .await
@@ -765,13 +804,14 @@ fn checkpoint_from_enrichment_row(
     let requests_used_total: i64 = row.get("requests_used_total");
     let last_run_budget: i64 = row.get("last_run_budget");
     let last_run_requests_used: i64 = row.get("last_run_requests_used");
-    Ok(EnrichmentCheckpoint::with_budget_state(
+    Ok(EnrichmentCheckpoint::with_reservation(
         row.get("cursor"),
         u64::try_from(version).map_err(|_| CollectorError::EnrichmentStateStorage)?,
         u64::try_from(requests_used_total).map_err(|_| CollectorError::EnrichmentStateStorage)?,
         u64::try_from(last_run_budget).map_err(|_| CollectorError::EnrichmentStateStorage)?,
         u64::try_from(last_run_requests_used)
             .map_err(|_| CollectorError::EnrichmentStateStorage)?,
+        row.get("reservation_owner"),
         row.get("complete"),
     ))
 }
@@ -946,6 +986,7 @@ where
             && report.requests_used < request.request_budget
         {
             report.requests_used += 1;
+            let reservation_owner = Uuid::new_v4().to_string();
             checkpoint = self
                 .state
                 .record_request(
@@ -953,6 +994,7 @@ where
                     &checkpoint,
                     request.request_budget,
                     report.requests_used,
+                    &reservation_owner,
                 )
                 .await?;
             let response = self

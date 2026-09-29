@@ -242,16 +242,18 @@ impl EnrichmentStateStore for FakeEnrichmentState {
         expected: &EnrichmentCheckpoint,
         request_budget: u64,
         run_requests_used: u64,
+        reservation_owner: &str,
     ) -> Result<EnrichmentCheckpoint, CollectorError> {
         if self.checkpoint.as_ref() != Some(expected) {
             return Err(CollectorError::CursorConflict);
         }
-        let next = EnrichmentCheckpoint::with_budget_state(
+        let next = EnrichmentCheckpoint::with_reservation(
             expected.cursor().map(str::to_owned),
             expected.version() + 1,
             expected.requests_used_total() + 1,
             request_budget,
             run_requests_used,
+            Some(reservation_owner.to_owned()),
             expected.complete(),
         );
         self.checkpoint = Some(next.clone());
@@ -360,17 +362,14 @@ async fn enrichment_rejects_a_repeated_opaque_cursor_without_advancing_state() {
 
     assert_eq!(error, CollectorError::InvalidHistoryPage);
     assert_eq!(archive.bodies, [REPEATED]);
-    assert_eq!(
-        state.checkpoint,
-        Some(EnrichmentCheckpoint::with_budget_state(
-            Some("same".to_owned()),
-            5,
-            10,
-            2,
-            1,
-            false
-        ))
-    );
+    let checkpoint = state.checkpoint.expect("failed request remains reserved");
+    assert_eq!(checkpoint.cursor(), Some("same"));
+    assert_eq!(checkpoint.version(), 5);
+    assert_eq!(checkpoint.requests_used_total(), 10);
+    assert_eq!(checkpoint.last_run_budget(), 2);
+    assert_eq!(checkpoint.last_run_requests_used(), 1);
+    assert!(checkpoint.reservation_active());
+    assert!(!checkpoint.complete());
 }
 
 #[tokio::test]
@@ -400,12 +399,14 @@ async fn enrichment_archives_provider_response_before_validation() {
     assert_eq!(error, CollectorError::InvalidHistoryPage);
     assert_eq!(archive.bodies, [INVALID]);
     assert_eq!(archive.statuses, [200]);
-    assert_eq!(
-        state.checkpoint,
-        Some(EnrichmentCheckpoint::with_budget_state(
-            None, 1, 1, 1, 1, false
-        ))
-    );
+    let checkpoint = state.checkpoint.expect("invalid response remains reserved");
+    assert_eq!(checkpoint.cursor(), None);
+    assert_eq!(checkpoint.version(), 1);
+    assert_eq!(checkpoint.requests_used_total(), 1);
+    assert_eq!(checkpoint.last_run_budget(), 1);
+    assert_eq!(checkpoint.last_run_requests_used(), 1);
+    assert!(checkpoint.reservation_active());
+    assert!(!checkpoint.complete());
 }
 
 #[tokio::test]
@@ -433,12 +434,16 @@ async fn enrichment_persists_hard_budget_for_transport_failures() {
 
     assert_eq!(error, CollectorError::Transport);
     assert_eq!(transport.requests.len(), 1);
-    assert_eq!(
-        state.checkpoint,
-        Some(EnrichmentCheckpoint::with_budget_state(
-            None, 1, 1, 1, 1, false
-        ))
-    );
+    let checkpoint = state
+        .checkpoint
+        .expect("transport failure remains reserved");
+    assert_eq!(checkpoint.cursor(), None);
+    assert_eq!(checkpoint.version(), 1);
+    assert_eq!(checkpoint.requests_used_total(), 1);
+    assert_eq!(checkpoint.last_run_budget(), 1);
+    assert_eq!(checkpoint.last_run_requests_used(), 1);
+    assert!(checkpoint.reservation_active());
+    assert!(!checkpoint.complete());
 }
 
 #[tokio::test]
