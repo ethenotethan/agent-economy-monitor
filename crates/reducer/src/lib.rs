@@ -410,20 +410,11 @@ impl FinalityEngine {
         if matches!(self.policy, FinalityPolicy::Evm { confirmations: 0 }) {
             return Err(ReducerError::InvalidFinalityEvidence("confirmation depth"));
         }
-        let evidence = evidence.into_iter().collect::<Vec<_>>();
-        let expected_position = evidence.first().map(ChainFinalityEvidence::position);
-        let expected_block_hash = evidence
-            .first()
-            .map(ChainFinalityEvidence::block_hash)
-            .map(str::to_owned);
         let mut updates = evidence
             .into_iter()
             .map(|item| {
                 item.validate()?;
-                if item.subject() != expected_subject
-                    || Some(item.position()) != expected_position
-                    || Some(item.block_hash()) != expected_block_hash.as_deref()
-                {
+                if item.subject() != expected_subject {
                     return Err(ReducerError::FinalitySubjectMismatch);
                 }
                 Ok(FinalityUpdate {
@@ -738,7 +729,14 @@ const fn valid_finality_transition(from: FinalityStatus, to: FinalityStatus) -> 
         FinalityStatus::Finalized => {
             matches!(to, FinalityStatus::Orphaned | FinalityStatus::Reverted)
         }
-        FinalityStatus::Orphaned | FinalityStatus::Reverted => false,
+        FinalityStatus::Orphaned => matches!(
+            to,
+            FinalityStatus::Observed
+                | FinalityStatus::Confirmed
+                | FinalityStatus::Finalized
+                | FinalityStatus::Reverted
+        ),
+        FinalityStatus::Reverted => false,
     }
 }
 
