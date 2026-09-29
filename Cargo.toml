@@ -8,6 +8,7 @@ description = "Private intelligence cockpit for x402 and MPP commerce activity"
 [workspace]
 members = [
     "crates/adapter-api",
+    "crates/classification",
     "crates/attribution",
     "crates/contracts",
     "crates/evidence-store",

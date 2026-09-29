@@ -19,6 +19,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "agent-economy-classification"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "sha2 0.10.9",
+ "thiserror",
+]
+
+[[package]]
 name = "agent-economy-contracts"
 version = "0.1.0"
 dependencies = [
