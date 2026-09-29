@@ -267,7 +267,7 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 297
+      "line_count": 306
     },
     {
       "declaration_count": 0,
@@ -305,7 +305,70 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5425
+      "line_count": 5437
+    },
+    {
+      "declaration_count": 44,
+      "declarations": [
+        "AttributionCandidate",
+        "AttributionEngine",
+        "AttributionError",
+        "AttributionLevel",
+        "AttributionMethod",
+        "AttributionResult",
+        "PaymentRequirement",
+        "Settlement",
+        "SettlementFinality",
+        "attribute",
+        "candidate",
+        "candidates",
+        "digest_fields",
+        "duplicate_requirement_ids_are_rejected",
+        "encode",
+        "encode_count",
+        "encode_field",
+        "endpoint_id",
+        "engine_version",
+        "evidence_ids",
+        "exact_match",
+        "explicit_requirement_id",
+        "explicit_requirement_match_is_verified_and_cites_both_sides",
+        "finish_result",
+        "fn",
+        "hash_field",
+        "id",
+        "input_snapshot_hash",
+        "new",
+        "nonfinalized_settlements_are_rejected",
+        "normalize_evidence",
+        "payment_option_id",
+        "replay_encoding_has_stable_golden_vectors",
+        "replay_is_identical_across_catalog_input_order",
+        "requirement",
+        "requirement_id",
+        "service_id",
+        "settlement",
+        "settlement_with_finality",
+        "shared_recipient_keeps_all_exact_candidates_weak",
+        "state_hash",
+        "unique_exact_catalog_match_is_strong",
+        "unmatched_settlement_is_unknown_but_keeps_settlement_evidence",
+        "validate_required"
+      ],
+      "description": "Deterministic, versioned settlement attribution with evidence-backed verified, strong, weak, and unknown outcomes that preserve every shared-recipient candidate.",
+      "external": false,
+      "file_count": 5,
+      "files": [
+        "crates/attribution/Cargo.toml",
+        "crates/attribution/src/lib.rs",
+        "crates/attribution/tests/attribution.rs",
+        "migrations/0006_settlement_attribution.down.sql",
+        "migrations/0006_settlement_attribution.up.sql"
+      ],
+      "id": "attribution-engine",
+      "label": "Settlement attribution engine",
+      "layer": "canonical",
+      "line_count": 1320
     },
     {
       "declaration_count": 0,
@@ -351,7 +414,7 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 13,
+      "file_count": 14,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -365,12 +428,13 @@
         "tests/observation_contracts.rs",
         "tests/operational_analytics_schema_test.py",
         "tests/reducer_finality_schema_test.py",
+        "tests/settlement_attribution_schema_test.py",
         "tests/shadow_catalog_schema_test.py"
       ],
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 2487
+      "line_count": 2830
     },
     {
       "declaration_count": 73,
@@ -944,7 +1008,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 2499
+      "line_count": 2509
     },
     {
       "declaration_count": 0,
@@ -1074,7 +1138,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, PostgreSQL cursor and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, PostgreSQL cursor and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution schema, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -1149,7 +1213,7 @@
         },
         {
           "id": "rust.workers",
-          "reason": "The external RPC collector, targeted buyer enrichment, and deterministic reducer/finality engine are implemented as libraries, but no collect/reduce/classify/enrich/project-wiki process mode exists yet; the remaining worker topology is specified only."
+          "reason": "The external RPC collector, targeted buyer enrichment, deterministic reducer/finality engine, and settlement attribution engine are implemented as libraries, but no collect/reduce/attribute/classify/enrich/project-wiki process mode exists yet; the remaining worker topology is specified only."
         }
       ]
     },
@@ -1171,17 +1235,17 @@
         ]
       },
       {
-        "component": "architecture-policy",
+        "component": "attribution-engine",
         "id": "attribution",
         "kind": "worker",
-        "label": "Attribution engine",
+        "label": "Settlement attribution engine",
         "origins": [
           {
             "family": "specified",
-            "line": 14,
-            "path": "docs/ARCHITECTURE.md",
+            "line": 231,
+            "path": "crates/attribution/src/lib.rs",
             "rule": "declared.topology",
-            "via": "D --> AT[Attribution engine]"
+            "via": "pub struct AttributionEngine {"
           }
         ]
       },
@@ -1766,7 +1830,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 2413,
+        "line_count": 2422,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1780,7 +1844,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 30,
+        "line_count": 31,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1808,7 +1872,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 495,
+        "line_count": 507,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1925,6 +1989,450 @@
         "path": "crates/adapter-api/src/lib.rs",
         "semantic_citations": 0,
         "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "attribution-engine",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 11,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "crates/attribution/Cargo.toml",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "attribution-engine",
+        "declaration_count": 39,
+        "declarations": [
+          {
+            "kind": "enum",
+            "line": 5,
+            "name": "AttributionLevel",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 13,
+            "name": "AttributionMethod",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 21,
+            "name": "SettlementFinality",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 27,
+            "name": "Settlement",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 41,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 80,
+            "name": "PaymentRequirement",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 95,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 139,
+            "name": "AttributionCandidate",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 150,
+            "name": "id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 153,
+            "name": "requirement_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 157,
+            "name": "payment_option_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 161,
+            "name": "endpoint_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 165,
+            "name": "service_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 169,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 173,
+            "name": "evidence_ids",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 180,
+            "name": "AttributionResult",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 193,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 196,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 200,
+            "name": "explicit_requirement_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 204,
+            "name": "candidates",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 208,
+            "name": "engine_version",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 212,
+            "name": "evidence_ids",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 216,
+            "name": "input_snapshot_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 220,
+            "name": "encode",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 224,
+            "name": "state_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 231,
+            "name": "AttributionEngine",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 236,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 241,
+            "name": "attribute",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 303,
+            "name": "exact_match",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 311,
+            "name": "candidate",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 338,
+            "name": "finish_result",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 406,
+            "name": "input_snapshot_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 451,
+            "name": "normalize_evidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 466,
+            "name": "validate_required",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 476,
+            "name": "digest_fields",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 487,
+            "name": "hash_field",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 492,
+            "name": "encode_field",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 497,
+            "name": "encode_count",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 503,
+            "name": "AttributionError",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 512,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/attribution/src/lib.rs",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "attribution-engine",
+        "declaration_count": 11,
+        "declarations": [
+          {
+            "kind": "fn",
+            "line": 5,
+            "name": "settlement",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 9,
+            "name": "settlement_with_finality",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 27,
+            "name": "requirement",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 45,
+            "name": "explicit_requirement_match_is_verified_and_cites_both_sides",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 78,
+            "name": "unique_exact_catalog_match_is_strong",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 97,
+            "name": "shared_recipient_keeps_all_exact_candidates_weak",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 133,
+            "name": "replay_is_identical_across_catalog_input_order",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 156,
+            "name": "replay_encoding_has_stable_golden_vectors",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 184,
+            "name": "unmatched_settlement_is_unknown_but_keeps_settlement_evidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 196,
+            "name": "duplicate_requirement_ids_are_rejected",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 212,
+            "name": "nonfinalized_settlements_are_rejected",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 226,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "crates/attribution/tests/attribution.rs",
+        "semantic_citations": 0,
+        "touched": false
       },
       {
         "citations": 0,
@@ -7673,11 +8181,11 @@
         "touched": false
       },
       {
-        "citations": 14,
+        "citations": 13,
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 115,
+        "line_count": 124,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -7837,6 +8345,34 @@
           "declared.topology"
         ],
         "path": "migrations/0005_reducer_finality.up.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "attribution-engine",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 42,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0006_settlement_attribution.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "attribution-engine",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 529,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0006_settlement_attribution.up.sql",
         "semantic_citations": 0,
         "touched": false
       },
@@ -8322,6 +8858,20 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
+        "line_count": 343,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/settlement_attribution_schema_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
         "line_count": 433,
         "mapped_declarations": 0,
         "passes": [
@@ -8344,14 +8894,14 @@
         "citations": 32,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
-        "files": 17,
+        "files": 18,
         "id": "declared.topology"
       },
       {
-        "citations": 684,
+        "citations": 734,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 20,
+        "files": 22,
         "id": "rust.declaration"
       },
       {
@@ -8380,15 +8930,15 @@
         "worker": 6
       },
       "citations": 34,
-      "declarations": 684,
+      "declarations": 734,
       "entities": 34,
       "entities_with_origin": 34,
-      "files": 83,
+      "files": 89,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
-      "touched_files": 17,
-      "untouched_files": 66
+      "touched_files": 18,
+      "untouched_files": 71
     }
   },
   "interplay": {
@@ -8445,6 +8995,12 @@
         "relation": "hosts",
         "source": "cloud-run-api",
         "target": "query-api"
+      },
+      {
+        "class": "structure",
+        "relation": "hosts",
+        "source": "cloud-run-jobs",
+        "target": "attribution"
       },
       {
         "class": "structure",
@@ -8807,6 +9363,11 @@
             "from": "cloud-run-jobs",
             "relation": "hosts",
             "to": "reducers"
+          },
+          {
+            "from": "cloud-run-jobs",
+            "relation": "hosts",
+            "to": "attribution"
           }
         ],
         "summary": "One Rust image serves the scale-to-zero dashboard and bounded scheduled workers without creating another product authority.",
@@ -8954,17 +9515,17 @@
         "page": "evidence"
       },
       {
-        "component": "architecture-policy",
+        "component": "attribution-engine",
         "evidence": [
           {
-            "excerpt": "D --> AT[Attribution engine]",
-            "line": 14,
-            "path": "docs/ARCHITECTURE.md"
+            "excerpt": "pub struct AttributionEngine {",
+            "line": 231,
+            "path": "crates/attribution/src/lib.rs"
           }
         ],
         "id": "attribution",
         "kind": "worker",
-        "label": "Attribution engine",
+        "label": "Settlement attribution engine",
         "page": "canonical"
       },
       {
@@ -9451,6 +10012,7 @@
       {
         "components": [
           "architecture-policy",
+          "attribution-engine",
           "buyer-enrichment-schema",
           "deterministic-reducer",
           "knowledge-graph-schema",
@@ -9461,6 +10023,7 @@
         "label": "Canonical knowledge",
         "roots": [
           "reducers",
+          "attribution",
           "buyer-enrichment-schema",
           "canonical-knowledge-schema",
           "operational-analytics-schema",
@@ -9493,9 +10056,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 684,
-    "files": 83,
-    "lines": 22442
+    "declarations": 734,
+    "files": 89,
+    "lines": 24136
   },
   "layers": [
     {
@@ -9536,7 +10099,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "4c2be529e98f786b7c506e174340e5f297c1e7f02b12b9de37196187f2ba91c4",
+  "source_tree_sha256": "03e57c0493f8b5532645dfcff550758a934f2c8f2ef7e14ebd05144a563471c8",
   "stores": {
     "count": 2,
     "items": [
