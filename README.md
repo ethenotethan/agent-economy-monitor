@@ -57,4 +57,11 @@ cargo run
 curl http://127.0.0.1:8080/healthz
 ```
 
+The service requires `DATABASE_URL` and `NAMESPACE_ID`; every dashboard read is scoped
+to that exact namespace UUID. Its purpose-built API is documented at
+`/api/v1/openapi.json`; Pulse, buyers, buyer timelines, services, graph neighborhoods,
+provenance, search, and system read models live under `/api/v1`. List endpoints accept
+cursor pagination with a hard maximum of 100 records, and successful read models include
+private cache directives, deterministic ETags, and resolvable provenance identifiers.
+
 See [CONTEXT.md](CONTEXT.md), [docs/PRODUCT.md](docs/PRODUCT.md), and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

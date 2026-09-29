@@ -23,7 +23,7 @@
   ],
   "components": [
     {
-      "description": "Axum process entry point and current HTTP status surface.",
+      "description": "Axum process entry point and versioned, bounded, provenance-bearing query API.",
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
@@ -32,6 +32,15 @@
         "Cargo.lock",
         "Cargo.toml",
         "src/**"
+      ]
+    },
+    {
+      "description": "Purpose-built PostgreSQL read models for cacheable Pulse, buyer, service, timeline, graph, provenance, search, and system queries.",
+      "id": "query-read-models",
+      "label": "Dashboard query read models",
+      "layer": "canonical",
+      "patterns": [
+        "migrations/0008_query_read_models.*.sql"
       ]
     },
     {
@@ -215,7 +224,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, PostgreSQL cursor and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -360,6 +369,8 @@
     {"class": "lifecycle", "relation": "writes-versioned-claims", "source": "classification", "target": "store:postgresql"},
     {"class": "interplay", "relation": "targets", "source": "store:postgresql", "target": "enrichment"},
     {"class": "boundary", "relation": "queries", "source": "enrichment", "target": "external:rpc-provider"},
+    {"class": "structure", "relation": "materializes", "source": "store:postgresql", "target": "dashboard-read-models"},
+    {"class": "interplay", "relation": "reads", "source": "query-api", "target": "dashboard-read-models"},
     {"class": "interplay", "relation": "reads", "source": "query-api", "target": "store:postgresql"},
     {"class": "interplay", "relation": "serves", "source": "query-api", "target": "cockpit"},
     {"class": "interplay", "relation": "bounds", "source": "store:postgresql", "target": "evidence-snapshot"},
@@ -478,7 +489,8 @@
     {"authority": "specified", "component": "buyer-classification", "id": "buyer-classification-schema", "kind": "schema", "label": "Versioned classification and replay drift schema", "origin": {"path": "migrations/0007_buyer_classification.up.sql", "search": "CREATE TABLE agent_economy.classification_runs ("}, "page": "canonical"},
     {"authority": "specified", "component": "rpc-collector", "id": "enrichment", "kind": "worker", "label": "Targeted buyer enrichment", "origin": {"path": "crates/rpc-collector/src/enrichment.rs", "search": "pub struct BuyerHistoryEnricher"}, "page": "canonical"},
     {"authority": "specified", "component": "buyer-enrichment-schema", "id": "buyer-enrichment-schema", "kind": "schema", "label": "Chain-scoped enrichment state and finalized cache", "origin": {"path": "migrations/0004_buyer_enrichment.up.sql", "search": "CREATE TABLE agent_economy.buyer_enrichment_cursors ("}, "page": "canonical"},
-    {"authority": "specified", "component": "architecture-policy", "id": "query-api", "kind": "service", "label": "Axum query API", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Axum query API"}, "page": "delivery"},
+    {"authority": "specified", "component": "runtime", "id": "query-api", "kind": "service", "label": "Axum query API", "origin": {"path": "src/query.rs", "search": "pub fn api_router"}, "page": "delivery"},
+    {"authority": "specified", "component": "query-read-models", "id": "dashboard-read-models", "kind": "schema", "label": "Dashboard query read models", "origin": {"path": "migrations/0008_query_read_models.up.sql", "search": "CREATE VIEW agent_economy.dashboard_facts"}, "page": "canonical"},
     {"authority": "specified", "component": "architecture-policy", "id": "cockpit", "kind": "surface", "label": "Leptos private cockpit", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Leptos private cockpit"}, "page": "experience"},
     {"authority": "specified", "component": "architecture-policy", "id": "evidence-snapshot", "kind": "boundary", "label": "Bounded evidence snapshots", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Bounded evidence snapshots"}, "page": "projection"},
     {"authority": "specified", "component": "architecture-policy", "id": "llm-projector", "kind": "projector", "label": "LLM projector", "origin": {"path": "docs/ARCHITECTURE.md", "search": "LLM projector"}, "page": "projection"},
@@ -491,6 +503,17 @@
     {"authority": "specified", "component": "architecture-policy", "id": "cloud-scheduler", "kind": "scheduler", "label": "Cloud Scheduler", "origin": {"path": "docs/ARCHITECTURE.md", "search": "CS[Cloud Scheduler]"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:healthz", "kind": "endpoint", "label": "GET /healthz", "origin": {"method": "get", "path": "src/main.rs", "route": "/healthz"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:status", "kind": "endpoint", "label": "GET /api/v1/status", "origin": {"method": "get", "path": "src/main.rs", "route": "/api/v1/status"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:openapi", "kind": "endpoint", "label": "GET /api/v1/openapi.json", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/openapi.json"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:pulse", "kind": "endpoint", "label": "GET /api/v1/pulse", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/pulse"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:buyers", "kind": "endpoint", "label": "GET /api/v1/buyers", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:buyer", "kind": "endpoint", "label": "GET /api/v1/buyers/{id}", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers/{id}"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:buyer-timeline", "kind": "endpoint", "label": "GET /api/v1/buyers/{id}/timeline", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers/{id}/timeline"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:services", "kind": "endpoint", "label": "GET /api/v1/services", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/services"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:service", "kind": "endpoint", "label": "GET /api/v1/services/{id}", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/services/{id}"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:graph", "kind": "endpoint", "label": "GET /api/v1/graph/{kind}/{id}", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/graph/{kind}/{id}"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:provenance", "kind": "endpoint", "label": "GET /api/v1/provenance/{id}", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/provenance/{id}"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:search", "kind": "endpoint", "label": "GET /api/v1/search", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/search"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:system", "kind": "endpoint", "label": "GET /api/v1/system", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/system"}, "page": "delivery"},
     {"authority": "specified", "component": "architecture-policy", "id": "store:evidence", "kind": "store", "label": "Google Cloud Storage", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Google Cloud Storage immutable evidence"}, "page": "evidence"},
     {"authority": "specified", "component": "architecture-policy", "id": "store:postgresql", "kind": "store", "label": "PostgreSQL operational and analytical store", "origin": {"path": "docs/ARCHITECTURE.md", "search": "PostgreSQL jobs"}, "page": "canonical"},
     {"authority": "specified", "component": null, "id": "external:rpc-provider", "kind": "external", "label": "External RPC provider", "origin": {"path": "README.md", "search": "through one external RPC provider"}, "page": null},
@@ -501,9 +524,9 @@
   "pages": [
     {"components": ["runtime"], "id": "experience", "label": "Private cockpit", "roots": ["cockpit"]},
     {"components": ["architecture-policy", "observation-contracts", "adapter-api", "evidence-store", "mpp-adapter", "rpc-collector", "x402-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "observation-contract", "adapter-boundary", "filesystem-evidence-store", "mpp-discovery-adapter", "protocol-adapters"]},
-    {"components": ["architecture-policy", "attribution-engine", "buyer-classification", "buyer-enrichment-schema", "deterministic-reducer", "knowledge-graph-schema", "operational-analytics-schema", "shadow-catalog-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "attribution", "classification", "buyer-classification-schema", "buyer-enrichment-schema", "canonical-knowledge-schema", "operational-analytics-schema", "shadow-catalog"]},
+    {"components": ["architecture-policy", "attribution-engine", "buyer-classification", "buyer-enrichment-schema", "deterministic-reducer", "knowledge-graph-schema", "operational-analytics-schema", "query-read-models", "shadow-catalog-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "attribution", "classification", "buyer-classification-schema", "buyer-enrichment-schema", "canonical-knowledge-schema", "dashboard-read-models", "operational-analytics-schema", "shadow-catalog"]},
     {"components": ["architecture-policy"], "id": "projection", "label": "Semantic projection", "roots": ["evidence-snapshot"]},
-    {"components": ["runtime", "development-stack"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service", "local-development-stack"]}
+    {"components": ["runtime", "development-stack"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service", "query-api", "local-development-stack"]}
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",

@@ -267,7 +267,7 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 306
+      "line_count": 313
     },
     {
       "declaration_count": 0,
@@ -305,7 +305,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5450
+      "line_count": 5473
     },
     {
       "declaration_count": 44,
@@ -450,17 +450,24 @@
       "line_count": 111
     },
     {
-      "declaration_count": 23,
+      "declaration_count": 38,
       "declarations": [
         "Error",
+        "FixtureStore",
         "X402Adapter",
         "adapters_emit_immutable_observations",
         "additive_unknown_fields_are_covered_by_the_content_address",
+        "buyer",
+        "buyer_timeline",
+        "buyers",
         "canonical_event_cites_supporting_observations",
         "canonical_event_decode_rejects_support_from_another_event",
         "canonical_event_keys_are_protocol_defined",
         "canonical_event_rejects_mismatched_support",
         "collect",
+        "fact",
+        "graph",
+        "list_queries_are_bounded_and_cacheable_with_provenance",
         "mpp_discovery_contract_rejects_noncanonical_atomic_amounts",
         "mpp_event_key_rejects_invalid_method_grammar",
         "mpp_event_keys_are_scoped_by_required_realm",
@@ -469,16 +476,24 @@
         "observation_construction_rejects_invalid_provenance",
         "observation_id_is_content_addressed",
         "observe",
+        "postgres_store_is_the_runtime_query_backend",
         "protobuf_replay_preserves_the_canonical_event",
         "protobuf_replay_preserves_the_observation",
         "protocol_observation_construction_rejects_invalid_amount",
+        "provenance",
+        "pulse",
+        "purpose_built_surface_is_documented_without_graphql_or_sql",
         "reducers_can_read_typed_observation_fields",
+        "search",
+        "service",
+        "services",
+        "system",
         "x402_event_key_requires_protocol_identifier_binding",
         "x402_key"
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 15,
+      "file_count": 17,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -492,6 +507,8 @@
         "tests/knowledge_graph_schema_test.py",
         "tests/observation_contracts.rs",
         "tests/operational_analytics_schema_test.py",
+        "tests/query_api.rs",
+        "tests/query_read_models_schema_test.py",
         "tests/reducer_finality_schema_test.py",
         "tests/settlement_attribution_schema_test.py",
         "tests/shadow_catalog_schema_test.py"
@@ -499,7 +516,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 3194
+      "line_count": 3511
     },
     {
       "declaration_count": 73,
@@ -852,6 +869,21 @@
       "line_count": 430
     },
     {
+      "declaration_count": 0,
+      "declarations": [],
+      "description": "Purpose-built PostgreSQL read models for cacheable Pulse, buyer, service, timeline, graph, provenance, search, and system queries.",
+      "external": false,
+      "file_count": 2,
+      "files": [
+        "migrations/0008_query_read_models.down.sql",
+        "migrations/0008_query_read_models.up.sql"
+      ],
+      "id": "query-read-models",
+      "label": "Dashboard query read models",
+      "layer": "canonical",
+      "line_count": 130
+    },
+    {
       "declaration_count": 181,
       "declarations": [
         "ALL",
@@ -1055,25 +1087,71 @@
       "line_count": 3628
     },
     {
-      "declaration_count": 3,
+      "declaration_count": 47,
       "declarations": [
+        "API_VERSION",
+        "CACHE_CONTROL",
+        "DEFAULT_PAGE_SIZE",
+        "DashboardPage",
+        "FACT_COLUMNS",
+        "Fact",
+        "GraphReadModel",
+        "MAX_PAGE_SIZE",
+        "PageQuery",
+        "PostgresQueryStore",
+        "ProvenanceReadModel",
+        "QueryError",
+        "QueryStore",
+        "SearchQuery",
         "Status",
+        "Store",
+        "SystemReadModel",
+        "Versioned",
+        "api_router",
+        "bounded",
+        "buyer",
+        "buyer_timeline",
+        "buyers",
+        "cacheable",
+        "composite_cursor_round_trips_delimiter_characters",
+        "decode_cursor",
+        "encode_cursor",
+        "fact_page",
+        "facts",
+        "graph",
+        "into_response",
         "main",
-        "status"
+        "malformed_composite_cursor_is_rejected",
+        "new",
+        "one_fact",
+        "openapi",
+        "page",
+        "provenance",
+        "pulse",
+        "query",
+        "row_to_fact",
+        "search",
+        "service",
+        "services",
+        "status",
+        "system",
+        "tests"
       ],
-      "description": "Axum process entry point and current HTTP status surface.",
+      "description": "Axum process entry point and versioned, bounded, provenance-bearing query API.",
       "external": false,
-      "file_count": 4,
+      "file_count": 6,
       "files": [
         ".env.example",
         "Cargo.lock",
         "Cargo.toml",
-        "src/main.rs"
+        "src/lib.rs",
+        "src/main.rs",
+        "src/query.rs"
       ],
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 2519
+      "line_count": 3190
     },
     {
       "declaration_count": 0,
@@ -1203,7 +1281,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, PostgreSQL cursor and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -1450,6 +1528,21 @@
         ]
       },
       {
+        "component": "query-read-models",
+        "id": "dashboard-read-models",
+        "kind": "schema",
+        "label": "Dashboard query read models",
+        "origins": [
+          {
+            "family": "specified",
+            "line": 3,
+            "path": "migrations/0008_query_read_models.up.sql",
+            "rule": "declared.topology",
+            "via": "CREATE VIEW agent_economy.dashboard_facts AS"
+          }
+        ]
+      },
+      {
         "component": "rpc-collector",
         "id": "enrichment",
         "kind": "worker",
@@ -1556,16 +1649,166 @@
       },
       {
         "component": "runtime",
+        "id": "http:buyer",
+        "kind": "endpoint",
+        "label": "GET /api/v1/buyers/{id}",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 438,
+            "path": "src/query.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/buyers/{id}\", get(buyer))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:buyer-timeline",
+        "kind": "endpoint",
+        "label": "GET /api/v1/buyers/{id}/timeline",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 439,
+            "path": "src/query.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/buyers/{id}/timeline\", get(buyer_timeline))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:buyers",
+        "kind": "endpoint",
+        "label": "GET /api/v1/buyers",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 437,
+            "path": "src/query.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/buyers\", get(buyers))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:graph",
+        "kind": "endpoint",
+        "label": "GET /api/v1/graph/{kind}/{id}",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 442,
+            "path": "src/query.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/graph/{kind}/{id}\", get(graph))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
         "id": "http:healthz",
         "kind": "endpoint",
         "label": "GET /healthz",
         "origins": [
           {
             "family": "mechanical",
-            "line": 37,
+            "line": 48,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/healthz\", get(status))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:openapi",
+        "kind": "endpoint",
+        "label": "GET /api/v1/openapi.json",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 435,
+            "path": "src/query.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/openapi.json\", get(openapi))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:provenance",
+        "kind": "endpoint",
+        "label": "GET /api/v1/provenance/{id}",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 443,
+            "path": "src/query.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/provenance/{id}\", get(provenance))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:pulse",
+        "kind": "endpoint",
+        "label": "GET /api/v1/pulse",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 436,
+            "path": "src/query.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/pulse\", get(pulse))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:search",
+        "kind": "endpoint",
+        "label": "GET /api/v1/search",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 444,
+            "path": "src/query.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/search\", get(search))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:service",
+        "kind": "endpoint",
+        "label": "GET /api/v1/services/{id}",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 441,
+            "path": "src/query.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/services/{id}\", get(service))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:services",
+        "kind": "endpoint",
+        "label": "GET /api/v1/services",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 440,
+            "path": "src/query.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/services\", get(services))"
           }
         ]
       },
@@ -1577,10 +1820,25 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 38,
+            "line": 49,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/status\", get(status))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:system",
+        "kind": "endpoint",
+        "label": "GET /api/v1/system",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 445,
+            "path": "src/query.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/system\", get(system))"
           }
         ]
       },
@@ -1705,17 +1963,17 @@
         ]
       },
       {
-        "component": "architecture-policy",
+        "component": "runtime",
         "id": "query-api",
         "kind": "service",
         "label": "Axum query API",
         "origins": [
           {
             "family": "specified",
-            "line": 26,
-            "path": "docs/ARCHITECTURE.md",
+            "line": 433,
+            "path": "src/query.rs",
             "rule": "declared.topology",
-            "via": "PG --> Q[Axum query API and dashboard read models]"
+            "via": "pub fn api_router(store: Store) -> Router {"
           }
         ]
       },
@@ -1742,7 +2000,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 40,
+            "line": 51,
             "path": "src/main.rs",
             "rule": "declared.topology",
             "via": "info!(%address, \"agent economy monitor listening\");"
@@ -1826,7 +2084,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 13,
+        "line_count": 14,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1910,7 +2168,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 2431,
+        "line_count": 2436,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1924,7 +2182,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 32,
+        "line_count": 37,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1938,7 +2196,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 60,
+        "line_count": 67,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -1952,7 +2210,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 520,
+        "line_count": 543,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -8873,7 +9131,7 @@
         "touched": false
       },
       {
-        "citations": 12,
+        "citations": 11,
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
@@ -9098,6 +9356,34 @@
       },
       {
         "citations": 0,
+        "component": "query-read-models",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 7,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0008_query_read_models.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 1,
+        "component": "query-read-models",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 123,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0008_query_read_models.up.sql",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
@@ -9237,13 +9523,36 @@
         "touched": false
       },
       {
+        "citations": 0,
+        "component": "runtime",
+        "declaration_count": 1,
+        "declarations": [
+          {
+            "kind": "mod",
+            "line": 1,
+            "name": "query",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 1,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "src/lib.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
         "citations": 3,
         "component": "runtime",
         "declaration_count": 3,
         "declarations": [
           {
             "kind": "struct",
-            "line": 10,
+            "line": 12,
             "name": "Status",
             "passes": [
               "rust.declaration"
@@ -9251,7 +9560,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 15,
+            "line": 17,
             "name": "status",
             "passes": [
               "rust.declaration"
@@ -9259,19 +9568,546 @@
           },
           {
             "kind": "async-fn",
-            "line": 25,
+            "line": 27,
             "name": "main",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 43,
+        "line_count": 54,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
         ],
         "path": "src/main.rs",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 12,
+        "component": "runtime",
+        "declaration_count": 64,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 15,
+            "name": "API_VERSION",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 17,
+            "name": "DEFAULT_PAGE_SIZE",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 18,
+            "name": "MAX_PAGE_SIZE",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 19,
+            "name": "CACHE_CONTROL",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 22,
+            "name": "Fact",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 32,
+            "name": "DashboardPage",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 39,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 49,
+            "name": "GraphReadModel",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 56,
+            "name": "ProvenanceReadModel",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 71,
+            "name": "SystemReadModel",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 76,
+            "name": "Versioned",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 82,
+            "name": "QueryError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 89,
+            "name": "into_response",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 112,
+            "name": "QueryStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 113,
+            "name": "pulse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 114,
+            "name": "buyers",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 115,
+            "name": "buyer",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 116,
+            "name": "buyer_timeline",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 122,
+            "name": "services",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 127,
+            "name": "service",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 128,
+            "name": "graph",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 130,
+            "name": "provenance",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 131,
+            "name": "search",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 137,
+            "name": "system",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 139,
+            "name": "PostgresQueryStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 146,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 152,
+            "name": "facts",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 166,
+            "name": "fact_page",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 182,
+            "name": "one_fact",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 194,
+            "name": "row_to_fact",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 210,
+            "name": "page",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 216,
+            "name": "encode_cursor",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 224,
+            "name": "decode_cursor",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 241,
+            "name": "FACT_COLUMNS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 246,
+            "name": "pulse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 252,
+            "name": "buyers",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 256,
+            "name": "buyer",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 260,
+            "name": "buyer_timeline",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 293,
+            "name": "services",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 301,
+            "name": "service",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 305,
+            "name": "graph",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 346,
+            "name": "provenance",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 366,
+            "name": "search",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 395,
+            "name": "system",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "type",
+            "line": 405,
+            "name": "Store",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 409,
+            "name": "PageQuery",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 415,
+            "name": "bounded",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 427,
+            "name": "SearchQuery",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 432,
+            "name": "api_router",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 448,
+            "name": "openapi",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 505,
+            "name": "cacheable",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 530,
+            "name": "pulse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 537,
+            "name": "buyers",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 545,
+            "name": "buyer",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 553,
+            "name": "buyer_timeline",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 562,
+            "name": "services",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 570,
+            "name": "service",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 581,
+            "name": "graph",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 593,
+            "name": "provenance",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 604,
+            "name": "search",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 622,
+            "name": "system",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "mod",
+            "line": 631,
+            "name": "tests",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 635,
+            "name": "composite_cursor_round_trips_delimiter_characters",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 644,
+            "name": "malformed_composite_cursor_is_rejected",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 648,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "src/query.rs",
         "semantic_citations": 0,
         "touched": true
       },
@@ -9576,6 +10412,155 @@
       {
         "citations": 0,
         "component": "delivery-gates",
+        "declaration_count": 15,
+        "declarations": [
+          {
+            "kind": "struct",
+            "line": 17,
+            "name": "FixtureStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 18,
+            "name": "fact",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 32,
+            "name": "pulse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 35,
+            "name": "buyers",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 43,
+            "name": "buyer",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 47,
+            "name": "buyer_timeline",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 59,
+            "name": "services",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 67,
+            "name": "service",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 71,
+            "name": "graph",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 84,
+            "name": "provenance",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 100,
+            "name": "search",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 109,
+            "name": "system",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 118,
+            "name": "list_queries_are_bounded_and_cacheable_with_provenance",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 159,
+            "name": "purpose_built_surface_is_documented_without_graphql_or_sql",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 255,
+            "name": "postgres_store_is_the_runtime_query_backend",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 258,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/query_api.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 59,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/query_read_models_schema_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
         "line_count": 230,
@@ -9625,24 +10610,24 @@
         "id": "ci.workflow"
       },
       {
-        "citations": 33,
+        "citations": 34,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
-        "files": 20,
+        "files": 22,
         "id": "declared.topology"
       },
       {
-        "citations": 805,
+        "citations": 885,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 24,
+        "files": 27,
         "id": "rust.declaration"
       },
       {
-        "citations": 2,
+        "citations": 13,
         "class": "mechanical",
         "description": "Literal Axum method and path routes extracted from Rust source.",
-        "files": 1,
+        "files": 2,
         "id": "rust.http-route"
       }
     ],
@@ -9652,27 +10637,27 @@
         "boundary": 2,
         "contract": 1,
         "deployment": 3,
-        "endpoint": 2,
+        "endpoint": 13,
         "external": 4,
         "projection": 2,
         "projector": 1,
         "scheduler": 1,
-        "schema": 5,
+        "schema": 6,
         "service": 2,
         "store": 2,
         "surface": 1,
         "worker": 6
       },
-      "citations": 35,
-      "declarations": 805,
-      "entities": 35,
-      "entities_with_origin": 35,
-      "files": 95,
+      "citations": 47,
+      "declarations": 885,
+      "entities": 47,
+      "entities_with_origin": 47,
+      "files": 101,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
-      "touched_files": 20,
-      "untouched_files": 75
+      "touched_files": 22,
+      "untouched_files": 79
     }
   },
   "interplay": {
@@ -9908,6 +10893,12 @@
         "class": "interplay",
         "relation": "reads",
         "source": "query-api",
+        "target": "dashboard-read-models"
+      },
+      {
+        "class": "interplay",
+        "relation": "reads",
+        "source": "query-api",
         "target": "store:postgresql"
       },
       {
@@ -9981,6 +10972,12 @@
         "relation": "derives-features",
         "source": "store:postgresql",
         "target": "classification"
+      },
+      {
+        "class": "structure",
+        "relation": "materializes",
+        "source": "store:postgresql",
+        "target": "dashboard-read-models"
       },
       {
         "class": "interplay",
@@ -10401,6 +11398,20 @@
         "page": "evidence"
       },
       {
+        "component": "query-read-models",
+        "evidence": [
+          {
+            "excerpt": "CREATE VIEW agent_economy.dashboard_facts AS",
+            "line": 3,
+            "path": "migrations/0008_query_read_models.up.sql"
+          }
+        ],
+        "id": "dashboard-read-models",
+        "kind": "schema",
+        "label": "Dashboard query read models",
+        "page": "canonical"
+      },
+      {
         "component": "rpc-collector",
         "evidence": [
           {
@@ -10502,8 +11513,64 @@
         "component": "runtime",
         "evidence": [
           {
+            "excerpt": ".route(\"/api/v1/buyers/{id}\", get(buyer))",
+            "line": 438,
+            "path": "src/query.rs"
+          }
+        ],
+        "id": "http:buyer",
+        "kind": "endpoint",
+        "label": "GET /api/v1/buyers/{id}",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/api/v1/buyers/{id}/timeline\", get(buyer_timeline))",
+            "line": 439,
+            "path": "src/query.rs"
+          }
+        ],
+        "id": "http:buyer-timeline",
+        "kind": "endpoint",
+        "label": "GET /api/v1/buyers/{id}/timeline",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/api/v1/buyers\", get(buyers))",
+            "line": 437,
+            "path": "src/query.rs"
+          }
+        ],
+        "id": "http:buyers",
+        "kind": "endpoint",
+        "label": "GET /api/v1/buyers",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/api/v1/graph/{kind}/{id}\", get(graph))",
+            "line": 442,
+            "path": "src/query.rs"
+          }
+        ],
+        "id": "http:graph",
+        "kind": "endpoint",
+        "label": "GET /api/v1/graph/{kind}/{id}",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
             "excerpt": ".route(\"/healthz\", get(status))",
-            "line": 37,
+            "line": 48,
             "path": "src/main.rs"
           }
         ],
@@ -10516,14 +11583,112 @@
         "component": "runtime",
         "evidence": [
           {
+            "excerpt": ".route(\"/api/v1/openapi.json\", get(openapi))",
+            "line": 435,
+            "path": "src/query.rs"
+          }
+        ],
+        "id": "http:openapi",
+        "kind": "endpoint",
+        "label": "GET /api/v1/openapi.json",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/api/v1/provenance/{id}\", get(provenance))",
+            "line": 443,
+            "path": "src/query.rs"
+          }
+        ],
+        "id": "http:provenance",
+        "kind": "endpoint",
+        "label": "GET /api/v1/provenance/{id}",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/api/v1/pulse\", get(pulse))",
+            "line": 436,
+            "path": "src/query.rs"
+          }
+        ],
+        "id": "http:pulse",
+        "kind": "endpoint",
+        "label": "GET /api/v1/pulse",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/api/v1/search\", get(search))",
+            "line": 444,
+            "path": "src/query.rs"
+          }
+        ],
+        "id": "http:search",
+        "kind": "endpoint",
+        "label": "GET /api/v1/search",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/api/v1/services/{id}\", get(service))",
+            "line": 441,
+            "path": "src/query.rs"
+          }
+        ],
+        "id": "http:service",
+        "kind": "endpoint",
+        "label": "GET /api/v1/services/{id}",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/api/v1/services\", get(services))",
+            "line": 440,
+            "path": "src/query.rs"
+          }
+        ],
+        "id": "http:services",
+        "kind": "endpoint",
+        "label": "GET /api/v1/services",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
             "excerpt": ".route(\"/api/v1/status\", get(status))",
-            "line": 38,
+            "line": 49,
             "path": "src/main.rs"
           }
         ],
         "id": "http:status",
         "kind": "endpoint",
         "label": "GET /api/v1/status",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/api/v1/system\", get(system))",
+            "line": 445,
+            "path": "src/query.rs"
+          }
+        ],
+        "id": "http:system",
+        "kind": "endpoint",
+        "label": "GET /api/v1/system",
         "page": "delivery"
       },
       {
@@ -10639,12 +11804,12 @@
         "page": "evidence"
       },
       {
-        "component": "architecture-policy",
+        "component": "runtime",
         "evidence": [
           {
-            "excerpt": "PG --> Q[Axum query API and dashboard read models]",
-            "line": 26,
-            "path": "docs/ARCHITECTURE.md"
+            "excerpt": "pub fn api_router(store: Store) -> Router {",
+            "line": 433,
+            "path": "src/query.rs"
           }
         ],
         "id": "query-api",
@@ -10671,7 +11836,7 @@
         "evidence": [
           {
             "excerpt": "info!(%address, \"agent economy monitor listening\");",
-            "line": 40,
+            "line": 51,
             "path": "src/main.rs"
           }
         ],
@@ -10778,6 +11943,7 @@
           "deterministic-reducer",
           "knowledge-graph-schema",
           "operational-analytics-schema",
+          "query-read-models",
           "shadow-catalog-schema"
         ],
         "id": "canonical",
@@ -10789,6 +11955,7 @@
           "buyer-classification-schema",
           "buyer-enrichment-schema",
           "canonical-knowledge-schema",
+          "dashboard-read-models",
           "operational-analytics-schema",
           "shadow-catalog"
         ]
@@ -10812,6 +11979,7 @@
         "label": "Runtime delivery",
         "roots": [
           "runtime-service",
+          "query-api",
           "local-development-stack"
         ]
       }
@@ -10819,9 +11987,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 805,
-    "files": 95,
-    "lines": 26109
+    "declarations": 885,
+    "files": 101,
+    "lines": 27257
   },
   "layers": [
     {
@@ -10862,7 +12030,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "ca5b58862726b2602d593636e0eb788c51091b5a0c963b58b0e903f8614ad94d",
+  "source_tree_sha256": "8b051b2417c7bb8d62ec90668cc57fd3ec7c92e9e3066ba9a4e06d3007e9b87c",
   "stores": {
     "count": 2,
     "items": [
