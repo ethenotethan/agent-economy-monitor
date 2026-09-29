@@ -127,6 +127,16 @@
       ]
     },
     {
+      "description": "Deterministic, versioned settlement attribution with evidence-backed verified, strong, weak, and unknown outcomes that preserve every shared-recipient candidate.",
+      "id": "attribution-engine",
+      "label": "Settlement attribution engine",
+      "layer": "canonical",
+      "patterns": [
+        "crates/attribution/**",
+        "migrations/0006_settlement_attribution.*.sql"
+      ]
+    },
+    {
       "description": "Deterministic observation-only parser for MPP OpenAPI discovery metadata.",
       "id": "mpp-adapter",
       "label": "MPP discovery adapter",
@@ -195,7 +205,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, PostgreSQL cursor and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The Axum status surface, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, PostgreSQL cursor and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution schema, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -316,7 +326,8 @@
         {"from": "cloud-scheduler", "relation": "invokes", "to": "cloud-run-jobs"},
         {"from": "cloud-run-api", "relation": "hosts", "to": "query-api"},
         {"from": "cloud-run-jobs", "relation": "hosts", "to": "collector"},
-        {"from": "cloud-run-jobs", "relation": "hosts", "to": "reducers"}
+        {"from": "cloud-run-jobs", "relation": "hosts", "to": "reducers"},
+        {"from": "cloud-run-jobs", "relation": "hosts", "to": "attribution"}
       ],
       "summary": "One Rust image serves the scale-to-zero dashboard and bounded scheduled workers without creating another product authority.",
       "title": "Cloud runtime to dashboard"
@@ -357,6 +368,7 @@
     {"class": "structure", "relation": "hosts", "source": "cloud-run-api", "target": "query-api"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "collector"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "reducers"},
+    {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "attribution"},
     {"class": "structure", "relation": "provisions", "source": "local-development-stack", "target": "store:postgresql"},
     {"class": "structure", "relation": "initializes", "source": "local-development-stack", "target": "filesystem-evidence-store"},
     {"class": "structure", "relation": "implements-contract-of", "source": "filesystem-evidence-store", "target": "store:evidence"},
@@ -449,7 +461,7 @@
     {"authority": "specified", "component": "mpp-adapter", "id": "mpp-discovery-adapter", "kind": "adapter", "label": "MPP OpenAPI discovery adapter", "origin": {"path": "crates/mpp-adapter/src/lib.rs", "search": "impl ProtocolAdapter for MppDiscoveryAdapter"}, "page": "evidence"},
     {"authority": "specified", "component": "x402-adapter", "id": "protocol-adapters", "kind": "adapter", "label": "Stateless x402 discovery adapter", "origin": {"path": "crates/x402-adapter/src/lib.rs", "search": "pub struct X402Adapter"}, "page": "evidence"},
     {"authority": "specified", "component": "deterministic-reducer", "id": "reducers", "kind": "worker", "label": "Deterministic reducers", "origin": {"path": "crates/reducer/src/lib.rs", "search": "pub struct Reducer"}, "page": "canonical"},
-    {"authority": "specified", "component": "architecture-policy", "id": "attribution", "kind": "worker", "label": "Attribution engine", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Attribution engine"}, "page": "canonical"},
+    {"authority": "specified", "component": "attribution-engine", "id": "attribution", "kind": "worker", "label": "Settlement attribution engine", "origin": {"path": "crates/attribution/src/lib.rs", "search": "pub struct AttributionEngine"}, "page": "canonical"},
     {"authority": "specified", "component": "architecture-policy", "id": "classification", "kind": "worker", "label": "Behavioral classification", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Behavioral features and rule classifiers"}, "page": "canonical"},
     {"authority": "specified", "component": "rpc-collector", "id": "enrichment", "kind": "worker", "label": "Targeted buyer enrichment", "origin": {"path": "crates/rpc-collector/src/enrichment.rs", "search": "pub struct BuyerHistoryEnricher"}, "page": "canonical"},
     {"authority": "specified", "component": "buyer-enrichment-schema", "id": "buyer-enrichment-schema", "kind": "schema", "label": "Chain-scoped enrichment state and finalized cache", "origin": {"path": "migrations/0004_buyer_enrichment.up.sql", "search": "CREATE TABLE agent_economy.buyer_enrichment_cursors ("}, "page": "canonical"},
@@ -476,7 +488,7 @@
   "pages": [
     {"components": ["runtime"], "id": "experience", "label": "Private cockpit", "roots": ["cockpit"]},
     {"components": ["architecture-policy", "observation-contracts", "adapter-api", "evidence-store", "mpp-adapter", "rpc-collector", "x402-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "observation-contract", "adapter-boundary", "filesystem-evidence-store", "mpp-discovery-adapter", "protocol-adapters"]},
-    {"components": ["architecture-policy", "buyer-enrichment-schema", "deterministic-reducer", "knowledge-graph-schema", "operational-analytics-schema", "shadow-catalog-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "buyer-enrichment-schema", "canonical-knowledge-schema", "operational-analytics-schema", "shadow-catalog"]},
+    {"components": ["architecture-policy", "attribution-engine", "buyer-enrichment-schema", "deterministic-reducer", "knowledge-graph-schema", "operational-analytics-schema", "shadow-catalog-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "attribution", "buyer-enrichment-schema", "canonical-knowledge-schema", "operational-analytics-schema", "shadow-catalog"]},
     {"components": ["architecture-policy"], "id": "projection", "label": "Semantic projection", "roots": ["evidence-snapshot"]},
     {"components": ["runtime", "development-stack"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service", "local-development-stack"]}
   ],
@@ -489,7 +501,7 @@
   "title": "Agent Economy Monitor Architecture",
   "unresolved": [
     {"id": "rust.runtime-mpp-adapter", "reason": "MPP OpenAPI and x402 discovery adapters exist, but no runtime MPP challenge parser exists yet."},
-    {"id": "rust.workers", "reason": "The external RPC collector, targeted buyer enrichment, and deterministic reducer/finality engine are implemented as libraries, but no collect/reduce/classify/enrich/project-wiki process mode exists yet; the remaining worker topology is specified only."},
+    {"id": "rust.workers", "reason": "The external RPC collector, targeted buyer enrichment, deterministic reducer/finality engine, and settlement attribution engine are implemented as libraries, but no collect/reduce/attribute/classify/enrich/project-wiki process mode exists yet; the remaining worker topology is specified only."},
     {"id": "runtime.storage-clients", "reason": "The filesystem evidence adapter and PostgreSQL RPC cursor and buyer-enrichment clients are implemented; no Google Cloud Storage client or remaining production PostgreSQL repositories exist yet."}
   ]
 }

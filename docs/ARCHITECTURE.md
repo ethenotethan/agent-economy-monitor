@@ -90,6 +90,15 @@ RPC endpoint values are secret-bearing types whose debug representation is alway
 redacted. Transport errors intentionally discard underlying URL-bearing error text,
 and request payloads are neither logged nor retained as fixtures.
 
+### Settlement attribution
+
+The deterministic attribution engine consumes finalized settlements and bounded catalog
+snapshots. Explicit payment-requirement matches are verified; unique exact catalog matches
+are strong; shared-recipient ambiguity preserves every exact candidate as weak instead of
+forcing one endpoint; and unmatched settlements remain unknown. Candidate edges cite both
+settlement and requirement evidence. Replay sorts candidates and evidence before hashing,
+while PostgreSQL stores immutable, versioned runs, candidates, and evidence links.
+
 ## Deferred scale seams
 
 Pub/Sub and BigQuery are not v1 dependencies and do not appear as deployed System Map nodes. Pub/Sub may replace PostgreSQL job leasing only when p95 job-pickup latency exceeds 60 seconds for seven consecutive days while at least eight workers are available and Cloud SQL CPU exceeds 70%. BigQuery may receive an analytical projection only when p95 analytical query latency exceeds 2 seconds for fourteen consecutive days after indexes and materialized views are tuned, and either canonical event volume exceeds 100 million rows or analytical work consumes more than 30% of Cloud SQL CPU. Either promotion requires an owner-approved architecture issue and keeps Google Cloud Storage as the replay authority.
