@@ -1,5 +1,6 @@
-use std::{env, net::SocketAddr};
+use std::{env, io, net::SocketAddr};
 
+use agent_economy_monitor::projection_runtime::{ProjectionRuntimeConfig, run_projection_once};
 use agent_economy_monitor::query::{PostgresQueryStore, api_router};
 use axum::{Json, Router, routing::get};
 use serde::Serialize;
@@ -29,6 +30,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
 
+    match env::args().nth(1).as_deref() {
+        Some("project-wiki") => {
+            let config = ProjectionRuntimeConfig::from_env()
+                .map_err(|message| io::Error::new(io::ErrorKind::InvalidInput, message))?;
+            match run_projection_once(config).await? {
+                Some(projection) => {
+                    info!(
+                        job_id = %projection.payload.job_id,
+                        bundle_sha256 = %projection.bundle_sha256,
+                        "published approved semantic projection"
+                    );
+                }
+                None => info!("no semantic projection job available"),
+            }
+            Ok(())
+        }
+        None | Some("serve") => serve().await,
+        Some(_) => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "usage: agent-economy-monitor [serve|project-wiki]",
+        )
+        .into()),
+    }
+}
+
+async fn serve() -> Result<(), Box<dyn std::error::Error>> {
     let port = env::var("PORT")
         .ok()
         .and_then(|value| value.parse::<u16>().ok())
@@ -38,6 +65,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let database_url = env::var("DATABASE_URL")?;
     let namespace_id = env::var("NAMESPACE_ID")?;
     let (client, connection) = tokio_postgres::connect(&database_url, NoTls).await?;
+    client
+        .batch_execute("SET ROLE agent_economy_dashboard_reader")
+        .await?;
     tokio::spawn(async move {
         if connection.await.is_err() {
             tracing::error!("PostgreSQL query connection closed unexpectedly");

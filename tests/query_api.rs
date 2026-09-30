@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use agent_economy_monitor::query::{
-    DashboardPage, Fact, GraphReadModel, PostgresQueryStore, ProvenanceReadModel, QueryError,
-    QueryStore, SystemReadModel, api_router,
+    DashboardPage, Fact, GraphReadModel, PostgresQueryStore, ProjectionPage, ProjectionPageList,
+    ProvenanceReadModel, QueryError, QueryStore, SystemReadModel, api_router,
 };
 use async_trait::async_trait;
 use axum::{
@@ -112,6 +112,34 @@ impl QueryStore for FixtureStore {
             facts: vec![fact("system:jobs", "system_metric")],
         })
     }
+
+    async fn investigations(
+        &self,
+        _after: Option<&str>,
+        _limit: usize,
+    ) -> Result<ProjectionPageList, QueryError> {
+        Ok(ProjectionPageList::new(
+            vec![ProjectionPage {
+                page_path: "investigations/weather".into(),
+                stable_entity_id: "service:weather".into(),
+                generated_markdown: "# Weather".into(),
+                citations: json!([{"stable_id": "evidence:weather", "evidence_sha256": "d".repeat(64)}]),
+                wikilinks: vec!["services/weather".into()],
+                model_id: "projector-v1".into(),
+                model_sha256: "a".repeat(64),
+                prompt_sha256: "b".repeat(64),
+                snapshot_sha256: "c".repeat(64),
+                output_sha256: "d".repeat(64),
+                bundle_sha256: "e".repeat(64),
+                changeset_id: "changeset-7".into(),
+                changeset_sha256: "f".repeat(64),
+                approved_by: "owner".into(),
+                approved_at: "2026-09-30T00:00:00Z".into(),
+                published_at: "2026-09-30T00:01:00Z".into(),
+            }],
+            None,
+        ))
+    }
 }
 
 #[tokio::test]
@@ -168,6 +196,7 @@ async fn purpose_built_surface_is_documented_without_graphql_or_sql() {
         "/api/v1/graph/buyer/buyer:1",
         "/api/v1/provenance/11111111-1111-1111-1111-111111111111",
         "/api/v1/search?q=buyer",
+        "/api/v1/investigations",
         "/api/v1/system",
     ];
     for path in paths {
@@ -232,6 +261,12 @@ async fn purpose_built_surface_is_documented_without_graphql_or_sql() {
         "q"
     );
     assert!(document["components"]["schemas"]["Fact"].is_object());
+    assert!(
+        document["paths"]
+            .as_object()
+            .unwrap()
+            .contains_key("/api/v1/investigations")
+    );
     let serialized = serde_json::to_string(&document).unwrap().to_lowercase();
     assert!(!serialized.contains("graphql"));
     assert!(!serialized.contains("sql"));
@@ -255,4 +290,5 @@ async fn purpose_built_surface_is_documented_without_graphql_or_sql() {
 fn postgres_store_is_the_runtime_query_backend() {
     let _constructor: fn(tokio_postgres::Client, String) -> PostgresQueryStore =
         PostgresQueryStore::new;
+    assert!(include_str!("../src/main.rs").contains("SET ROLE agent_economy_dashboard_reader"));
 }

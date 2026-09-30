@@ -31,7 +31,20 @@
         ".env.example",
         "Cargo.lock",
         "Cargo.toml",
-        "src/**"
+        "src/lib.rs",
+        "src/main.rs",
+        "src/query.rs"
+      ]
+    },
+    {
+      "description": "Outbound-only local projection orchestration, isolated native-wiki writes, approval-bound immutable mirror bundles, and their PostgreSQL ledger.",
+      "id": "semantic-projection",
+      "label": "Isolated semantic-wiki projection",
+      "layer": "projection",
+      "patterns": [
+        "src/projection.rs",
+        "src/projection_runtime.rs",
+        "migrations/0009_semantic_projection.*.sql"
       ]
     },
     {
@@ -492,11 +505,11 @@
     {"authority": "specified", "component": "runtime", "id": "query-api", "kind": "service", "label": "Axum query API", "origin": {"path": "src/query.rs", "search": "pub fn api_router"}, "page": "delivery"},
     {"authority": "specified", "component": "query-read-models", "id": "dashboard-read-models", "kind": "schema", "label": "Dashboard query read models", "origin": {"path": "migrations/0008_query_read_models.up.sql", "search": "CREATE VIEW agent_economy.dashboard_facts"}, "page": "canonical"},
     {"authority": "specified", "component": "architecture-policy", "id": "cockpit", "kind": "surface", "label": "Leptos private cockpit", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Leptos private cockpit"}, "page": "experience"},
-    {"authority": "specified", "component": "architecture-policy", "id": "evidence-snapshot", "kind": "boundary", "label": "Bounded evidence snapshots", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Bounded evidence snapshots"}, "page": "projection"},
-    {"authority": "specified", "component": "architecture-policy", "id": "llm-projector", "kind": "projector", "label": "LLM projector", "origin": {"path": "docs/ARCHITECTURE.md", "search": "LLM projector"}, "page": "projection"},
-    {"authority": "specified", "component": "architecture-policy", "id": "semantic-wiki", "kind": "projection", "label": "Agentic Commerce Intelligence wiki", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Agentic Commerce Intelligence wiki"}, "page": "projection"},
-    {"authority": "specified", "component": "architecture-policy", "id": "local-wiki-projector", "kind": "worker", "label": "Local Hermes projection worker", "origin": {"path": "docs/ARCHITECTURE.md", "search": "H[Local Hermes projection worker]"}, "page": "projection"},
-    {"authority": "specified", "component": "architecture-policy", "id": "projection-mirror", "kind": "projection", "label": "Approved read-only projection mirror", "origin": {"path": "docs/ARCHITECTURE.md", "search": "B[Approved read-only projection mirror]"}, "page": "projection"},
+    {"authority": "specified", "component": "semantic-projection", "id": "evidence-snapshot", "kind": "boundary", "label": "Bounded evidence snapshots", "origin": {"path": "migrations/0009_semantic_projection.up.sql", "search": "CREATE TABLE agent_economy.projection_snapshots"}, "page": "projection"},
+    {"authority": "specified", "component": "semantic-projection", "id": "llm-projector", "kind": "projector", "label": "LLM projector", "origin": {"path": "src/projection_runtime.rs", "search": "impl Projector for HttpProjector"}, "page": "projection"},
+    {"authority": "specified", "component": "semantic-projection", "id": "semantic-wiki", "kind": "projection", "label": "Agentic Commerce Intelligence wiki", "origin": {"path": "src/projection.rs", "search": "const WIKI_ID"}, "page": "projection"},
+    {"authority": "specified", "component": "semantic-projection", "id": "local-wiki-projector", "kind": "worker", "label": "Local Hermes projection worker", "origin": {"path": "src/projection_runtime.rs", "search": "pub async fn run_projection_once"}, "page": "projection"},
+    {"authority": "specified", "component": "semantic-projection", "id": "projection-mirror", "kind": "projection", "label": "Approved read-only projection mirror", "origin": {"path": "migrations/0009_semantic_projection.up.sql", "search": "CREATE VIEW agent_economy.projection_mirror_pages"}, "page": "projection"},
     {"authority": "specified", "component": "runtime", "id": "runtime-service", "kind": "service", "label": "agent-economy-monitor", "origin": {"path": "src/main.rs", "search": "agent economy monitor listening"}, "page": "delivery"},
     {"authority": "specified", "component": "architecture-policy", "id": "cloud-run-api", "kind": "deployment", "label": "Cloud Run dashboard service", "origin": {"path": "docs/ARCHITECTURE.md", "search": "API[Cloud Run service]"}, "page": "delivery"},
     {"authority": "specified", "component": "architecture-policy", "id": "cloud-run-jobs", "kind": "deployment", "label": "Cloud Run worker jobs", "origin": {"path": "docs/ARCHITECTURE.md", "search": "J[Cloud Run jobs]"}, "page": "delivery"},
@@ -513,6 +526,7 @@
     {"authority": "mechanical", "component": "runtime", "id": "http:graph", "kind": "endpoint", "label": "GET /api/v1/graph/{kind}/{id}", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/graph/{kind}/{id}"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:provenance", "kind": "endpoint", "label": "GET /api/v1/provenance/{id}", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/provenance/{id}"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:search", "kind": "endpoint", "label": "GET /api/v1/search", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/search"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:investigations", "kind": "endpoint", "label": "GET /api/v1/investigations", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/investigations"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:system", "kind": "endpoint", "label": "GET /api/v1/system", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/system"}, "page": "delivery"},
     {"authority": "specified", "component": "architecture-policy", "id": "store:evidence", "kind": "store", "label": "Google Cloud Storage", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Google Cloud Storage immutable evidence"}, "page": "evidence"},
     {"authority": "specified", "component": "architecture-policy", "id": "store:postgresql", "kind": "store", "label": "PostgreSQL operational and analytical store", "origin": {"path": "docs/ARCHITECTURE.md", "search": "PostgreSQL jobs"}, "page": "canonical"},
@@ -525,7 +539,7 @@
     {"components": ["runtime"], "id": "experience", "label": "Private cockpit", "roots": ["cockpit"]},
     {"components": ["architecture-policy", "observation-contracts", "adapter-api", "evidence-store", "mpp-adapter", "rpc-collector", "x402-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "observation-contract", "adapter-boundary", "filesystem-evidence-store", "mpp-discovery-adapter", "protocol-adapters"]},
     {"components": ["architecture-policy", "attribution-engine", "buyer-classification", "buyer-enrichment-schema", "deterministic-reducer", "knowledge-graph-schema", "operational-analytics-schema", "query-read-models", "shadow-catalog-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "attribution", "classification", "buyer-classification-schema", "buyer-enrichment-schema", "canonical-knowledge-schema", "dashboard-read-models", "operational-analytics-schema", "shadow-catalog"]},
-    {"components": ["architecture-policy"], "id": "projection", "label": "Semantic projection", "roots": ["evidence-snapshot"]},
+    {"components": ["architecture-policy", "semantic-projection"], "id": "projection", "label": "Semantic projection", "roots": ["evidence-snapshot"]},
     {"components": ["runtime", "development-stack"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service", "query-api", "local-development-stack"]}
   ],
   "repository": "ethenotethan/agent-economy-monitor",
@@ -537,7 +551,7 @@
   "title": "Agent Economy Monitor Architecture",
   "unresolved": [
     {"id": "rust.runtime-mpp-adapter", "reason": "MPP OpenAPI and x402 discovery adapters exist, but no runtime MPP challenge parser exists yet."},
-    {"id": "rust.workers", "reason": "The external RPC collector, targeted buyer enrichment, deterministic reducer/finality engine, settlement attribution engine, and buyer classification engine are implemented as libraries, but no collect/reduce/attribute/classify/enrich/project-wiki process mode exists yet; the remaining worker topology is specified only."},
+    {"id": "rust.workers", "reason": "The local project-wiki mode is implemented, while the external RPC collector, targeted buyer enrichment, deterministic reducer/finality engine, settlement attribution engine, and buyer classification engine remain libraries without collect/reduce/attribute/classify/enrich process modes."},
     {"id": "runtime.storage-clients", "reason": "The filesystem evidence adapter and PostgreSQL RPC cursor and buyer-enrichment clients are implemented; no Google Cloud Storage client or remaining production PostgreSQL repositories exist yet."}
   ]
 }

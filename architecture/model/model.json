@@ -305,7 +305,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5473
+      "line_count": 5487
     },
     {
       "declaration_count": 44,
@@ -450,13 +450,20 @@
       "line_count": 111
     },
     {
-      "declaration_count": 38,
+      "declaration_count": 65,
       "declarations": [
         "Error",
+        "EventLog",
+        "FixtureGateway",
+        "FixtureProjector",
         "FixtureStore",
+        "FixtureWiki",
+        "PublishedBundles",
         "X402Adapter",
         "adapters_emit_immutable_observations",
         "additive_unknown_fields_are_covered_by_the_content_address",
+        "approval_for",
+        "binary_wires_a_bounded_outbound_projection_mode",
         "buyer",
         "buyer_timeline",
         "buyers",
@@ -464,36 +471,56 @@
         "canonical_event_decode_rejects_support_from_another_event",
         "canonical_event_keys_are_protocol_defined",
         "canonical_event_rejects_mismatched_support",
+        "capture_changeset",
         "collect",
         "fact",
+        "fetch_snapshot",
+        "fixture",
         "graph",
+        "investigations",
         "list_queries_are_bounded_and_cacheable_with_provenance",
         "mpp_discovery_contract_rejects_noncanonical_atomic_amounts",
         "mpp_event_key_rejects_invalid_method_grammar",
         "mpp_event_keys_are_scoped_by_required_realm",
         "mpp_extension_replays_through_the_shared_envelope",
+        "native_wiki_adapter_uses_real_rpc_and_preserves_curated_content",
         "observation",
         "observation_construction_rejects_invalid_provenance",
         "observation_id_is_content_addressed",
         "observe",
+        "output_sha",
         "postgres_store_is_the_runtime_query_backend",
+        "project",
+        "projection_binds_revision_and_approval_before_exact_byte_publication",
         "protobuf_replay_preserves_the_canonical_event",
         "protobuf_replay_preserves_the_observation",
         "protocol_observation_construction_rejects_invalid_amount",
         "provenance",
+        "publication_rejects_private_snapshot_canaries_and_unauthorized_citations",
+        "publish_bundle_if_absent",
+        "pull_job",
         "pulse",
         "purpose_built_surface_is_documented_without_graphql_or_sql",
         "reducers_can_read_typed_observation_fields",
+        "rendered_markdown_links_must_exactly_match_safe_sidecar_links",
+        "replace_generated_section",
+        "runtime_config_requires_outbound_https_and_redacts_bearer_tokens",
         "search",
         "service",
         "services",
+        "sha256",
+        "snapshot_hash_binds_the_exact_model_input_and_privacy_policy",
+        "snapshot_hash_mismatch_stops_before_projection_or_wiki_write",
+        "snapshot_sha",
         "system",
+        "unrelated_changeset_revision_and_wrong_approval_candidate_are_rejected",
+        "valid_output",
         "x402_event_key_requires_protocol_identifier_binding",
         "x402_key"
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 17,
+      "file_count": 20,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -507,16 +534,19 @@
         "tests/knowledge_graph_schema_test.py",
         "tests/observation_contracts.rs",
         "tests/operational_analytics_schema_test.py",
+        "tests/projection_runtime.rs",
         "tests/query_api.rs",
         "tests/query_read_models_schema_test.py",
         "tests/reducer_finality_schema_test.py",
+        "tests/semantic_projection.rs",
+        "tests/semantic_projection_schema_test.py",
         "tests/settlement_attribution_schema_test.py",
         "tests/shadow_catalog_schema_test.py"
       ],
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 3511
+      "line_count": 4124
     },
     {
       "declaration_count": 73,
@@ -1087,7 +1117,7 @@
       "line_count": 3628
     },
     {
-      "declaration_count": 47,
+      "declaration_count": 54,
       "declarations": [
         "API_VERSION",
         "CACHE_CONTROL",
@@ -1099,6 +1129,8 @@
         "MAX_PAGE_SIZE",
         "PageQuery",
         "PostgresQueryStore",
+        "ProjectionPage",
+        "ProjectionPageList",
         "ProvenanceReadModel",
         "QueryError",
         "QueryStore",
@@ -1120,17 +1152,22 @@
         "facts",
         "graph",
         "into_response",
+        "investigations",
         "main",
         "malformed_composite_cursor_is_rejected",
         "new",
         "one_fact",
         "openapi",
         "page",
+        "projection",
+        "projection_runtime",
         "provenance",
         "pulse",
         "query",
         "row_to_fact",
+        "row_to_projection_page",
         "search",
+        "serve",
         "service",
         "services",
         "status",
@@ -1151,7 +1188,101 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 3190
+      "line_count": 3317
+    },
+    {
+      "declaration_count": 76,
+      "declarations": [
+        "ALLOWED_LINK_PREFIXES",
+        "CapturedWikiWrite",
+        "Citation",
+        "DESTINATION_PREFIX",
+        "GENERATED_BEGIN",
+        "GENERATED_END",
+        "HermesNativeWiki",
+        "HttpProjectionGateway",
+        "HttpProjector",
+        "ModelProjectionRequest",
+        "ModelProjectionResponse",
+        "NativeChangeset",
+        "NativeRevision",
+        "NativeWiki",
+        "ProjectionApproval",
+        "ProjectionError",
+        "ProjectionFact",
+        "ProjectionGateway",
+        "ProjectionInput",
+        "ProjectionJob",
+        "ProjectionOutput",
+        "ProjectionPayload",
+        "ProjectionRuntimeConfig",
+        "ProjectionWorker",
+        "Projector",
+        "PublicationEnvelope",
+        "PublishedProjection",
+        "RpcError",
+        "RpcRequest",
+        "RpcResponse",
+        "SecretString",
+        "Snapshot",
+        "WIKI_ID",
+        "WikiChangesetResult",
+        "WikiChangesetsParams",
+        "WikiChangesetsResult",
+        "WikiPageParams",
+        "WikiPageResult",
+        "WikiUpdateParams",
+        "WikiUpdateResult",
+        "allowed_path",
+        "approval_for",
+        "call",
+        "call_response",
+        "capture_changeset",
+        "decode_success",
+        "endpoint",
+        "ensure_private_fragments_absent",
+        "expose",
+        "extract_wikilinks",
+        "fetch_snapshot",
+        "fmt",
+        "from_env",
+        "is_loopback",
+        "is_sha256",
+        "merge_generated_section",
+        "new",
+        "project",
+        "publish_bundle_if_absent",
+        "pull_job",
+        "replace_generated_section",
+        "required_env",
+        "run_once",
+        "run_projection_once",
+        "secure_url",
+        "sha256",
+        "validate_changeset",
+        "validate_citation",
+        "validate_hash",
+        "validate_job",
+        "validate_output",
+        "validate_revision",
+        "validate_snapshot_policy",
+        "verify_hash",
+        "verify_output_hash",
+        "verify_snapshot_hash"
+      ],
+      "description": "Outbound-only local projection orchestration, isolated native-wiki writes, approval-bound immutable mirror bundles, and their PostgreSQL ledger.",
+      "external": false,
+      "file_count": 4,
+      "files": [
+        "migrations/0009_semantic_projection.down.sql",
+        "migrations/0009_semantic_projection.up.sql",
+        "src/projection.rs",
+        "src/projection_runtime.rs"
+      ],
+      "id": "semantic-projection",
+      "label": "Isolated semantic-wiki projection",
+      "layer": "projection",
+      "line_count": 1517
     },
     {
       "declaration_count": 0,
@@ -1356,7 +1487,7 @@
         },
         {
           "id": "rust.workers",
-          "reason": "The external RPC collector, targeted buyer enrichment, deterministic reducer/finality engine, settlement attribution engine, and buyer classification engine are implemented as libraries, but no collect/reduce/attribute/classify/enrich/project-wiki process mode exists yet; the remaining worker topology is specified only."
+          "reason": "The local project-wiki mode is implemented, while the external RPC collector, targeted buyer enrichment, deterministic reducer/finality engine, settlement attribution engine, and buyer classification engine remain libraries without collect/reduce/attribute/classify/enrich process modes."
         }
       ]
     },
@@ -1558,17 +1689,17 @@
         ]
       },
       {
-        "component": "architecture-policy",
+        "component": "semantic-projection",
         "id": "evidence-snapshot",
         "kind": "boundary",
         "label": "Bounded evidence snapshots",
         "origins": [
           {
             "family": "specified",
-            "line": 28,
-            "path": "docs/ARCHITECTURE.md",
+            "line": 3,
+            "path": "migrations/0009_semantic_projection.up.sql",
             "rule": "declared.topology",
-            "via": "PG --> P[Bounded evidence snapshots]"
+            "via": "CREATE TABLE agent_economy.projection_snapshots ("
           }
         ]
       },
@@ -1655,7 +1786,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 438,
+            "line": 521,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/buyers/{id}\", get(buyer))"
@@ -1670,7 +1801,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 439,
+            "line": 522,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/buyers/{id}/timeline\", get(buyer_timeline))"
@@ -1685,7 +1816,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 437,
+            "line": 520,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/buyers\", get(buyers))"
@@ -1700,7 +1831,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 442,
+            "line": 525,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/graph/{kind}/{id}\", get(graph))"
@@ -1715,10 +1846,25 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 48,
+            "line": 78,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/healthz\", get(status))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:investigations",
+        "kind": "endpoint",
+        "label": "GET /api/v1/investigations",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 528,
+            "path": "src/query.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/investigations\", get(investigations))"
           }
         ]
       },
@@ -1730,7 +1876,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 435,
+            "line": 518,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/openapi.json\", get(openapi))"
@@ -1745,7 +1891,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 443,
+            "line": 526,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/provenance/{id}\", get(provenance))"
@@ -1760,7 +1906,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 436,
+            "line": 519,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/pulse\", get(pulse))"
@@ -1775,7 +1921,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 444,
+            "line": 527,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/search\", get(search))"
@@ -1790,7 +1936,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 441,
+            "line": 524,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/services/{id}\", get(service))"
@@ -1805,7 +1951,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 440,
+            "line": 523,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/services\", get(services))"
@@ -1820,7 +1966,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 49,
+            "line": 79,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/status\", get(status))"
@@ -1835,7 +1981,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 445,
+            "line": 529,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/system\", get(system))"
@@ -1843,17 +1989,17 @@
         ]
       },
       {
-        "component": "architecture-policy",
+        "component": "semantic-projection",
         "id": "llm-projector",
         "kind": "projector",
         "label": "LLM projector",
         "origins": [
           {
             "family": "specified",
-            "line": 32,
-            "path": "docs/ARCHITECTURE.md",
+            "line": 233,
+            "path": "src/projection_runtime.rs",
             "rule": "declared.topology",
-            "via": "M[LLM projector]"
+            "via": "impl Projector for HttpProjector {"
           }
         ]
       },
@@ -1873,17 +2019,17 @@
         ]
       },
       {
-        "component": "architecture-policy",
+        "component": "semantic-projection",
         "id": "local-wiki-projector",
         "kind": "worker",
         "label": "Local Hermes projection worker",
         "origins": [
           {
             "family": "specified",
-            "line": 30,
-            "path": "docs/ARCHITECTURE.md",
+            "line": 611,
+            "path": "src/projection_runtime.rs",
             "rule": "declared.topology",
-            "via": "H[Local Hermes projection worker] -->|outbound pull| P"
+            "via": "pub async fn run_projection_once("
           }
         ]
       },
@@ -1933,17 +2079,17 @@
         ]
       },
       {
-        "component": "architecture-policy",
+        "component": "semantic-projection",
         "id": "projection-mirror",
         "kind": "projection",
         "label": "Approved read-only projection mirror",
         "origins": [
           {
             "family": "specified",
-            "line": 34,
-            "path": "docs/ARCHITECTURE.md",
+            "line": 234,
+            "path": "migrations/0009_semantic_projection.up.sql",
             "rule": "declared.topology",
-            "via": "W --> B[Approved read-only projection mirror]"
+            "via": "CREATE VIEW agent_economy.projection_mirror_pages AS"
           }
         ]
       },
@@ -1970,7 +2116,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 433,
+            "line": 516,
             "path": "src/query.rs",
             "rule": "declared.topology",
             "via": "pub fn api_router(store: Store) -> Router {"
@@ -2000,7 +2146,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 51,
+            "line": 81,
             "path": "src/main.rs",
             "rule": "declared.topology",
             "via": "info!(%address, \"agent economy monitor listening\");"
@@ -2008,17 +2154,17 @@
         ]
       },
       {
-        "component": "architecture-policy",
+        "component": "semantic-projection",
         "id": "semantic-wiki",
         "kind": "projection",
         "label": "Agentic Commerce Intelligence wiki",
         "origins": [
           {
             "family": "specified",
-            "line": 33,
-            "path": "docs/ARCHITECTURE.md",
+            "line": 6,
+            "path": "src/projection.rs",
             "rule": "declared.topology",
-            "via": "M --> W[Agentic Commerce Intelligence wiki]"
+            "via": "const WIKI_ID: &str = \"agentic-commerce\";"
           }
         ]
       },
@@ -2168,7 +2314,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 2436,
+        "line_count": 2437,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -2182,7 +2328,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 37,
+        "line_count": 38,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -2210,7 +2356,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 543,
+        "line_count": 557,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -9131,7 +9277,7 @@
         "touched": false
       },
       {
-        "citations": 11,
+        "citations": 6,
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
@@ -9384,6 +9530,34 @@
       },
       {
         "citations": 0,
+        "component": "semantic-projection",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 24,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0009_semantic_projection.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 2,
+        "component": "semantic-projection",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 318,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0009_semantic_projection.up.sql",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
@@ -9525,18 +9699,34 @@
       {
         "citations": 0,
         "component": "runtime",
-        "declaration_count": 1,
+        "declaration_count": 3,
         "declarations": [
           {
             "kind": "mod",
             "line": 1,
+            "name": "projection",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "mod",
+            "line": 2,
+            "name": "projection_runtime",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "mod",
+            "line": 3,
             "name": "query",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 1,
+        "line_count": 3,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -9548,11 +9738,11 @@
       {
         "citations": 3,
         "component": "runtime",
-        "declaration_count": 3,
+        "declaration_count": 4,
         "declarations": [
           {
             "kind": "struct",
-            "line": 12,
+            "line": 13,
             "name": "Status",
             "passes": [
               "rust.declaration"
@@ -9560,7 +9750,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 17,
+            "line": 18,
             "name": "status",
             "passes": [
               "rust.declaration"
@@ -9568,14 +9758,22 @@
           },
           {
             "kind": "async-fn",
-            "line": 27,
+            "line": 28,
             "name": "main",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 57,
+            "name": "serve",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 54,
+        "line_count": 84,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -9585,9 +9783,727 @@
         "touched": true
       },
       {
-        "citations": 12,
+        "citations": 1,
+        "component": "semantic-projection",
+        "declaration_count": 44,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 5,
+            "name": "WIKI_ID",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 7,
+            "name": "DESTINATION_PREFIX",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 8,
+            "name": "ALLOWED_LINK_PREFIXES",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 11,
+            "name": "Citation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 17,
+            "name": "ProjectionJob",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 29,
+            "name": "ProjectionFact",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 36,
+            "name": "ProjectionInput",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 43,
+            "name": "Snapshot",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 54,
+            "name": "ProjectionOutput",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 62,
+            "name": "NativeRevision",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 68,
+            "name": "NativeChangeset",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 77,
+            "name": "ProjectionApproval",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 84,
+            "name": "ProjectionPayload",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 102,
+            "name": "PublicationEnvelope",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 109,
+            "name": "PublishedProjection",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 118,
+            "name": "ProjectionError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 130,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 149,
+            "name": "ProjectionGateway",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 150,
+            "name": "pull_job",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 151,
+            "name": "fetch_snapshot",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 152,
+            "name": "approval_for",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 157,
+            "name": "publish_bundle_if_absent",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 166,
+            "name": "Projector",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 167,
+            "name": "project",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 175,
+            "name": "NativeWiki",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 176,
+            "name": "replace_generated_section",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 184,
+            "name": "capture_changeset",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 192,
+            "name": "ProjectionWorker",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 205,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 212,
+            "name": "run_once",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 305,
+            "name": "validate_job",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 326,
+            "name": "validate_snapshot_policy",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 359,
+            "name": "validate_output",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 395,
+            "name": "validate_citation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 404,
+            "name": "validate_revision",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 411,
+            "name": "validate_changeset",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 427,
+            "name": "verify_output_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 437,
+            "name": "extract_wikilinks",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 460,
+            "name": "ensure_private_fragments_absent",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 484,
+            "name": "allowed_path",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 496,
+            "name": "validate_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 517,
+            "name": "verify_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 525,
+            "name": "verify_snapshot_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 535,
+            "name": "sha256",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 538,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "src/projection.rs",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 2,
+        "component": "semantic-projection",
+        "declaration_count": 42,
+        "declarations": [
+          {
+            "kind": "struct",
+            "line": 20,
+            "name": "SecretString",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 23,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 26,
+            "name": "expose",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 33,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 39,
+            "name": "ProjectionRuntimeConfig",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 49,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 77,
+            "name": "from_env",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 89,
+            "name": "required_env",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 93,
+            "name": "secure_url",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 111,
+            "name": "is_loopback",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 115,
+            "name": "endpoint",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 122,
+            "name": "HttpProjectionGateway",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 130,
+            "name": "pull_job",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 143,
+            "name": "fetch_snapshot",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 155,
+            "name": "approval_for",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 177,
+            "name": "publish_bundle_if_absent",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 213,
+            "name": "HttpProjector",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 220,
+            "name": "ModelProjectionRequest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 226,
+            "name": "ModelProjectionResponse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 234,
+            "name": "project",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 272,
+            "name": "HermesNativeWiki",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 280,
+            "name": "CapturedWikiWrite",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 289,
+            "name": "RpcRequest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 297,
+            "name": "RpcResponse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 303,
+            "name": "RpcError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 308,
+            "name": "call_response",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 334,
+            "name": "call",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 351,
+            "name": "GENERATED_BEGIN",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 353,
+            "name": "GENERATED_END",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 354,
+            "name": "merge_generated_section",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 392,
+            "name": "WikiPageParams",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 398,
+            "name": "WikiPageResult",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 405,
+            "name": "WikiUpdateParams",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 417,
+            "name": "WikiUpdateResult",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 422,
+            "name": "WikiChangesetsParams",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 431,
+            "name": "WikiChangesetsResult",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 436,
+            "name": "WikiChangesetResult",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 446,
+            "name": "replace_generated_section",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 563,
+            "name": "capture_changeset",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 591,
+            "name": "is_sha256",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 595,
+            "name": "decode_success",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 610,
+            "name": "run_projection_once",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 637,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "src/projection_runtime.rs",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 13,
         "component": "runtime",
-        "declaration_count": 64,
+        "declaration_count": 71,
         "declarations": [
           {
             "kind": "const",
@@ -9672,6 +10588,30 @@
           {
             "kind": "struct",
             "line": 76,
+            "name": "ProjectionPage",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 96,
+            "name": "ProjectionPageList",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 103,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 113,
             "name": "Versioned",
             "passes": [
               "rust.declaration"
@@ -9679,7 +10619,7 @@
           },
           {
             "kind": "enum",
-            "line": 82,
+            "line": 119,
             "name": "QueryError",
             "passes": [
               "rust.declaration"
@@ -9687,7 +10627,7 @@
           },
           {
             "kind": "fn",
-            "line": 89,
+            "line": 126,
             "name": "into_response",
             "passes": [
               "rust.declaration"
@@ -9695,7 +10635,7 @@
           },
           {
             "kind": "trait",
-            "line": 112,
+            "line": 149,
             "name": "QueryStore",
             "passes": [
               "rust.declaration"
@@ -9703,7 +10643,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 113,
+            "line": 150,
             "name": "pulse",
             "passes": [
               "rust.declaration"
@@ -9711,88 +10651,8 @@
           },
           {
             "kind": "async-fn",
-            "line": 114,
+            "line": 151,
             "name": "buyers",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 115,
-            "name": "buyer",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 116,
-            "name": "buyer_timeline",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 122,
-            "name": "services",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 127,
-            "name": "service",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 128,
-            "name": "graph",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 130,
-            "name": "provenance",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 131,
-            "name": "search",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 137,
-            "name": "system",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "struct",
-            "line": 139,
-            "name": "PostgresQueryStore",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 146,
-            "name": "new",
             "passes": [
               "rust.declaration"
             ]
@@ -9800,6 +10660,94 @@
           {
             "kind": "async-fn",
             "line": 152,
+            "name": "buyer",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 153,
+            "name": "buyer_timeline",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 159,
+            "name": "services",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 164,
+            "name": "service",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 165,
+            "name": "graph",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 167,
+            "name": "provenance",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 168,
+            "name": "search",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 174,
+            "name": "investigations",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 179,
+            "name": "system",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 181,
+            "name": "PostgresQueryStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 188,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 194,
             "name": "facts",
             "passes": [
               "rust.declaration"
@@ -9807,7 +10755,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 166,
+            "line": 208,
             "name": "fact_page",
             "passes": [
               "rust.declaration"
@@ -9815,7 +10763,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 182,
+            "line": 224,
             "name": "one_fact",
             "passes": [
               "rust.declaration"
@@ -9823,7 +10771,7 @@
           },
           {
             "kind": "fn",
-            "line": 194,
+            "line": 236,
             "name": "row_to_fact",
             "passes": [
               "rust.declaration"
@@ -9831,7 +10779,7 @@
           },
           {
             "kind": "fn",
-            "line": 210,
+            "line": 252,
             "name": "page",
             "passes": [
               "rust.declaration"
@@ -9839,7 +10787,7 @@
           },
           {
             "kind": "fn",
-            "line": 216,
+            "line": 258,
             "name": "encode_cursor",
             "passes": [
               "rust.declaration"
@@ -9847,7 +10795,7 @@
           },
           {
             "kind": "fn",
-            "line": 224,
+            "line": 266,
             "name": "decode_cursor",
             "passes": [
               "rust.declaration"
@@ -9855,7 +10803,7 @@
           },
           {
             "kind": "const",
-            "line": 241,
+            "line": 283,
             "name": "FACT_COLUMNS",
             "passes": [
               "rust.declaration"
@@ -9863,7 +10811,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 246,
+            "line": 288,
             "name": "pulse",
             "passes": [
               "rust.declaration"
@@ -9871,7 +10819,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 252,
+            "line": 294,
             "name": "buyers",
             "passes": [
               "rust.declaration"
@@ -9879,7 +10827,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 256,
+            "line": 298,
             "name": "buyer",
             "passes": [
               "rust.declaration"
@@ -9887,7 +10835,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 260,
+            "line": 302,
             "name": "buyer_timeline",
             "passes": [
               "rust.declaration"
@@ -9895,7 +10843,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 293,
+            "line": 335,
             "name": "services",
             "passes": [
               "rust.declaration"
@@ -9903,7 +10851,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 301,
+            "line": 343,
             "name": "service",
             "passes": [
               "rust.declaration"
@@ -9911,7 +10859,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 305,
+            "line": 347,
             "name": "graph",
             "passes": [
               "rust.declaration"
@@ -9919,7 +10867,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 346,
+            "line": 388,
             "name": "provenance",
             "passes": [
               "rust.declaration"
@@ -9927,7 +10875,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 366,
+            "line": 408,
             "name": "search",
             "passes": [
               "rust.declaration"
@@ -9935,15 +10883,31 @@
           },
           {
             "kind": "async-fn",
-            "line": 395,
+            "line": 437,
+            "name": "investigations",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 456,
             "name": "system",
             "passes": [
               "rust.declaration"
             ]
           },
           {
+            "kind": "fn",
+            "line": 466,
+            "name": "row_to_projection_page",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "type",
-            "line": 405,
+            "line": 488,
             "name": "Store",
             "passes": [
               "rust.declaration"
@@ -9951,7 +10915,7 @@
           },
           {
             "kind": "struct",
-            "line": 409,
+            "line": 492,
             "name": "PageQuery",
             "passes": [
               "rust.declaration"
@@ -9959,7 +10923,7 @@
           },
           {
             "kind": "fn",
-            "line": 415,
+            "line": 498,
             "name": "bounded",
             "passes": [
               "rust.declaration"
@@ -9967,7 +10931,7 @@
           },
           {
             "kind": "struct",
-            "line": 427,
+            "line": 510,
             "name": "SearchQuery",
             "passes": [
               "rust.declaration"
@@ -9975,7 +10939,7 @@
           },
           {
             "kind": "fn",
-            "line": 432,
+            "line": 515,
             "name": "api_router",
             "passes": [
               "rust.declaration"
@@ -9983,7 +10947,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 448,
+            "line": 532,
             "name": "openapi",
             "passes": [
               "rust.declaration"
@@ -9991,7 +10955,7 @@
           },
           {
             "kind": "fn",
-            "line": 505,
+            "line": 590,
             "name": "cacheable",
             "passes": [
               "rust.declaration"
@@ -9999,7 +10963,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 530,
+            "line": 615,
             "name": "pulse",
             "passes": [
               "rust.declaration"
@@ -10007,7 +10971,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 537,
+            "line": 622,
             "name": "buyers",
             "passes": [
               "rust.declaration"
@@ -10015,7 +10979,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 545,
+            "line": 630,
             "name": "buyer",
             "passes": [
               "rust.declaration"
@@ -10023,7 +10987,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 553,
+            "line": 638,
             "name": "buyer_timeline",
             "passes": [
               "rust.declaration"
@@ -10031,7 +10995,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 562,
+            "line": 647,
             "name": "services",
             "passes": [
               "rust.declaration"
@@ -10039,7 +11003,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 570,
+            "line": 655,
             "name": "service",
             "passes": [
               "rust.declaration"
@@ -10047,7 +11011,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 581,
+            "line": 666,
             "name": "graph",
             "passes": [
               "rust.declaration"
@@ -10055,7 +11019,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 593,
+            "line": 678,
             "name": "provenance",
             "passes": [
               "rust.declaration"
@@ -10063,7 +11027,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 604,
+            "line": 689,
             "name": "search",
             "passes": [
               "rust.declaration"
@@ -10071,7 +11035,15 @@
           },
           {
             "kind": "async-fn",
-            "line": 622,
+            "line": 707,
+            "name": "investigations",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 715,
             "name": "system",
             "passes": [
               "rust.declaration"
@@ -10079,7 +11051,7 @@
           },
           {
             "kind": "mod",
-            "line": 631,
+            "line": 724,
             "name": "tests",
             "passes": [
               "rust.declaration"
@@ -10087,7 +11059,7 @@
           },
           {
             "kind": "fn",
-            "line": 635,
+            "line": 728,
             "name": "composite_cursor_round_trips_delimiter_characters",
             "passes": [
               "rust.declaration"
@@ -10095,14 +11067,14 @@
           },
           {
             "kind": "fn",
-            "line": 644,
+            "line": 737,
             "name": "malformed_composite_cursor_is_rejected",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 648,
+        "line_count": 741,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -10412,7 +11384,46 @@
       {
         "citations": 0,
         "component": "delivery-gates",
-        "declaration_count": 15,
+        "declaration_count": 3,
+        "declarations": [
+          {
+            "kind": "fn",
+            "line": 6,
+            "name": "runtime_config_requires_outbound_https_and_redacts_bearer_tokens",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 59,
+            "name": "binary_wires_a_bounded_outbound_projection_mode",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 67,
+            "name": "native_wiki_adapter_uses_real_rpc_and_preserves_curated_content",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 92,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/projection_runtime.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 16,
         "declarations": [
           {
             "kind": "struct",
@@ -10512,7 +11523,15 @@
           },
           {
             "kind": "async-fn",
-            "line": 118,
+            "line": 115,
+            "name": "investigations",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 146,
             "name": "list_queries_are_bounded_and_cacheable_with_provenance",
             "passes": [
               "rust.declaration"
@@ -10520,7 +11539,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 159,
+            "line": 187,
             "name": "purpose_built_surface_is_documented_without_graphql_or_sql",
             "passes": [
               "rust.declaration"
@@ -10528,14 +11547,14 @@
           },
           {
             "kind": "fn",
-            "line": 255,
+            "line": 290,
             "name": "postgres_store_is_the_runtime_query_backend",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 258,
+        "line_count": 294,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -10569,6 +11588,219 @@
           "declared.topology"
         ],
         "path": "tests/reducer_finality_schema_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 23,
+        "declarations": [
+          {
+            "kind": "type",
+            "line": 11,
+            "name": "EventLog",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "type",
+            "line": 13,
+            "name": "PublishedBundles",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 14,
+            "name": "sha256",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 18,
+            "name": "snapshot_sha",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 29,
+            "name": "output_sha",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 42,
+            "name": "FixtureGateway",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 52,
+            "name": "pull_job",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 56,
+            "name": "fetch_snapshot",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 61,
+            "name": "approval_for",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 77,
+            "name": "publish_bundle_if_absent",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 94,
+            "name": "FixtureProjector",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 101,
+            "name": "project",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 114,
+            "name": "FixtureWiki",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 122,
+            "name": "replace_generated_section",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 135,
+            "name": "capture_changeset",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 159,
+            "name": "fixture",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 224,
+            "name": "valid_output",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 244,
+            "name": "projection_binds_revision_and_approval_before_exact_byte_publication",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 275,
+            "name": "snapshot_hash_mismatch_stops_before_projection_or_wiki_write",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 292,
+            "name": "snapshot_hash_binds_the_exact_model_input_and_privacy_policy",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 311,
+            "name": "rendered_markdown_links_must_exactly_match_safe_sidecar_links",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 335,
+            "name": "publication_rejects_private_snapshot_canaries_and_unauthorized_citations",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 370,
+            "name": "unrelated_changeset_revision_and_wrong_approval_candidate_are_rejected",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 397,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/semantic_projection.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 88,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/semantic_projection_schema_test.py",
         "semantic_citations": 0,
         "touched": false
       },
@@ -10613,18 +11845,18 @@
         "citations": 34,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
-        "files": 22,
+        "files": 25,
         "id": "declared.topology"
       },
       {
-        "citations": 885,
+        "citations": 1008,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 27,
+        "files": 31,
         "id": "rust.declaration"
       },
       {
-        "citations": 13,
+        "citations": 14,
         "class": "mechanical",
         "description": "Literal Axum method and path routes extracted from Rust source.",
         "files": 2,
@@ -10637,7 +11869,7 @@
         "boundary": 2,
         "contract": 1,
         "deployment": 3,
-        "endpoint": 13,
+        "endpoint": 14,
         "external": 4,
         "projection": 2,
         "projector": 1,
@@ -10648,16 +11880,16 @@
         "surface": 1,
         "worker": 6
       },
-      "citations": 47,
-      "declarations": 885,
-      "entities": 47,
-      "entities_with_origin": 47,
-      "files": 101,
+      "citations": 48,
+      "declarations": 1008,
+      "entities": 48,
+      "entities_with_origin": 48,
+      "files": 108,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
-      "touched_files": 22,
-      "untouched_files": 79
+      "touched_files": 25,
+      "untouched_files": 83
     }
   },
   "interplay": {
@@ -11426,12 +12658,12 @@
         "page": "canonical"
       },
       {
-        "component": "architecture-policy",
+        "component": "semantic-projection",
         "evidence": [
           {
-            "excerpt": "PG --> P[Bounded evidence snapshots]",
-            "line": 28,
-            "path": "docs/ARCHITECTURE.md"
+            "excerpt": "CREATE TABLE agent_economy.projection_snapshots (",
+            "line": 3,
+            "path": "migrations/0009_semantic_projection.up.sql"
           }
         ],
         "id": "evidence-snapshot",
@@ -11514,7 +12746,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/buyers/{id}\", get(buyer))",
-            "line": 438,
+            "line": 521,
             "path": "src/query.rs"
           }
         ],
@@ -11528,7 +12760,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/buyers/{id}/timeline\", get(buyer_timeline))",
-            "line": 439,
+            "line": 522,
             "path": "src/query.rs"
           }
         ],
@@ -11542,7 +12774,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/buyers\", get(buyers))",
-            "line": 437,
+            "line": 520,
             "path": "src/query.rs"
           }
         ],
@@ -11556,7 +12788,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/graph/{kind}/{id}\", get(graph))",
-            "line": 442,
+            "line": 525,
             "path": "src/query.rs"
           }
         ],
@@ -11570,7 +12802,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/healthz\", get(status))",
-            "line": 48,
+            "line": 78,
             "path": "src/main.rs"
           }
         ],
@@ -11583,8 +12815,22 @@
         "component": "runtime",
         "evidence": [
           {
+            "excerpt": ".route(\"/api/v1/investigations\", get(investigations))",
+            "line": 528,
+            "path": "src/query.rs"
+          }
+        ],
+        "id": "http:investigations",
+        "kind": "endpoint",
+        "label": "GET /api/v1/investigations",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
             "excerpt": ".route(\"/api/v1/openapi.json\", get(openapi))",
-            "line": 435,
+            "line": 518,
             "path": "src/query.rs"
           }
         ],
@@ -11598,7 +12844,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/provenance/{id}\", get(provenance))",
-            "line": 443,
+            "line": 526,
             "path": "src/query.rs"
           }
         ],
@@ -11612,7 +12858,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/pulse\", get(pulse))",
-            "line": 436,
+            "line": 519,
             "path": "src/query.rs"
           }
         ],
@@ -11626,7 +12872,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/search\", get(search))",
-            "line": 444,
+            "line": 527,
             "path": "src/query.rs"
           }
         ],
@@ -11640,7 +12886,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/services/{id}\", get(service))",
-            "line": 441,
+            "line": 524,
             "path": "src/query.rs"
           }
         ],
@@ -11654,7 +12900,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/services\", get(services))",
-            "line": 440,
+            "line": 523,
             "path": "src/query.rs"
           }
         ],
@@ -11668,7 +12914,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/status\", get(status))",
-            "line": 49,
+            "line": 79,
             "path": "src/main.rs"
           }
         ],
@@ -11682,7 +12928,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/system\", get(system))",
-            "line": 445,
+            "line": 529,
             "path": "src/query.rs"
           }
         ],
@@ -11692,12 +12938,12 @@
         "page": "delivery"
       },
       {
-        "component": "architecture-policy",
+        "component": "semantic-projection",
         "evidence": [
           {
-            "excerpt": "M[LLM projector]",
-            "line": 32,
-            "path": "docs/ARCHITECTURE.md"
+            "excerpt": "impl Projector for HttpProjector {",
+            "line": 233,
+            "path": "src/projection_runtime.rs"
           }
         ],
         "id": "llm-projector",
@@ -11720,12 +12966,12 @@
         "page": "delivery"
       },
       {
-        "component": "architecture-policy",
+        "component": "semantic-projection",
         "evidence": [
           {
-            "excerpt": "H[Local Hermes projection worker] -->|outbound pull| P",
-            "line": 30,
-            "path": "docs/ARCHITECTURE.md"
+            "excerpt": "pub async fn run_projection_once(",
+            "line": 611,
+            "path": "src/projection_runtime.rs"
           }
         ],
         "id": "local-wiki-projector",
@@ -11776,12 +13022,12 @@
         "page": "canonical"
       },
       {
-        "component": "architecture-policy",
+        "component": "semantic-projection",
         "evidence": [
           {
-            "excerpt": "W --> B[Approved read-only projection mirror]",
-            "line": 34,
-            "path": "docs/ARCHITECTURE.md"
+            "excerpt": "CREATE VIEW agent_economy.projection_mirror_pages AS",
+            "line": 234,
+            "path": "migrations/0009_semantic_projection.up.sql"
           }
         ],
         "id": "projection-mirror",
@@ -11808,7 +13054,7 @@
         "evidence": [
           {
             "excerpt": "pub fn api_router(store: Store) -> Router {",
-            "line": 433,
+            "line": 516,
             "path": "src/query.rs"
           }
         ],
@@ -11836,7 +13082,7 @@
         "evidence": [
           {
             "excerpt": "info!(%address, \"agent economy monitor listening\");",
-            "line": 51,
+            "line": 81,
             "path": "src/main.rs"
           }
         ],
@@ -11846,12 +13092,12 @@
         "page": "delivery"
       },
       {
-        "component": "architecture-policy",
+        "component": "semantic-projection",
         "evidence": [
           {
-            "excerpt": "M --> W[Agentic Commerce Intelligence wiki]",
-            "line": 33,
-            "path": "docs/ARCHITECTURE.md"
+            "excerpt": "const WIKI_ID: &str = \"agentic-commerce\";",
+            "line": 6,
+            "path": "src/projection.rs"
           }
         ],
         "id": "semantic-wiki",
@@ -11962,7 +13208,8 @@
       },
       {
         "components": [
-          "architecture-policy"
+          "architecture-policy",
+          "semantic-projection"
         ],
         "id": "projection",
         "label": "Semantic projection",
@@ -11987,9 +13234,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 885,
-    "files": 101,
-    "lines": 27257
+    "declarations": 1008,
+    "files": 108,
+    "lines": 29528
   },
   "layers": [
     {
@@ -12030,7 +13277,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "8b051b2417c7bb8d62ec90668cc57fd3ec7c92e9e3066ba9a4e06d3007e9b87c",
+  "source_tree_sha256": "7055990b16052f8e64ad05b5eed7e9098afdd1df0133c5ba835dc28ce389cce5",
   "stores": {
     "count": 2,
     "items": [

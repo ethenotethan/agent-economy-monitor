@@ -72,6 +72,43 @@ pub struct SystemReadModel {
     pub facts: Vec<Fact>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct ProjectionPage {
+    pub page_path: String,
+    pub stable_entity_id: String,
+    pub generated_markdown: String,
+    pub citations: Value,
+    pub wikilinks: Vec<String>,
+    pub model_id: String,
+    pub model_sha256: String,
+    pub prompt_sha256: String,
+    pub snapshot_sha256: String,
+    pub output_sha256: String,
+    pub bundle_sha256: String,
+    pub changeset_id: String,
+    pub changeset_sha256: String,
+    pub approved_by: String,
+    pub approved_at: String,
+    pub published_at: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct ProjectionPageList {
+    pub api_version: &'static str,
+    pub items: Vec<ProjectionPage>,
+    pub next_cursor: Option<String>,
+}
+
+impl ProjectionPageList {
+    pub fn new(items: Vec<ProjectionPage>, next_cursor: Option<String>) -> Self {
+        Self {
+            api_version: API_VERSION,
+            items,
+            next_cursor,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize)]
 struct Versioned<T> {
     api_version: &'static str,
@@ -134,6 +171,11 @@ pub trait QueryStore: Send + Sync + 'static {
         after: Option<&str>,
         limit: usize,
     ) -> Result<DashboardPage, QueryError>;
+    async fn investigations(
+        &self,
+        after: Option<&str>,
+        limit: usize,
+    ) -> Result<ProjectionPageList, QueryError>;
     async fn system(&self) -> Result<SystemReadModel, QueryError>;
 }
 
@@ -393,6 +435,25 @@ impl QueryStore for PostgresQueryStore {
         Ok(DashboardPage::new(items, next_cursor))
     }
 
+    async fn investigations(
+        &self,
+        after: Option<&str>,
+        limit: usize,
+    ) -> Result<ProjectionPageList, QueryError> {
+        let fetch = i64::try_from(limit + 1).map_err(|_| QueryError::Unavailable)?;
+        let rows = self.client.query(
+            "SELECT page_path, stable_entity_id, generated_markdown, citations::text, wikilinks, model_id, model_sha256, prompt_sha256, snapshot_sha256, output_sha256, bundle_sha256, changeset_id, changeset_sha256, approved_by, approved_at::text, published_at::text FROM (SELECT DISTINCT ON (page.namespace_id, page.page_path) page.* FROM agent_economy.projection_mirror_pages AS page WHERE page.namespace_id = $1::text::uuid ORDER BY page.namespace_id, page.page_path, page.published_at DESC, page.bundle_sha256 DESC) AS latest WHERE ($2::text IS NULL OR page_path > $2) ORDER BY page_path LIMIT $3",
+            &[&self.namespace_id, &after, &fetch],
+        ).await.map_err(|_| QueryError::Unavailable)?;
+        let mut items = rows
+            .iter()
+            .map(row_to_projection_page)
+            .collect::<Result<Vec<_>, _>>()?;
+        let next_cursor = (items.len() > limit).then(|| items[limit - 1].page_path.clone());
+        items.truncate(limit);
+        Ok(ProjectionPageList::new(items, next_cursor))
+    }
+
     async fn system(&self) -> Result<SystemReadModel, QueryError> {
         let sql = format!(
             "SELECT {FACT_COLUMNS} FROM agent_economy.dashboard_system AS fact JOIN agent_economy.namespaces AS namespace USING (namespace_id) WHERE namespace.namespace_id = $1::text::uuid ORDER BY fact.observed_at DESC, fact.id LIMIT 100"
@@ -401,6 +462,28 @@ impl QueryStore for PostgresQueryStore {
             facts: self.facts(&sql, &[&self.namespace_id]).await?,
         })
     }
+}
+
+fn row_to_projection_page(row: &Row) -> Result<ProjectionPage, QueryError> {
+    let citations: String = row.try_get(3).map_err(|_| QueryError::Unavailable)?;
+    Ok(ProjectionPage {
+        page_path: row.try_get(0).map_err(|_| QueryError::Unavailable)?,
+        stable_entity_id: row.try_get(1).map_err(|_| QueryError::Unavailable)?,
+        generated_markdown: row.try_get(2).map_err(|_| QueryError::Unavailable)?,
+        citations: serde_json::from_str(&citations).map_err(|_| QueryError::Unavailable)?,
+        wikilinks: row.try_get(4).map_err(|_| QueryError::Unavailable)?,
+        model_id: row.try_get(5).map_err(|_| QueryError::Unavailable)?,
+        model_sha256: row.try_get(6).map_err(|_| QueryError::Unavailable)?,
+        prompt_sha256: row.try_get(7).map_err(|_| QueryError::Unavailable)?,
+        snapshot_sha256: row.try_get(8).map_err(|_| QueryError::Unavailable)?,
+        output_sha256: row.try_get(9).map_err(|_| QueryError::Unavailable)?,
+        bundle_sha256: row.try_get(10).map_err(|_| QueryError::Unavailable)?,
+        changeset_id: row.try_get(11).map_err(|_| QueryError::Unavailable)?,
+        changeset_sha256: row.try_get(12).map_err(|_| QueryError::Unavailable)?,
+        approved_by: row.try_get(13).map_err(|_| QueryError::Unavailable)?,
+        approved_at: row.try_get(14).map_err(|_| QueryError::Unavailable)?,
+        published_at: row.try_get(15).map_err(|_| QueryError::Unavailable)?,
+    })
 }
 
 type Store = Arc<dyn QueryStore>;
@@ -442,6 +525,7 @@ pub fn api_router(store: Store) -> Router {
         .route("/api/v1/graph/{kind}/{id}", get(graph))
         .route("/api/v1/provenance/{id}", get(provenance))
         .route("/api/v1/search", get(search))
+        .route("/api/v1/investigations", get(investigations))
         .route("/api/v1/system", get(system))
         .with_state(store)
 }
@@ -484,6 +568,7 @@ async fn openapi() -> Json<Value> {
             "/api/v1/graph/{kind}/{id}": {"get": {"parameters": [path_parameter("kind"), path_parameter("id"), json!({"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": MAX_PAGE_SIZE, "default": DEFAULT_PAGE_SIZE}})], "responses": response()}},
             "/api/v1/provenance/{id}": {"get": {"parameters": [path_parameter("id")], "responses": response()}},
             "/api/v1/search": {"get": {"parameters": search_parameters, "responses": response()}},
+            "/api/v1/investigations": {"get": {"parameters": page_parameters(), "responses": response()}},
             "/api/v1/system": {"get": {"responses": response()}}
         },
         "components": {"schemas": {
@@ -618,6 +703,14 @@ async fn search(
     };
     let (after, limit) = page.bounded()?;
     cacheable(&store.search(q, after, limit).await?)
+}
+
+async fn investigations(
+    State(store): State<Store>,
+    Query(query): Query<PageQuery>,
+) -> Result<Response, QueryError> {
+    let (after, limit) = query.bounded()?;
+    cacheable(&store.investigations(after, limit).await?)
 }
 
 async fn system(State(store): State<Store>) -> Result<Response, QueryError> {
