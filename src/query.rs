@@ -144,8 +144,12 @@ pub struct PostgresQueryStore {
 
 impl PostgresQueryStore {
     pub fn new(client: Client, namespace_id: String) -> Self {
+        Self::from_shared(Arc::new(client), namespace_id)
+    }
+
+    pub fn from_shared(client: Arc<Client>, namespace_id: String) -> Self {
         Self {
-            client: Arc::new(client),
+            client,
             namespace_id,
         }
     }
