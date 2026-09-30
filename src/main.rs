@@ -2,6 +2,7 @@ use std::{env, net::SocketAddr};
 
 use agent_economy_monitor::{
     auth::{AuthState, PostgresAuthStore, protect_router},
+    cockpit::mount_cockpit,
     query::{PostgresQueryStore, api_router},
 };
 use axum::{Json, Router, routing::get};
@@ -53,6 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let query_store = PostgresQueryStore::from_shared(client, namespace_id);
     let app: Router =
         api_router(std::sync::Arc::new(query_store)).route("/api/v1/status", get(status));
+    let app = mount_cockpit(app);
     let app = protect_router(app, auth).route("/healthz", get(status));
 
     info!(%address, "agent economy monitor listening");

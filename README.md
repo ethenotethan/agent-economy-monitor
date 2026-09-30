@@ -52,6 +52,8 @@ retry, evidence-object, and gap metrics. RPC endpoints are typed secrets with re
 debug output; collectors never log endpoint URLs or JSON-RPC request bodies.
 
 ```bash
+python3 -m pip install --requirement requirements-dev.txt
+python3 -m playwright install firefox
 ./scripts/verify
 cargo run
 curl http://127.0.0.1:8080/healthz
