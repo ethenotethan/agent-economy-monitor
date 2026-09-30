@@ -109,6 +109,14 @@ fn Cockpit() -> impl IntoView {
                         </section>
                     </main>
                 </div>
+                <button id="drawer-backdrop" class="drawer-backdrop" aria-label="Close provenance" hidden></button>
+                <aside id="provenance-drawer" class="provenance-drawer" role="dialog" aria-modal="true" aria-label="Evidence lineage" aria-hidden="true" tabindex="-1">
+                    <div class="drawer-head">
+                        <div><div class="eyebrow">"Evidence lineage"</div><h2>"Provenance"</h2></div>
+                        <button id="drawer-close" class="drawer-close" type="button" aria-label="Close provenance drawer">"Close"</button>
+                    </div>
+                    <div id="provenance-content" class="drawer-content"></div>
+                </aside>
                 <template data-state="loading">
                     <div class="skeletons" aria-label="Loading view">
                         <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>

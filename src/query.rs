@@ -53,6 +53,30 @@ pub struct GraphReadModel {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct ClassificationReadModel {
+    pub claim_id: String,
+    pub label: String,
+    pub status: String,
+    pub confidence: String,
+    pub method: String,
+    pub evidence_window_start: String,
+    pub evidence_window_end: String,
+    pub valid_to: Option<String>,
+    pub is_stale: bool,
+    pub provenance_ids: Vec<String>,
+    pub supporting_evidence_ids: Vec<String>,
+    pub conflicting_evidence_ids: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq)]
+pub struct BuyerDossierReadModel {
+    pub buyer: Fact,
+    pub classifications: Vec<ClassificationReadModel>,
+    pub timeline: DashboardPage,
+    pub graph: GraphReadModel,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ProvenanceReadModel {
     pub provenance_id: String,
     pub source_id: String,
@@ -113,6 +137,7 @@ pub trait QueryStore: Send + Sync + 'static {
     async fn pulse(&self) -> Result<Vec<Fact>, QueryError>;
     async fn buyers(&self, after: Option<&str>, limit: usize) -> Result<DashboardPage, QueryError>;
     async fn buyer(&self, id: &str) -> Result<Option<Fact>, QueryError>;
+    async fn buyer_dossier(&self, id: &str) -> Result<Option<BuyerDossierReadModel>, QueryError>;
     async fn buyer_timeline(
         &self,
         id: &str,
@@ -194,6 +219,21 @@ impl PostgresQueryStore {
             .into_iter()
             .next())
     }
+
+    async fn buyer_classifications(
+        &self,
+        id: &str,
+    ) -> Result<Vec<ClassificationReadModel>, QueryError> {
+        let rows = self
+            .client
+            .query(
+                "WITH latest_run AS (SELECT run.namespace_id, run.run_id, run.run_version FROM agent_economy.classification_runs AS run JOIN agent_economy.classification_run_seals AS seal USING (namespace_id, run_id, run_version) WHERE run.namespace_id = $1::text::uuid AND run.buyer_handle_id = $2 ORDER BY run.created_at DESC, run.run_id DESC, run.run_version DESC LIMIT 1) SELECT claim.claim_id, claim.label, claim.status, claim.confidence::text, claim.method, claim.evidence_window_start::text, claim.evidence_window_end::text, claim.valid_to::text, (claim.valid_to IS NOT NULL AND claim.valid_to <= CURRENT_TIMESTAMP) AS is_stale, claim.provenance_id::text, coalesce(array_agg(evidence.evidence_id ORDER BY evidence.evidence_id) FILTER (WHERE evidence.evidence_role = 'supporting'), '{}')::text[] AS supporting_evidence_ids, coalesce(array_agg(evidence.evidence_id ORDER BY evidence.evidence_id) FILTER (WHERE evidence.evidence_role = 'conflicting'), '{}')::text[] AS conflicting_evidence_ids FROM latest_run AS latest JOIN agent_economy.classification_run_claims AS run_claim USING (namespace_id, run_id, run_version) JOIN agent_economy.classification_claims AS claim ON claim.namespace_id = run_claim.namespace_id AND claim.claim_id = run_claim.claim_id AND claim.version = run_claim.claim_version LEFT JOIN agent_economy.classification_claim_evidence AS evidence ON evidence.namespace_id = claim.namespace_id AND evidence.claim_id = claim.claim_id AND evidence.claim_version = claim.version GROUP BY claim.claim_id, claim.version, claim.label, claim.status, claim.confidence, claim.method, claim.evidence_window_start, claim.evidence_window_end, claim.valid_to, claim.provenance_id ORDER BY claim.label, claim.claim_id",
+                &[&self.namespace_id, &id],
+            )
+            .await
+            .map_err(|_| QueryError::Unavailable)?;
+        rows.iter().map(row_to_classification).collect()
+    }
 }
 
 fn row_to_fact(row: &Row) -> Result<Fact, QueryError> {
@@ -210,6 +250,74 @@ fn row_to_fact(row: &Row) -> Result<Fact, QueryError> {
             .try_get("provenance_ids")
             .map_err(|_| QueryError::Unavailable)?,
     })
+}
+
+fn row_to_classification(row: &Row) -> Result<ClassificationReadModel, QueryError> {
+    Ok(ClassificationReadModel {
+        claim_id: row
+            .try_get("claim_id")
+            .map_err(|_| QueryError::Unavailable)?,
+        label: row.try_get("label").map_err(|_| QueryError::Unavailable)?,
+        status: row.try_get("status").map_err(|_| QueryError::Unavailable)?,
+        confidence: row
+            .try_get("confidence")
+            .map_err(|_| QueryError::Unavailable)?,
+        method: row.try_get("method").map_err(|_| QueryError::Unavailable)?,
+        evidence_window_start: row
+            .try_get("evidence_window_start")
+            .map_err(|_| QueryError::Unavailable)?,
+        evidence_window_end: row
+            .try_get("evidence_window_end")
+            .map_err(|_| QueryError::Unavailable)?,
+        valid_to: row
+            .try_get("valid_to")
+            .map_err(|_| QueryError::Unavailable)?,
+        is_stale: row
+            .try_get("is_stale")
+            .map_err(|_| QueryError::Unavailable)?,
+        provenance_ids: vec![
+            row.try_get("provenance_id")
+                .map_err(|_| QueryError::Unavailable)?,
+        ],
+        supporting_evidence_ids: row
+            .try_get("supporting_evidence_ids")
+            .map_err(|_| QueryError::Unavailable)?,
+        conflicting_evidence_ids: row
+            .try_get("conflicting_evidence_ids")
+            .map_err(|_| QueryError::Unavailable)?,
+    })
+}
+
+fn type_graph_edge(edge: &mut Fact) {
+    let buyer_id = edge
+        .value
+        .get("buyer_handle_id")
+        .and_then(Value::as_str)
+        .map(str::to_owned);
+    let service_id = edge
+        .value
+        .get("service_id")
+        .and_then(Value::as_str)
+        .map(str::to_owned);
+    if let (Some(buyer_id), Some(service_id), Some(value)) =
+        (buyer_id, service_id, edge.value.as_object_mut())
+    {
+        value.insert("source".into(), json!({"kind": "buyer", "id": buyer_id}));
+        value.insert(
+            "target".into(),
+            json!({"kind": "service", "id": service_id}),
+        );
+        let predicate = match value.get("level").and_then(Value::as_str) {
+            Some("verified" | "strong") => "paid_for",
+            _ => "candidate_for",
+        };
+        value.insert("predicate".into(), Value::String(predicate.into()));
+        value.insert("direction".into(), Value::String("outbound".into()));
+        value.insert(
+            "attribution_method".into(),
+            Value::String(edge.label.clone()),
+        );
+    }
 }
 
 fn page(mut items: Vec<Fact>, limit: usize) -> DashboardPage {
@@ -262,6 +370,18 @@ impl QueryStore for PostgresQueryStore {
         self.one_fact("buyer", id).await
     }
 
+    async fn buyer_dossier(&self, id: &str) -> Result<Option<BuyerDossierReadModel>, QueryError> {
+        let Some(buyer) = self.buyer(id).await? else {
+            return Ok(None);
+        };
+        Ok(Some(BuyerDossierReadModel {
+            buyer,
+            classifications: self.buyer_classifications(id).await?,
+            timeline: self.buyer_timeline(id, None, DEFAULT_PAGE_SIZE).await?,
+            graph: self.graph("buyer", id, DEFAULT_PAGE_SIZE).await?,
+        }))
+    }
+
     async fn buyer_timeline(
         &self,
         id: &str,
@@ -273,7 +393,7 @@ impl QueryStore for PostgresQueryStore {
         let after_time = cursor.as_ref().map(|parts| parts[0].as_str());
         let after_id = cursor.as_ref().map(|parts| parts[1].as_str());
         let sql = format!(
-            "SELECT {FACT_COLUMNS} FROM agent_economy.dashboard_facts AS fact JOIN agent_economy.namespaces AS namespace USING (namespace_id) WHERE namespace.namespace_id = $1::text::uuid AND fact.kind = 'settlement' AND fact.value->>'buyer_handle_id' = $2 AND ($3::text IS NULL OR ((fact.value->>'settled_at')::timestamptz, fact.id) < ($3::timestamptz, $4)) ORDER BY (fact.value->>'settled_at')::timestamptz DESC, fact.id DESC LIMIT $5"
+            "SELECT {FACT_COLUMNS} FROM agent_economy.dashboard_facts AS fact JOIN agent_economy.namespaces AS namespace USING (namespace_id) WHERE namespace.namespace_id = $1::text::uuid AND fact.kind = 'settlement' AND fact.value->>'buyer_handle_id' = $2 AND EXISTS (SELECT 1 FROM agent_economy.settlements AS settlement JOIN agent_economy.current_event_finality AS finality ON finality.namespace_id = settlement.namespace_id AND finality.protocol = settlement.protocol AND finality.chain_scope = settlement.chain_scope AND finality.canonical_event_id = settlement.canonical_event_id WHERE settlement.namespace_id = fact.namespace_id AND settlement.chain_scope = fact.value->>'chain_scope' AND settlement.settlement_id = fact.value->>'settlement_id' AND finality.finality_status = 'finalized') AND ($3::text IS NULL OR ((fact.value->>'settled_at')::timestamptz, fact.id) < ($3::timestamptz, $4)) ORDER BY (fact.value->>'settled_at')::timestamptz DESC, fact.id DESC LIMIT $5"
         );
         let items = self
             .facts(
@@ -328,7 +448,10 @@ impl QueryStore for PostgresQueryStore {
         let sql = format!(
             "WITH latest AS (SELECT DISTINCT ON (run.namespace_id, run.chain_scope, run.settlement_id) run.namespace_id, run.chain_scope, run.settlement_id, run.attribution_version, run.match_method, run.level FROM agent_economy.attribution_runs AS run JOIN agent_economy.attribution_run_seals AS seal USING (namespace_id, chain_scope, settlement_id, attribution_version) WHERE run.namespace_id = $1::text::uuid ORDER BY run.namespace_id, run.chain_scope, run.settlement_id, run.attribution_version DESC) SELECT concat_ws(':', candidate.chain_scope, candidate.settlement_id, candidate.attribution_version::text, candidate.candidate_id) AS id, 'attribution'::text AS kind, latest.match_method AS label, jsonb_build_object('settlement_id', candidate.settlement_id, 'chain_scope', candidate.chain_scope, 'buyer_handle_id', settlement.buyer_handle_id, 'service_id', candidate.service_id, 'endpoint_id', candidate.endpoint_id, 'payment_option_id', candidate.payment_option_id, 'confidence', candidate.confidence, 'level', latest.level)::text AS value, greatest(settlement_provenance.observed_at, requirement_provenance.observed_at)::text AS observed_at, ARRAY[settlement.provenance_id::text, requirement.provenance_id::text] AS provenance_ids FROM latest JOIN agent_economy.attribution_candidates AS candidate USING (namespace_id, chain_scope, settlement_id, attribution_version) JOIN agent_economy.settlements AS settlement ON settlement.namespace_id = candidate.namespace_id AND settlement.chain_scope = candidate.chain_scope AND settlement.settlement_id = candidate.settlement_id JOIN agent_economy.payment_requirements AS requirement ON requirement.namespace_id = candidate.namespace_id AND requirement.requirement_id = candidate.requirement_id JOIN agent_economy.provenance_records AS settlement_provenance ON settlement_provenance.namespace_id = settlement.namespace_id AND settlement_provenance.provenance_id = settlement.provenance_id JOIN agent_economy.provenance_records AS requirement_provenance ON requirement_provenance.namespace_id = requirement.namespace_id AND requirement_provenance.provenance_id = requirement.provenance_id WHERE {predicate} ORDER BY candidate.chain_scope, candidate.settlement_id, candidate.attribution_version, candidate.candidate_id LIMIT $3"
         );
-        let edges = self.facts(&sql, &[&self.namespace_id, &id, &fetch]).await?;
+        let mut edges = self.facts(&sql, &[&self.namespace_id, &id, &fetch]).await?;
+        for edge in &mut edges {
+            type_graph_edge(edge);
+        }
         let mut nodes = Vec::new();
         for edge in &edges {
             let related = if kind == "buyer" {
@@ -440,6 +563,7 @@ pub fn api_router(store: Store) -> Router {
         .route("/api/v1/pulse", get(pulse))
         .route("/api/v1/buyers", get(buyers))
         .route("/api/v1/buyers/{id}", get(buyer))
+        .route("/api/v1/buyers/{id}/dossier", get(buyer_dossier))
         .route("/api/v1/buyers/{id}/timeline", get(buyer_timeline))
         .route("/api/v1/services", get(services))
         .route("/api/v1/services/{id}", get(service))
@@ -482,6 +606,7 @@ async fn openapi() -> Json<Value> {
             "/api/v1/pulse": {"get": {"responses": response()}},
             "/api/v1/buyers": {"get": {"parameters": page_parameters(), "responses": response()}},
             "/api/v1/buyers/{id}": {"get": {"parameters": [path_parameter("id")], "responses": response()}},
+            "/api/v1/buyers/{id}/dossier": {"get": {"parameters": [path_parameter("id")], "responses": response()}},
             "/api/v1/buyers/{id}/timeline": {"get": {"parameters": timeline_parameters, "responses": response()}},
             "/api/v1/services": {"get": {"parameters": page_parameters(), "responses": response()}},
             "/api/v1/services/{id}": {"get": {"parameters": [path_parameter("id")], "responses": response()}},
@@ -549,6 +674,20 @@ async fn buyers(
 
 async fn buyer(State(store): State<Store>, Path(id): Path<String>) -> Result<Response, QueryError> {
     let value = store.buyer(&id).await?.ok_or(QueryError::NotFound)?;
+    cacheable(&Versioned {
+        api_version: API_VERSION,
+        data: value,
+    })
+}
+
+async fn buyer_dossier(
+    State(store): State<Store>,
+    Path(id): Path<String>,
+) -> Result<Response, QueryError> {
+    let value = store
+        .buyer_dossier(&id)
+        .await?
+        .ok_or(QueryError::NotFound)?;
     cacheable(&Versioned {
         api_version: API_VERSION,
         data: value,
@@ -633,7 +772,9 @@ async fn system(State(store): State<Store>) -> Result<Response, QueryError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{decode_cursor, encode_cursor};
+    use serde_json::json;
+
+    use super::{Fact, decode_cursor, encode_cursor, type_graph_edge};
 
     #[test]
     fn composite_cursor_round_trips_delimiter_characters() {
@@ -648,5 +789,36 @@ mod tests {
     fn malformed_composite_cursor_is_rejected() {
         assert!(decode_cursor("not-hex", 2).is_err());
         assert!(decode_cursor(&encode_cursor(&["only-one"]), 2).is_err());
+    }
+
+    #[test]
+    fn graph_edges_are_explicitly_typed_and_directed() {
+        let mut edge = Fact {
+            id: "edge:1".into(),
+            kind: "attribution".into(),
+            label: "explicit_requirement".into(),
+            value: json!({
+                "buyer_handle_id": "buyer:1",
+                "service_id": "service:1",
+                "confidence": "0.5000",
+                "level": "weak"
+            }),
+            observed_at: "2026-09-30T00:00:00Z".into(),
+            provenance_ids: vec!["provenance:1".into()],
+        };
+
+        type_graph_edge(&mut edge);
+
+        assert_eq!(
+            edge.value["source"],
+            json!({"kind": "buyer", "id": "buyer:1"})
+        );
+        assert_eq!(
+            edge.value["target"],
+            json!({"kind": "service", "id": "service:1"})
+        );
+        assert_eq!(edge.value["predicate"], "candidate_for");
+        assert_eq!(edge.value["direction"], "outbound");
+        assert_eq!(edge.value["attribution_method"], "explicit_requirement");
     }
 }
