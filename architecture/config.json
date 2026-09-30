@@ -203,6 +203,8 @@
       "patterns": [
         ".gitignore",
         ".github/workflows/**",
+        "examples/**",
+        "requirements-dev.txt",
         "scripts/verify",
         "tests/**"
       ]
@@ -464,7 +466,9 @@
     "crates/**/*.rs",
     "crates/**/*.sql",
     "docs/*.md",
+    "examples/**/*.rs",
     "migrations/*.sql",
+    "requirements-dev.txt",
     "scripts/build_architecture.py",
     "scripts/build_architecture_site.py",
     "scripts/check_architecture_contract.py",
@@ -473,6 +477,8 @@
     "scripts/test_architecture_site.py",
     "scripts/verify",
     "site/*",
+    "src/**/*.css",
+    "src/**/*.js",
     "src/**/*.rs",
     "tests/**/*_test.py",
     "tests/**/*.rs"
@@ -507,7 +513,7 @@
     {"authority": "specified", "component": "runtime", "id": "cockpit-access-control", "kind": "boundary", "label": "Shared-password access control", "origin": {"path": "src/auth.rs", "search": "pub struct AuthState"}, "page": "delivery"},
     {"authority": "specified", "component": "cockpit-auth-schema", "id": "cockpit-auth-state", "kind": "schema", "label": "Shared session and login-limit state", "origin": {"path": "migrations/0009_cockpit_auth.up.sql", "search": "CREATE TABLE agent_economy.auth_sessions"}, "page": "canonical"},
     {"authority": "specified", "component": "query-read-models", "id": "dashboard-read-models", "kind": "schema", "label": "Dashboard query read models", "origin": {"path": "migrations/0008_query_read_models.up.sql", "search": "CREATE VIEW agent_economy.dashboard_facts"}, "page": "canonical"},
-    {"authority": "specified", "component": "architecture-policy", "id": "cockpit", "kind": "surface", "label": "Leptos private cockpit", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Leptos private cockpit"}, "page": "experience"},
+    {"authority": "specified", "component": "runtime", "id": "cockpit", "kind": "surface", "label": "Leptos private cockpit", "origin": {"path": "src/cockpit.rs", "search": "fn Cockpit()"}, "page": "experience"},
     {"authority": "specified", "component": "architecture-policy", "id": "evidence-snapshot", "kind": "boundary", "label": "Bounded evidence snapshots", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Bounded evidence snapshots"}, "page": "projection"},
     {"authority": "specified", "component": "architecture-policy", "id": "llm-projector", "kind": "projector", "label": "LLM projector", "origin": {"path": "docs/ARCHITECTURE.md", "search": "LLM projector"}, "page": "projection"},
     {"authority": "specified", "component": "architecture-policy", "id": "semantic-wiki", "kind": "projection", "label": "Agentic Commerce Intelligence wiki", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Agentic Commerce Intelligence wiki"}, "page": "projection"},
@@ -521,6 +527,8 @@
     {"authority": "mechanical", "component": "runtime", "id": "http:login", "kind": "endpoint", "label": "POST /auth/login", "origin": {"method": "post", "path": "src/auth.rs", "route": "/auth/login"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:logout", "kind": "endpoint", "label": "POST /auth/logout", "origin": {"method": "post", "path": "src/auth.rs", "route": "/auth/logout"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:status", "kind": "endpoint", "label": "GET /api/v1/status", "origin": {"method": "get", "path": "src/main.rs", "route": "/api/v1/status"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:cockpit", "kind": "endpoint", "label": "GET /", "origin": {"method": "get", "path": "src/cockpit.rs", "route": "/"}, "page": "experience"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:live-updates", "kind": "endpoint", "label": "GET /api/v1/stream", "origin": {"method": "get", "path": "src/cockpit.rs", "route": "/api/v1/stream"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:openapi", "kind": "endpoint", "label": "GET /api/v1/openapi.json", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/openapi.json"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:pulse", "kind": "endpoint", "label": "GET /api/v1/pulse", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/pulse"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:buyers", "kind": "endpoint", "label": "GET /api/v1/buyers", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers"}, "page": "delivery"},

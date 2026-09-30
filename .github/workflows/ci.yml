@@ -46,6 +46,10 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Install browser test runtime
+        run: |
+          python3 -m pip install --requirement requirements-dev.txt
+          python3 -m playwright install --with-deps firefox
       - name: Verify
         env:
           GH_TOKEN: ${{ github.token }}

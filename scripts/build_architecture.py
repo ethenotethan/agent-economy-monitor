@@ -353,6 +353,10 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Install browser test runtime
+        run: |
+          python3 -m pip install --requirement requirements-dev.txt
+          python3 -m playwright install --with-deps firefox
       - name: Verify
         env:
           GH_TOKEN: ${{ github.token }}
@@ -606,6 +610,8 @@ jobs:
             "python3 scripts/build_architecture.py --check",
         ],
         "verify": [
+            "python3 -m pip install --requirement requirements-dev.txt",
+            "python3 -m playwright install --with-deps firefox",
             "./scripts/verify",
             "python3 tests/knowledge_graph_schema_test.py KnowledgeGraphMigrationLiveTest -v",
             "python3 tests/operational_analytics_schema_test.py OperationalAnalyticsMigrationLiveTest -v",

@@ -69,10 +69,12 @@
         "runs_on": "ubuntu-latest",
         "scripts": [
           "./scripts/verify",
+          "python3 -m pip install --requirement requirements-dev.txt",
+          "python3 -m playwright install --with-deps firefox",
           "python3 tests/knowledge_graph_schema_test.py KnowledgeGraphMigrationLiveTest -v",
           "python3 tests/operational_analytics_schema_test.py OperationalAnalyticsMigrationLiveTest -v"
         ],
-        "step_count": 6,
+        "step_count": 7,
         "workflow": "ci"
       },
       {
@@ -267,7 +269,7 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 324
+      "line_count": 326
     },
     {
       "declaration_count": 0,
@@ -305,7 +307,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5491
+      "line_count": 5506
     },
     {
       "declaration_count": 44,
@@ -465,7 +467,7 @@
       "line_count": 27
     },
     {
-      "declaration_count": 52,
+      "declaration_count": 55,
       "declarations": [
         "CountingStore",
         "Error",
@@ -491,9 +493,11 @@
         "fact",
         "graph",
         "list_queries_are_bounded_and_cacheable_with_provenance",
+        "live_update_stream_is_event_stream_and_emits_refresh_signal",
         "login",
         "login_body_is_bounded_before_password_verification",
         "login_issues_secure_bounded_session_and_logout_requires_csrf",
+        "main",
         "mpp_discovery_contract_rejects_noncanonical_atomic_amounts",
         "mpp_event_key_rejects_invalid_method_grammar",
         "mpp_event_keys_are_scoped_by_required_realm",
@@ -509,6 +513,7 @@
         "protocol_observation_construction_rejects_invalid_amount",
         "provenance",
         "pulse",
+        "pulse_is_the_landing_view_with_complete_cockpit_navigation",
         "purpose_built_surface_is_documented_without_graphql_or_sql",
         "reducers_can_read_typed_observation_fields",
         "repeated_bad_passwords_are_rate_limited",
@@ -522,17 +527,21 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 19,
+      "file_count": 23,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
         ".gitignore",
+        "examples/cockpit_browser_fixture.rs",
+        "requirements-dev.txt",
         "scripts/verify",
         "tests/access_control.rs",
         "tests/adapter_boundary.rs",
         "tests/buyer_enrichment_schema_test.py",
         "tests/classification_schema_test.py",
+        "tests/cockpit.rs",
         "tests/cockpit_auth_schema_test.py",
+        "tests/cockpit_browser_test.py",
         "tests/dev_stack_live_test.py",
         "tests/dev_stack_test.py",
         "tests/knowledge_graph_schema_test.py",
@@ -547,7 +556,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 3913
+      "line_count": 4122
     },
     {
       "declaration_count": 73,
@@ -1118,7 +1127,7 @@
       "line_count": 3628
     },
     {
-      "declaration_count": 87,
+      "declaration_count": 96,
       "declarations": [
         "API_VERSION",
         "AuthConfig",
@@ -1127,8 +1136,10 @@
         "AuthStore",
         "AuthStoreError",
         "CACHE_CONTROL",
+        "CLIENT",
         "COOKIE_NAME",
         "CSRF_HEADER",
+        "Cockpit",
         "DEFAULT_PAGE_SIZE",
         "DEFAULT_SESSION_TTL",
         "DashboardPage",
@@ -1146,12 +1157,14 @@
         "MAX_SESSIONS",
         "MAX_SESSION_TTL",
         "MemoryState",
+        "NavLink",
         "PageQuery",
         "PostgresAuthStore",
         "PostgresQueryStore",
         "ProvenanceReadModel",
         "QueryError",
         "QueryStore",
+        "STYLE",
         "SearchQuery",
         "Session",
         "Status",
@@ -1168,6 +1181,9 @@
         "buyer_timeline",
         "buyers",
         "cacheable",
+        "cockpit",
+        "cockpit_document",
+        "cockpit_router",
         "composite_cursor_round_trips_delimiter_characters",
         "constant_time_eq",
         "cookie_value",
@@ -1182,10 +1198,12 @@
         "from_shared",
         "graph",
         "into_response",
+        "live_updates",
         "login",
         "logout",
         "main",
         "malformed_composite_cursor_is_rejected",
+        "mount_cockpit",
         "new",
         "no_store",
         "one_fact",
@@ -1210,12 +1228,15 @@
       ],
       "description": "Axum process entry point and versioned, bounded, provenance-bearing query API.",
       "external": false,
-      "file_count": 7,
+      "file_count": 10,
       "files": [
         ".env.example",
         "Cargo.lock",
         "Cargo.toml",
         "src/auth.rs",
+        "src/cockpit.css",
+        "src/cockpit.js",
+        "src/cockpit.rs",
         "src/lib.rs",
         "src/main.rs",
         "src/query.rs"
@@ -1223,7 +1244,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 3901
+      "line_count": 5368
     },
     {
       "declaration_count": 0,
@@ -1570,17 +1591,17 @@
         ]
       },
       {
-        "component": "architecture-policy",
+        "component": "runtime",
         "id": "cockpit",
         "kind": "surface",
         "label": "Leptos private cockpit",
         "origins": [
           {
             "family": "specified",
-            "line": 27,
-            "path": "docs/ARCHITECTURE.md",
+            "line": 54,
+            "path": "src/cockpit.rs",
             "rule": "declared.topology",
-            "via": "Q --> L[Leptos private cockpit]"
+            "via": "fn Cockpit() -> impl IntoView {"
           }
         ]
       },
@@ -1796,6 +1817,21 @@
       },
       {
         "component": "runtime",
+        "id": "http:cockpit",
+        "kind": "endpoint",
+        "label": "GET /",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 21,
+            "path": "src/cockpit.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/\", get(cockpit))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
         "id": "http:graph",
         "kind": "endpoint",
         "label": "GET /api/v1/graph/{kind}/{id}",
@@ -1817,10 +1853,25 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 56,
+            "line": 58,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/healthz\", get(status))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:live-updates",
+        "kind": "endpoint",
+        "label": "GET /api/v1/stream",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 22,
+            "path": "src/cockpit.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/stream\", get(live_updates))"
           }
         ]
       },
@@ -1952,7 +2003,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 55,
+            "line": 56,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/status\", get(status))"
@@ -2132,7 +2183,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 58,
+            "line": 60,
             "path": "src/main.rs",
             "rule": "declared.topology",
             "via": "info!(%address, \"agent economy monitor listening\");"
@@ -2230,7 +2281,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 61,
+        "line_count": 65,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -2300,7 +2351,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 2488,
+        "line_count": 3531,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -2314,7 +2365,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 41,
+        "line_count": 44,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -2328,7 +2379,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 77,
+        "line_count": 79,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -2342,7 +2393,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 561,
+        "line_count": 569,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -9263,7 +9314,7 @@
         "touched": false
       },
       {
-        "citations": 11,
+        "citations": 10,
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
@@ -9289,6 +9340,29 @@
         "path": "docs/PRODUCT.md",
         "semantic_citations": 0,
         "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 1,
+        "declarations": [
+          {
+            "kind": "fn",
+            "line": 2,
+            "name": "main",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 5,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "examples/cockpit_browser_fixture.rs",
+        "semantic_citations": 0,
+        "touched": false
       },
       {
         "citations": 0,
@@ -9544,10 +9618,24 @@
       },
       {
         "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 1,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "requirements-dev.txt",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1378,
+        "line_count": 1384,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -9603,7 +9691,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1490,
+        "line_count": 1491,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -10132,7 +10220,122 @@
       {
         "citations": 0,
         "component": "runtime",
-        "declaration_count": 2,
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 92,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "src/cockpit.css",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 174,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "src/cockpit.js",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 3,
+        "component": "runtime",
+        "declaration_count": 9,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 11,
+            "name": "STYLE",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 13,
+            "name": "CLIENT",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 14,
+            "name": "cockpit_router",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 18,
+            "name": "mount_cockpit",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 24,
+            "name": "cockpit_document",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 28,
+            "name": "cockpit",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 32,
+            "name": "live_updates",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 54,
+            "name": "Cockpit",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 139,
+            "name": "NavLink",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 152,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "src/cockpit.rs",
+        "semantic_citations": 0,
+        "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "runtime",
+        "declaration_count": 3,
         "declarations": [
           {
             "kind": "mod",
@@ -10145,13 +10348,21 @@
           {
             "kind": "mod",
             "line": 2,
+            "name": "cockpit",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "mod",
+            "line": 3,
             "name": "query",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 2,
+        "line_count": 3,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -10167,7 +10378,7 @@
         "declarations": [
           {
             "kind": "struct",
-            "line": 15,
+            "line": 16,
             "name": "Status",
             "passes": [
               "rust.declaration"
@@ -10175,7 +10386,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 20,
+            "line": 21,
             "name": "status",
             "passes": [
               "rust.declaration"
@@ -10183,14 +10394,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 30,
+            "line": 31,
             "name": "main",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 61,
+        "line_count": 63,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -11035,6 +11246,37 @@
       {
         "citations": 0,
         "component": "delivery-gates",
+        "declaration_count": 2,
+        "declarations": [
+          {
+            "kind": "async-fn",
+            "line": 10,
+            "name": "pulse_is_the_landing_view_with_complete_cockpit_navigation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 50,
+            "name": "live_update_stream_is_event_stream_and_emits_refresh_signal",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 77,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/cockpit.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
         "line_count": 29,
@@ -11043,6 +11285,20 @@
           "declared.topology"
         ],
         "path": "tests/cockpit_auth_schema_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 122,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/cockpit_browser_test.py",
         "semantic_citations": 0,
         "touched": false
       },
@@ -11465,21 +11721,21 @@
         "citations": 36,
         "class": "semantic",
         "description": "Human-authoritative topology with unique source citations.",
-        "files": 24,
+        "files": 25,
         "id": "declared.topology"
       },
       {
-        "citations": 966,
+        "citations": 979,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 29,
+        "files": 32,
         "id": "rust.declaration"
       },
       {
-        "citations": 15,
+        "citations": 17,
         "class": "mechanical",
         "description": "Literal Axum method and path routes extracted from Rust source.",
-        "files": 3,
+        "files": 4,
         "id": "rust.http-route"
       }
     ],
@@ -11489,7 +11745,7 @@
         "boundary": 3,
         "contract": 1,
         "deployment": 3,
-        "endpoint": 15,
+        "endpoint": 17,
         "external": 4,
         "projection": 2,
         "projector": 1,
@@ -11500,16 +11756,16 @@
         "surface": 1,
         "worker": 6
       },
-      "citations": 51,
-      "declarations": 966,
-      "entities": 51,
-      "entities_with_origin": 51,
-      "files": 106,
+      "citations": 53,
+      "declarations": 979,
+      "entities": 53,
+      "entities_with_origin": 53,
+      "files": 113,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
-      "touched_files": 24,
-      "untouched_files": 82
+      "touched_files": 25,
+      "untouched_files": 88
     }
   },
   "interplay": {
@@ -12252,12 +12508,12 @@
         "page": "delivery"
       },
       {
-        "component": "architecture-policy",
+        "component": "runtime",
         "evidence": [
           {
-            "excerpt": "Q --> L[Leptos private cockpit]",
-            "line": 27,
-            "path": "docs/ARCHITECTURE.md"
+            "excerpt": "fn Cockpit() -> impl IntoView {",
+            "line": 54,
+            "path": "src/cockpit.rs"
           }
         ],
         "id": "cockpit",
@@ -12465,6 +12721,20 @@
         "component": "runtime",
         "evidence": [
           {
+            "excerpt": ".route(\"/\", get(cockpit))",
+            "line": 21,
+            "path": "src/cockpit.rs"
+          }
+        ],
+        "id": "http:cockpit",
+        "kind": "endpoint",
+        "label": "GET /",
+        "page": "experience"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
             "excerpt": ".route(\"/api/v1/graph/{kind}/{id}\", get(graph))",
             "line": 446,
             "path": "src/query.rs"
@@ -12480,13 +12750,27 @@
         "evidence": [
           {
             "excerpt": ".route(\"/healthz\", get(status))",
-            "line": 56,
+            "line": 58,
             "path": "src/main.rs"
           }
         ],
         "id": "http:healthz",
         "kind": "endpoint",
         "label": "GET /healthz",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/api/v1/stream\", get(live_updates))",
+            "line": 22,
+            "path": "src/cockpit.rs"
+          }
+        ],
+        "id": "http:live-updates",
+        "kind": "endpoint",
+        "label": "GET /api/v1/stream",
         "page": "delivery"
       },
       {
@@ -12606,7 +12890,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/status\", get(status))",
-            "line": 55,
+            "line": 56,
             "path": "src/main.rs"
           }
         ],
@@ -12774,7 +13058,7 @@
         "evidence": [
           {
             "excerpt": "info!(%address, \"agent economy monitor listening\");",
-            "line": 58,
+            "line": 60,
             "path": "src/main.rs"
           }
         ],
@@ -12927,9 +13211,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 966,
-    "files": 106,
-    "lines": 28426
+    "declarations": 979,
+    "files": 113,
+    "lines": 30119
   },
   "layers": [
     {
@@ -12970,7 +13254,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "7d4a5e75c226becb1532be7d4d4d5ad487fb8f025a0a3111b0b844849eabb8e1",
+  "source_tree_sha256": "ca5bca99f91cab2a4f78d124c5bbfd9d704f1a57c3e003c9a5ffe3f68b3913a9",
   "stores": {
     "count": 2,
     "items": [
