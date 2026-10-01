@@ -269,7 +269,7 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 326
+      "line_count": 336
     },
     {
       "declaration_count": 0,
@@ -307,7 +307,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5529
+      "line_count": 5582
     },
     {
       "declaration_count": 44,
@@ -373,7 +373,7 @@
       "line_count": 1320
     },
     {
-      "declaration_count": 45,
+      "declaration_count": 54,
       "declarations": [
         "Activity",
         "AutonomySignal",
@@ -388,6 +388,11 @@
         "FeatureSnapshot",
         "LabelDefinition",
         "LabelKind",
+        "MAX_IDENTIFIER_LENGTH",
+        "PROMOTE_SQL",
+        "PostgresClassificationPromotionStore",
+        "PromotionError",
+        "PromotionRequest",
         "Protocol",
         "Rule",
         "activity",
@@ -407,7 +412,9 @@
         "encode_field",
         "evidence_ids",
         "feature_version",
+        "fmt",
         "fn",
+        "from_args",
         "input_snapshot_hash",
         "label_churn_count",
         "label_id",
@@ -417,24 +424,29 @@
         "measures_label_and_input_drift_between_replays",
         "median",
         "new",
+        "promote",
         "removed_labels",
         "replay_state_hash",
+        "run_version",
         "state_hash"
       ],
       "description": "Deterministic buyer spend, cadence, protocol, counterparty, and explicit-autonomy features with versioned core and extension labels plus replay drift measurement.",
       "external": false,
-      "file_count": 5,
+      "file_count": 8,
       "files": [
         "crates/classification/Cargo.toml",
         "crates/classification/src/lib.rs",
         "crates/classification/tests/classification.rs",
         "migrations/0007_buyer_classification.down.sql",
-        "migrations/0007_buyer_classification.up.sql"
+        "migrations/0007_buyer_classification.up.sql",
+        "migrations/0010_classification_promotions.down.sql",
+        "migrations/0010_classification_promotions.up.sql",
+        "src/classification_promotion.rs"
       ],
       "id": "buyer-classification",
       "label": "Buyer behavioral classification",
       "layer": "canonical",
-      "line_count": 1586
+      "line_count": 1935
     },
     {
       "declaration_count": 0,
@@ -467,7 +479,7 @@
       "line_count": 27
     },
     {
-      "declaration_count": 102,
+      "declaration_count": 106,
       "declarations": [
         "CapturedChangeset",
         "CountingStore",
@@ -495,6 +507,8 @@
         "auth_state",
         "binary_wires_a_bounded_outbound_projection_mode",
         "buyer",
+        "buyer_dossier",
+        "buyer_dossier_keeps_classification_and_relationship_evidence_explicit",
         "buyer_timeline",
         "buyers",
         "canonical_event_cites_supporting_observations",
@@ -534,6 +548,8 @@
         "project",
         "project_wiki_uses_authenticated_postgres_gateway_end_to_end",
         "projection_binds_revision_and_approval_before_exact_byte_publication",
+        "promotion_command_requires_exactly_five_arguments",
+        "promotion_request_requires_complete_bounded_authority",
         "protected_api_rejects_before_extractors_and_store_access",
         "protobuf_replay_preserves_the_canonical_event",
         "protobuf_replay_preserves_the_observation",
@@ -574,7 +590,7 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 28,
+      "file_count": 29,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -585,6 +601,7 @@
         "tests/access_control.rs",
         "tests/adapter_boundary.rs",
         "tests/buyer_enrichment_schema_test.py",
+        "tests/classification_promotion.rs",
         "tests/classification_schema_test.py",
         "tests/cockpit.rs",
         "tests/cockpit_auth_schema_test.py",
@@ -608,7 +625,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 5444
+      "line_count": 5898
     },
     {
       "declaration_count": 73,
@@ -1179,7 +1196,7 @@
       "line_count": 3628
     },
     {
-      "declaration_count": 104,
+      "declaration_count": 116,
       "declarations": [
         "API_VERSION",
         "AuthConfig",
@@ -1187,14 +1204,18 @@
         "AuthState",
         "AuthStore",
         "AuthStoreError",
+        "BUYER_CLASSIFICATIONS_SQL",
+        "BuyerDossierReadModel",
         "CACHE_CONTROL",
         "CLIENT",
         "COOKIE_NAME",
         "CSRF_HEADER",
+        "ClassificationReadModel",
         "Cockpit",
         "DEFAULT_PAGE_SIZE",
         "DEFAULT_SESSION_TTL",
         "DashboardPage",
+        "EvidenceProvenanceBinding",
         "FACT_COLUMNS",
         "Fact",
         "GraphReadModel",
@@ -1232,9 +1253,13 @@
         "begin_login",
         "bounded",
         "buyer",
+        "buyer_classification_query_uses_explicit_promotion_authority",
+        "buyer_classifications",
+        "buyer_dossier",
         "buyer_timeline",
         "buyers",
         "cacheable",
+        "classification_promotion",
         "cockpit",
         "cockpit_document",
         "cockpit_router",
@@ -1244,6 +1269,7 @@
         "create_session",
         "decode_cursor",
         "encode_cursor",
+        "evidence_bindings",
         "fact_page",
         "facts",
         "finish_login",
@@ -1251,6 +1277,7 @@
         "from_env",
         "from_shared",
         "graph",
+        "graph_edges_are_explicitly_typed_and_directed",
         "into_response",
         "investigations",
         "live_updates",
@@ -1274,6 +1301,7 @@
         "random_token",
         "remove_session",
         "require_session",
+        "row_to_classification",
         "row_to_fact",
         "row_to_projection_page",
         "search",
@@ -1284,6 +1312,7 @@
         "status",
         "system",
         "tests",
+        "type_graph_edge",
         "with_store"
       ],
       "description": "Axum process entry point and versioned, bounded, provenance-bearing query API.",
@@ -1304,7 +1333,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 5545
+      "line_count": 6211
     },
     {
       "declaration_count": 95,
@@ -1409,8 +1438,8 @@
       "external": false,
       "file_count": 5,
       "files": [
-        "migrations/0010_semantic_projection.down.sql",
-        "migrations/0010_semantic_projection.up.sql",
+        "migrations/0011_semantic_projection.down.sql",
+        "migrations/0011_semantic_projection.up.sql",
         "src/projection.rs",
         "src/projection_gateway.rs",
         "src/projection_runtime.rs"
@@ -1418,7 +1447,7 @@
       "id": "semantic-projection",
       "label": "Isolated semantic-wiki projection",
       "layer": "projection",
-      "line_count": 2019
+      "line_count": 2024
     },
     {
       "declaration_count": 0,
@@ -1863,7 +1892,7 @@
           {
             "family": "specified",
             "line": 3,
-            "path": "migrations/0010_semantic_projection.up.sql",
+            "path": "migrations/0011_semantic_projection.up.sql",
             "rule": "declared.topology",
             "via": "CREATE TABLE agent_economy.projection_snapshots ("
           }
@@ -1952,10 +1981,25 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 525,
+            "line": 736,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/buyers/{id}\", get(buyer))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:buyer-dossier",
+        "kind": "endpoint",
+        "label": "GET /api/v1/buyers/{id}/dossier",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 737,
+            "path": "src/query.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/api/v1/buyers/{id}/dossier\", get(buyer_dossier))"
           }
         ]
       },
@@ -1967,7 +2011,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 526,
+            "line": 738,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/buyers/{id}/timeline\", get(buyer_timeline))"
@@ -1982,7 +2026,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 524,
+            "line": 735,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/buyers\", get(buyers))"
@@ -2012,7 +2056,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 529,
+            "line": 741,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/graph/{kind}/{id}\", get(graph))"
@@ -2027,7 +2071,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 121,
+            "line": 141,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/healthz\", get(status))"
@@ -2042,7 +2086,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 532,
+            "line": 744,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/investigations\", get(investigations))"
@@ -2102,7 +2146,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 522,
+            "line": 733,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/openapi.json\", get(openapi))"
@@ -2177,7 +2221,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 530,
+            "line": 742,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/provenance/{id}\", get(provenance))"
@@ -2192,7 +2236,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 523,
+            "line": 734,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/pulse\", get(pulse))"
@@ -2207,7 +2251,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 531,
+            "line": 743,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/search\", get(search))"
@@ -2222,7 +2266,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 528,
+            "line": 740,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/services/{id}\", get(service))"
@@ -2237,7 +2281,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 527,
+            "line": 739,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/services\", get(services))"
@@ -2252,7 +2296,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 119,
+            "line": 139,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/status\", get(status))"
@@ -2267,7 +2311,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 533,
+            "line": 745,
             "path": "src/query.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/system\", get(system))"
@@ -2373,7 +2417,7 @@
           {
             "family": "specified",
             "line": 242,
-            "path": "migrations/0010_semantic_projection.up.sql",
+            "path": "migrations/0011_semantic_projection.up.sql",
             "rule": "declared.topology",
             "via": "CREATE VIEW agent_economy.projection_mirror_pages AS"
           }
@@ -2402,7 +2446,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 520,
+            "line": 731,
             "path": "src/query.rs",
             "rule": "declared.topology",
             "via": "pub fn api_router(store: Store) -> Router {"
@@ -2432,7 +2476,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 124,
+            "line": 144,
             "path": "src/main.rs",
             "rule": "declared.topology",
             "via": "info!(%address, \"agent economy monitor listening\");"
@@ -2628,7 +2672,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 79,
+        "line_count": 89,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -2642,7 +2686,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 592,
+        "line_count": 595,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -9867,6 +9911,34 @@
       },
       {
         "citations": 0,
+        "component": "buyer-classification",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 20,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0010_classification_promotions.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "buyer-classification",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 199,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0010_classification_promotions.up.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
         "component": "semantic-projection",
         "declaration_count": 0,
         "declarations": [],
@@ -9875,7 +9947,7 @@
         "passes": [
           "declared.topology"
         ],
-        "path": "migrations/0010_semantic_projection.down.sql",
+        "path": "migrations/0011_semantic_projection.down.sql",
         "semantic_citations": 0,
         "touched": false
       },
@@ -9884,12 +9956,12 @@
         "component": "semantic-projection",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 338,
+        "line_count": 343,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
         ],
-        "path": "migrations/0010_semantic_projection.up.sql",
+        "path": "migrations/0011_semantic_projection.up.sql",
         "semantic_citations": 0,
         "touched": true
       },
@@ -9940,7 +10012,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 180,
+        "line_count": 195,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -9968,7 +10040,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1491,
+        "line_count": 1526,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -10496,10 +10568,113 @@
       },
       {
         "citations": 0,
+        "component": "buyer-classification",
+        "declaration_count": 11,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 4,
+            "name": "MAX_IDENTIFIER_LENGTH",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 6,
+            "name": "PROMOTE_SQL",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 9,
+            "name": "PromotionRequest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 18,
+            "name": "from_args",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 44,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 73,
+            "name": "run_version",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 78,
+            "name": "PostgresClassificationPromotionStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 85,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 94,
+            "name": "promote",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 116,
+            "name": "PromotionError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 122,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 130,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "src/classification_promotion.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 92,
+        "line_count": 141,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -10513,7 +10688,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 174,
+        "line_count": 496,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -10593,14 +10768,14 @@
           },
           {
             "kind": "fn",
-            "line": 139,
+            "line": 147,
             "name": "NavLink",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 152,
+        "line_count": 160,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -10612,7 +10787,7 @@
       {
         "citations": 0,
         "component": "runtime",
-        "declaration_count": 6,
+        "declaration_count": 7,
         "declarations": [
           {
             "kind": "mod",
@@ -10625,7 +10800,7 @@
           {
             "kind": "mod",
             "line": 2,
-            "name": "cockpit",
+            "name": "classification_promotion",
             "passes": [
               "rust.declaration"
             ]
@@ -10633,7 +10808,7 @@
           {
             "kind": "mod",
             "line": 3,
-            "name": "projection",
+            "name": "cockpit",
             "passes": [
               "rust.declaration"
             ]
@@ -10641,7 +10816,7 @@
           {
             "kind": "mod",
             "line": 4,
-            "name": "projection_gateway",
+            "name": "projection",
             "passes": [
               "rust.declaration"
             ]
@@ -10649,7 +10824,7 @@
           {
             "kind": "mod",
             "line": 5,
-            "name": "projection_runtime",
+            "name": "projection_gateway",
             "passes": [
               "rust.declaration"
             ]
@@ -10657,13 +10832,21 @@
           {
             "kind": "mod",
             "line": 6,
+            "name": "projection_runtime",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "mod",
+            "line": 7,
             "name": "query",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 6,
+        "line_count": 7,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -10679,7 +10862,7 @@
         "declarations": [
           {
             "kind": "struct",
-            "line": 20,
+            "line": 21,
             "name": "Status",
             "passes": [
               "rust.declaration"
@@ -10687,7 +10870,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 25,
+            "line": 26,
             "name": "status",
             "passes": [
               "rust.declaration"
@@ -10695,7 +10878,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 35,
+            "line": 36,
             "name": "main",
             "passes": [
               "rust.declaration"
@@ -10703,14 +10886,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 64,
+            "line": 84,
             "name": "serve",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 127,
+        "line_count": 147,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -11685,9 +11868,9 @@
         "touched": true
       },
       {
-        "citations": 13,
+        "citations": 14,
         "component": "runtime",
-        "declaration_count": 72,
+        "declaration_count": 85,
         "declarations": [
           {
             "kind": "const",
@@ -11756,6 +11939,30 @@
           {
             "kind": "struct",
             "line": 56,
+            "name": "EvidenceProvenanceBinding",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 62,
+            "name": "ClassificationReadModel",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 80,
+            "name": "BuyerDossierReadModel",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 88,
             "name": "ProvenanceReadModel",
             "passes": [
               "rust.declaration"
@@ -11763,7 +11970,7 @@
           },
           {
             "kind": "struct",
-            "line": 71,
+            "line": 103,
             "name": "SystemReadModel",
             "passes": [
               "rust.declaration"
@@ -11771,7 +11978,7 @@
           },
           {
             "kind": "struct",
-            "line": 76,
+            "line": 108,
             "name": "ProjectionPage",
             "passes": [
               "rust.declaration"
@@ -11779,7 +11986,7 @@
           },
           {
             "kind": "struct",
-            "line": 96,
+            "line": 128,
             "name": "ProjectionPageList",
             "passes": [
               "rust.declaration"
@@ -11787,7 +11994,7 @@
           },
           {
             "kind": "fn",
-            "line": 103,
+            "line": 135,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -11795,7 +12002,7 @@
           },
           {
             "kind": "struct",
-            "line": 113,
+            "line": 145,
             "name": "Versioned",
             "passes": [
               "rust.declaration"
@@ -11803,7 +12010,7 @@
           },
           {
             "kind": "enum",
-            "line": 119,
+            "line": 151,
             "name": "QueryError",
             "passes": [
               "rust.declaration"
@@ -11811,7 +12018,7 @@
           },
           {
             "kind": "fn",
-            "line": 126,
+            "line": 158,
             "name": "into_response",
             "passes": [
               "rust.declaration"
@@ -11819,7 +12026,7 @@
           },
           {
             "kind": "trait",
-            "line": 149,
+            "line": 181,
             "name": "QueryStore",
             "passes": [
               "rust.declaration"
@@ -11827,7 +12034,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 150,
+            "line": 182,
             "name": "pulse",
             "passes": [
               "rust.declaration"
@@ -11835,7 +12042,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 151,
+            "line": 183,
             "name": "buyers",
             "passes": [
               "rust.declaration"
@@ -11843,7 +12050,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 152,
+            "line": 184,
             "name": "buyer",
             "passes": [
               "rust.declaration"
@@ -11851,7 +12058,15 @@
           },
           {
             "kind": "async-fn",
-            "line": 153,
+            "line": 185,
+            "name": "buyer_dossier",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 186,
             "name": "buyer_timeline",
             "passes": [
               "rust.declaration"
@@ -11859,7 +12074,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 159,
+            "line": 192,
             "name": "services",
             "passes": [
               "rust.declaration"
@@ -11867,72 +12082,8 @@
           },
           {
             "kind": "async-fn",
-            "line": 164,
+            "line": 197,
             "name": "service",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 165,
-            "name": "graph",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 167,
-            "name": "provenance",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 168,
-            "name": "search",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 174,
-            "name": "investigations",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 179,
-            "name": "system",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "struct",
-            "line": 181,
-            "name": "PostgresQueryStore",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 188,
-            "name": "new",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 191,
-            "name": "from_shared",
             "passes": [
               "rust.declaration"
             ]
@@ -11940,7 +12091,31 @@
           {
             "kind": "async-fn",
             "line": 198,
-            "name": "facts",
+            "name": "graph",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 200,
+            "name": "provenance",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 201,
+            "name": "search",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 207,
+            "name": "investigations",
             "passes": [
               "rust.declaration"
             ]
@@ -11948,6 +12123,46 @@
           {
             "kind": "async-fn",
             "line": 212,
+            "name": "system",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 214,
+            "name": "PostgresQueryStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 221,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 224,
+            "name": "from_shared",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 231,
+            "name": "facts",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 245,
             "name": "fact_page",
             "passes": [
               "rust.declaration"
@@ -11955,15 +12170,23 @@
           },
           {
             "kind": "async-fn",
-            "line": 228,
+            "line": 261,
             "name": "one_fact",
             "passes": [
               "rust.declaration"
             ]
           },
           {
+            "kind": "async-fn",
+            "line": 272,
+            "name": "buyer_classifications",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "fn",
-            "line": 240,
+            "line": 285,
             "name": "row_to_fact",
             "passes": [
               "rust.declaration"
@@ -11971,7 +12194,31 @@
           },
           {
             "kind": "fn",
-            "line": 256,
+            "line": 301,
+            "name": "row_to_classification",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 339,
+            "name": "evidence_bindings",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 347,
+            "name": "type_graph_edge",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 379,
             "name": "page",
             "passes": [
               "rust.declaration"
@@ -11979,7 +12226,7 @@
           },
           {
             "kind": "fn",
-            "line": 262,
+            "line": 385,
             "name": "encode_cursor",
             "passes": [
               "rust.declaration"
@@ -11987,7 +12234,7 @@
           },
           {
             "kind": "fn",
-            "line": 270,
+            "line": 393,
             "name": "decode_cursor",
             "passes": [
               "rust.declaration"
@@ -11995,15 +12242,23 @@
           },
           {
             "kind": "const",
-            "line": 287,
+            "line": 410,
             "name": "FACT_COLUMNS",
             "passes": [
               "rust.declaration"
             ]
           },
           {
+            "kind": "const",
+            "line": 412,
+            "name": "BUYER_CLASSIFICATIONS_SQL",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "async-fn",
-            "line": 292,
+            "line": 488,
             "name": "pulse",
             "passes": [
               "rust.declaration"
@@ -12011,7 +12266,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 298,
+            "line": 494,
             "name": "buyers",
             "passes": [
               "rust.declaration"
@@ -12019,7 +12274,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 302,
+            "line": 498,
             "name": "buyer",
             "passes": [
               "rust.declaration"
@@ -12027,7 +12282,15 @@
           },
           {
             "kind": "async-fn",
-            "line": 306,
+            "line": 502,
+            "name": "buyer_dossier",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 514,
             "name": "buyer_timeline",
             "passes": [
               "rust.declaration"
@@ -12035,7 +12298,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 339,
+            "line": 547,
             "name": "services",
             "passes": [
               "rust.declaration"
@@ -12043,7 +12306,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 347,
+            "line": 555,
             "name": "service",
             "passes": [
               "rust.declaration"
@@ -12051,7 +12314,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 351,
+            "line": 559,
             "name": "graph",
             "passes": [
               "rust.declaration"
@@ -12059,7 +12322,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 392,
+            "line": 603,
             "name": "provenance",
             "passes": [
               "rust.declaration"
@@ -12067,7 +12330,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 412,
+            "line": 623,
             "name": "search",
             "passes": [
               "rust.declaration"
@@ -12075,7 +12338,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 441,
+            "line": 652,
             "name": "investigations",
             "passes": [
               "rust.declaration"
@@ -12083,7 +12346,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 460,
+            "line": 671,
             "name": "system",
             "passes": [
               "rust.declaration"
@@ -12091,7 +12354,7 @@
           },
           {
             "kind": "fn",
-            "line": 470,
+            "line": 681,
             "name": "row_to_projection_page",
             "passes": [
               "rust.declaration"
@@ -12099,7 +12362,7 @@
           },
           {
             "kind": "type",
-            "line": 492,
+            "line": 703,
             "name": "Store",
             "passes": [
               "rust.declaration"
@@ -12107,7 +12370,7 @@
           },
           {
             "kind": "struct",
-            "line": 496,
+            "line": 707,
             "name": "PageQuery",
             "passes": [
               "rust.declaration"
@@ -12115,7 +12378,7 @@
           },
           {
             "kind": "fn",
-            "line": 502,
+            "line": 713,
             "name": "bounded",
             "passes": [
               "rust.declaration"
@@ -12123,7 +12386,7 @@
           },
           {
             "kind": "struct",
-            "line": 514,
+            "line": 725,
             "name": "SearchQuery",
             "passes": [
               "rust.declaration"
@@ -12131,7 +12394,7 @@
           },
           {
             "kind": "fn",
-            "line": 519,
+            "line": 730,
             "name": "api_router",
             "passes": [
               "rust.declaration"
@@ -12139,7 +12402,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 536,
+            "line": 748,
             "name": "openapi",
             "passes": [
               "rust.declaration"
@@ -12147,7 +12410,7 @@
           },
           {
             "kind": "fn",
-            "line": 594,
+            "line": 807,
             "name": "cacheable",
             "passes": [
               "rust.declaration"
@@ -12155,7 +12418,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 619,
+            "line": 832,
             "name": "pulse",
             "passes": [
               "rust.declaration"
@@ -12163,7 +12426,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 626,
+            "line": 839,
             "name": "buyers",
             "passes": [
               "rust.declaration"
@@ -12171,7 +12434,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 634,
+            "line": 847,
             "name": "buyer",
             "passes": [
               "rust.declaration"
@@ -12179,7 +12442,15 @@
           },
           {
             "kind": "async-fn",
-            "line": 642,
+            "line": 855,
+            "name": "buyer_dossier",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 869,
             "name": "buyer_timeline",
             "passes": [
               "rust.declaration"
@@ -12187,7 +12458,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 651,
+            "line": 878,
             "name": "services",
             "passes": [
               "rust.declaration"
@@ -12195,7 +12466,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 659,
+            "line": 886,
             "name": "service",
             "passes": [
               "rust.declaration"
@@ -12203,7 +12474,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 670,
+            "line": 897,
             "name": "graph",
             "passes": [
               "rust.declaration"
@@ -12211,7 +12482,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 682,
+            "line": 909,
             "name": "provenance",
             "passes": [
               "rust.declaration"
@@ -12219,7 +12490,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 693,
+            "line": 920,
             "name": "search",
             "passes": [
               "rust.declaration"
@@ -12227,7 +12498,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 711,
+            "line": 938,
             "name": "investigations",
             "passes": [
               "rust.declaration"
@@ -12235,7 +12506,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 719,
+            "line": 946,
             "name": "system",
             "passes": [
               "rust.declaration"
@@ -12243,7 +12514,7 @@
           },
           {
             "kind": "mod",
-            "line": 728,
+            "line": 955,
             "name": "tests",
             "passes": [
               "rust.declaration"
@@ -12251,7 +12522,15 @@
           },
           {
             "kind": "fn",
-            "line": 732,
+            "line": 961,
+            "name": "buyer_classification_query_uses_explicit_promotion_authority",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 967,
             "name": "composite_cursor_round_trips_delimiter_characters",
             "passes": [
               "rust.declaration"
@@ -12259,14 +12538,22 @@
           },
           {
             "kind": "fn",
-            "line": 741,
+            "line": 976,
             "name": "malformed_composite_cursor_is_rejected",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 982,
+            "name": "graph_edges_are_explicitly_typed_and_directed",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 745,
+        "line_count": 1011,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -12278,7 +12565,7 @@
       {
         "citations": 0,
         "component": "delivery-gates",
-        "declaration_count": 26,
+        "declaration_count": 27,
         "declarations": [
           {
             "kind": "const",
@@ -12331,6 +12618,14 @@
           {
             "kind": "async-fn",
             "line": 62,
+            "name": "buyer_dossier",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 66,
             "name": "buyer_timeline",
             "passes": [
               "rust.declaration"
@@ -12338,7 +12633,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 71,
+            "line": 75,
             "name": "services",
             "passes": [
               "rust.declaration"
@@ -12346,7 +12641,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 79,
+            "line": 83,
             "name": "service",
             "passes": [
               "rust.declaration"
@@ -12354,7 +12649,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 83,
+            "line": 87,
             "name": "graph",
             "passes": [
               "rust.declaration"
@@ -12362,7 +12657,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 92,
+            "line": 96,
             "name": "provenance",
             "passes": [
               "rust.declaration"
@@ -12370,7 +12665,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 96,
+            "line": 100,
             "name": "search",
             "passes": [
               "rust.declaration"
@@ -12378,7 +12673,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 105,
+            "line": 109,
             "name": "investigations",
             "passes": [
               "rust.declaration"
@@ -12386,7 +12681,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 113,
+            "line": 117,
             "name": "system",
             "passes": [
               "rust.declaration"
@@ -12394,7 +12689,7 @@
           },
           {
             "kind": "fn",
-            "line": 118,
+            "line": 122,
             "name": "auth_config",
             "passes": [
               "rust.declaration"
@@ -12402,7 +12697,7 @@
           },
           {
             "kind": "fn",
-            "line": 127,
+            "line": 131,
             "name": "auth_state",
             "passes": [
               "rust.declaration"
@@ -12410,7 +12705,7 @@
           },
           {
             "kind": "fn",
-            "line": 131,
+            "line": 135,
             "name": "app",
             "passes": [
               "rust.declaration"
@@ -12418,7 +12713,7 @@
           },
           {
             "kind": "fn",
-            "line": 135,
+            "line": 139,
             "name": "app_with_auth",
             "passes": [
               "rust.declaration"
@@ -12426,7 +12721,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 139,
+            "line": 143,
             "name": "login",
             "passes": [
               "rust.declaration"
@@ -12434,7 +12729,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 153,
+            "line": 157,
             "name": "protected_api_rejects_before_extractors_and_store_access",
             "passes": [
               "rust.declaration"
@@ -12442,7 +12737,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 171,
+            "line": 175,
             "name": "login_issues_secure_bounded_session_and_logout_requires_csrf",
             "passes": [
               "rust.declaration"
@@ -12450,7 +12745,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 254,
+            "line": 258,
             "name": "repeated_bad_passwords_are_rate_limited",
             "passes": [
               "rust.declaration"
@@ -12458,7 +12753,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 268,
+            "line": 272,
             "name": "concurrent_bad_passwords_cannot_bypass_the_attempt_budget",
             "passes": [
               "rust.declaration"
@@ -12466,7 +12761,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 290,
+            "line": 294,
             "name": "sessions_and_rate_limits_are_shared_across_runtime_instances",
             "passes": [
               "rust.declaration"
@@ -12474,7 +12769,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 342,
+            "line": 346,
             "name": "login_body_is_bounded_before_password_verification",
             "passes": [
               "rust.declaration"
@@ -12482,14 +12777,14 @@
           },
           {
             "kind": "fn",
-            "line": 349,
+            "line": 353,
             "name": "configuration_requires_argon2id_and_bounded_session_lifetime",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 381,
+        "line_count": 385,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -12570,9 +12865,40 @@
       {
         "citations": 0,
         "component": "delivery-gates",
+        "declaration_count": 2,
+        "declarations": [
+          {
+            "kind": "fn",
+            "line": 4,
+            "name": "promotion_request_requires_complete_bounded_authority",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 38,
+            "name": "promotion_command_requires_exactly_five_arguments",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 53,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/classification_promotion.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 364,
+        "line_count": 515,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -12631,7 +12957,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 122,
+        "line_count": 273,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -13119,11 +13445,11 @@
       {
         "citations": 0,
         "component": "delivery-gates",
-        "declaration_count": 17,
+        "declaration_count": 19,
         "declarations": [
           {
             "kind": "struct",
-            "line": 18,
+            "line": 19,
             "name": "FixtureStore",
             "passes": [
               "rust.declaration"
@@ -13131,7 +13457,7 @@
           },
           {
             "kind": "fn",
-            "line": 19,
+            "line": 20,
             "name": "fact",
             "passes": [
               "rust.declaration"
@@ -13139,7 +13465,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 33,
+            "line": 34,
             "name": "pulse",
             "passes": [
               "rust.declaration"
@@ -13147,7 +13473,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 36,
+            "line": 37,
             "name": "buyers",
             "passes": [
               "rust.declaration"
@@ -13155,7 +13481,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 44,
+            "line": 45,
             "name": "buyer",
             "passes": [
               "rust.declaration"
@@ -13163,7 +13489,15 @@
           },
           {
             "kind": "async-fn",
-            "line": 48,
+            "line": 49,
+            "name": "buyer_dossier",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 95,
             "name": "buyer_timeline",
             "passes": [
               "rust.declaration"
@@ -13171,7 +13505,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 60,
+            "line": 107,
             "name": "services",
             "passes": [
               "rust.declaration"
@@ -13179,7 +13513,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 68,
+            "line": 115,
             "name": "service",
             "passes": [
               "rust.declaration"
@@ -13187,7 +13521,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 72,
+            "line": 119,
             "name": "graph",
             "passes": [
               "rust.declaration"
@@ -13195,7 +13529,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 85,
+            "line": 132,
             "name": "provenance",
             "passes": [
               "rust.declaration"
@@ -13203,7 +13537,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 101,
+            "line": 148,
             "name": "search",
             "passes": [
               "rust.declaration"
@@ -13211,7 +13545,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 110,
+            "line": 157,
             "name": "system",
             "passes": [
               "rust.declaration"
@@ -13219,7 +13553,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 116,
+            "line": 163,
             "name": "investigations",
             "passes": [
               "rust.declaration"
@@ -13227,7 +13561,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 147,
+            "line": 194,
             "name": "list_queries_are_bounded_and_cacheable_with_provenance",
             "passes": [
               "rust.declaration"
@@ -13235,7 +13569,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 188,
+            "line": 235,
             "name": "purpose_built_surface_is_documented_without_graphql_or_sql",
             "passes": [
               "rust.declaration"
@@ -13243,7 +13577,7 @@
           },
           {
             "kind": "fn",
-            "line": 291,
+            "line": 340,
             "name": "postgres_store_is_the_runtime_query_backend",
             "passes": [
               "rust.declaration"
@@ -13251,14 +13585,22 @@
           },
           {
             "kind": "async-fn",
-            "line": 299,
+            "line": 348,
             "name": "restricted_dashboard_role_serves_every_query_path",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 430,
+            "name": "buyer_dossier_keeps_classification_and_relationship_evidence_explicit",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 377,
+        "line_count": 472,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -13553,14 +13895,14 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1158,
+        "citations": 1188,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 39,
+        "files": 41,
         "id": "rust.declaration"
       },
       {
-        "citations": 22,
+        "citations": 23,
         "class": "mechanical",
         "description": "Literal Axum method and path routes extracted from Rust source.",
         "files": 5,
@@ -13573,7 +13915,7 @@
         "boundary": 3,
         "contract": 1,
         "deployment": 3,
-        "endpoint": 22,
+        "endpoint": 23,
         "external": 4,
         "projection": 2,
         "projector": 1,
@@ -13584,16 +13926,16 @@
         "surface": 1,
         "worker": 6
       },
-      "citations": 58,
-      "declarations": 1158,
-      "entities": 58,
-      "entities_with_origin": 58,
-      "files": 123,
+      "citations": 59,
+      "declarations": 1188,
+      "entities": 59,
+      "entities_with_origin": 59,
+      "files": 127,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
       "touched_files": 29,
-      "untouched_files": 94
+      "untouched_files": 98
     }
   },
   "interplay": {
@@ -14425,7 +14767,7 @@
           {
             "excerpt": "CREATE TABLE agent_economy.projection_snapshots (",
             "line": 3,
-            "path": "migrations/0010_semantic_projection.up.sql"
+            "path": "migrations/0011_semantic_projection.up.sql"
           }
         ],
         "id": "evidence-snapshot",
@@ -14508,7 +14850,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/buyers/{id}\", get(buyer))",
-            "line": 525,
+            "line": 736,
             "path": "src/query.rs"
           }
         ],
@@ -14521,8 +14863,22 @@
         "component": "runtime",
         "evidence": [
           {
+            "excerpt": ".route(\"/api/v1/buyers/{id}/dossier\", get(buyer_dossier))",
+            "line": 737,
+            "path": "src/query.rs"
+          }
+        ],
+        "id": "http:buyer-dossier",
+        "kind": "endpoint",
+        "label": "GET /api/v1/buyers/{id}/dossier",
+        "page": "delivery"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
             "excerpt": ".route(\"/api/v1/buyers/{id}/timeline\", get(buyer_timeline))",
-            "line": 526,
+            "line": 738,
             "path": "src/query.rs"
           }
         ],
@@ -14536,7 +14892,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/buyers\", get(buyers))",
-            "line": 524,
+            "line": 735,
             "path": "src/query.rs"
           }
         ],
@@ -14564,7 +14920,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/graph/{kind}/{id}\", get(graph))",
-            "line": 529,
+            "line": 741,
             "path": "src/query.rs"
           }
         ],
@@ -14578,7 +14934,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/healthz\", get(status))",
-            "line": 121,
+            "line": 141,
             "path": "src/main.rs"
           }
         ],
@@ -14592,7 +14948,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/investigations\", get(investigations))",
-            "line": 532,
+            "line": 744,
             "path": "src/query.rs"
           }
         ],
@@ -14648,7 +15004,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/openapi.json\", get(openapi))",
-            "line": 522,
+            "line": 733,
             "path": "src/query.rs"
           }
         ],
@@ -14718,7 +15074,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/provenance/{id}\", get(provenance))",
-            "line": 530,
+            "line": 742,
             "path": "src/query.rs"
           }
         ],
@@ -14732,7 +15088,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/pulse\", get(pulse))",
-            "line": 523,
+            "line": 734,
             "path": "src/query.rs"
           }
         ],
@@ -14746,7 +15102,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/search\", get(search))",
-            "line": 531,
+            "line": 743,
             "path": "src/query.rs"
           }
         ],
@@ -14760,7 +15116,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/services/{id}\", get(service))",
-            "line": 528,
+            "line": 740,
             "path": "src/query.rs"
           }
         ],
@@ -14774,7 +15130,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/services\", get(services))",
-            "line": 527,
+            "line": 739,
             "path": "src/query.rs"
           }
         ],
@@ -14788,7 +15144,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/status\", get(status))",
-            "line": 119,
+            "line": 139,
             "path": "src/main.rs"
           }
         ],
@@ -14802,7 +15158,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/system\", get(system))",
-            "line": 533,
+            "line": 745,
             "path": "src/query.rs"
           }
         ],
@@ -14901,7 +15257,7 @@
           {
             "excerpt": "CREATE VIEW agent_economy.projection_mirror_pages AS",
             "line": 242,
-            "path": "migrations/0010_semantic_projection.up.sql"
+            "path": "migrations/0011_semantic_projection.up.sql"
           }
         ],
         "id": "projection-mirror",
@@ -14928,7 +15284,7 @@
         "evidence": [
           {
             "excerpt": "pub fn api_router(store: Store) -> Router {",
-            "line": 520,
+            "line": 731,
             "path": "src/query.rs"
           }
         ],
@@ -14956,7 +15312,7 @@
         "evidence": [
           {
             "excerpt": "info!(%address, \"agent economy monitor listening\");",
-            "line": 124,
+            "line": 144,
             "path": "src/main.rs"
           }
         ],
@@ -15110,9 +15466,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1158,
-    "files": 123,
-    "lines": 33660
+    "declarations": 1188,
+    "files": 127,
+    "lines": 35197
   },
   "layers": [
     {
@@ -15153,7 +15509,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "6ca04269a1f35ab88cdd3a85b431d39508ee3b4c618ecb6a08bceefc3880d7a2",
+  "source_tree_sha256": "4a8977fcd63f88d1b0d757dd30ed5b25331109181082fa97a0bd49cfaeba5df0",
   "stores": {
     "count": 2,
     "items": [

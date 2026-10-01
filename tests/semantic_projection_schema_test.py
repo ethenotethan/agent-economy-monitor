@@ -2,8 +2,8 @@ import pathlib
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-UP = ROOT / "migrations" / "0010_semantic_projection.up.sql"
-DOWN = ROOT / "migrations" / "0010_semantic_projection.down.sql"
+UP = ROOT / "migrations" / "0011_semantic_projection.up.sql"
+DOWN = ROOT / "migrations" / "0011_semantic_projection.down.sql"
 
 
 class SemanticProjectionMigrationTest(unittest.TestCase):

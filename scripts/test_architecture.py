@@ -5,12 +5,17 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import io
 import json
+import os
 import shutil
 import subprocess
 import tempfile
 import unittest
+import urllib.error
+from email.message import Message
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = ROOT / "scripts" / "build_architecture.py"
@@ -100,6 +105,36 @@ class ArchitectureCompilerTests(unittest.TestCase):
 
         problems = checker.evaluate(ROOT, unavailable)
         self.assertTrue(any("cannot fetch immutable Harness source" in problem for problem in problems), problems)
+
+    def test_contract_fetch_retries_a_secondary_rate_limit(self) -> None:
+        checker = load_contract_checker()
+        attempts = 0
+
+        def urlopen(_request, timeout):
+            nonlocal attempts
+            attempts += 1
+            self.assertEqual(30, timeout)
+            if attempts == 1:
+                headers = Message()
+                headers["Retry-After"] = "0"
+                raise urllib.error.HTTPError(
+                    "https://api.github.com/pinned",
+                    429,
+                    "Too Many Requests",
+                    headers,
+                    None,
+                )
+            return io.BytesIO(b"pinned bytes")
+
+        with (
+            mock.patch.dict(os.environ, {"GH_TOKEN": "test-token"}),
+            mock.patch.object(checker.urllib.request, "urlopen", side_effect=urlopen),
+            mock.patch.object(checker.time, "sleep") as sleep,
+        ):
+            self.assertEqual(b"pinned bytes", checker.fetch_url("https://api.github.com/pinned"))
+
+        self.assertEqual(2, attempts)
+        sleep.assert_called_once_with(0.0)
 
     def test_contract_check_rejects_source_metadata_drift(self) -> None:
         checker = load_contract_checker()

@@ -49,7 +49,7 @@
         "src/projection.rs",
         "src/projection_gateway.rs",
         "src/projection_runtime.rs",
-        "migrations/0010_semantic_projection.*.sql"
+        "migrations/0011_semantic_projection.*.sql"
       ]
     },
     {
@@ -179,7 +179,9 @@
       "layer": "canonical",
       "patterns": [
         "crates/classification/**",
-        "migrations/0007_buyer_classification.*.sql"
+        "src/classification_promotion.rs",
+        "migrations/0007_buyer_classification.*.sql",
+        "migrations/0010_classification_promotions.*.sql"
       ]
     },
     {
@@ -533,11 +535,11 @@
     {"authority": "specified", "component": "query-read-models", "id": "dashboard-read-models", "kind": "schema", "label": "Dashboard query read models", "origin": {"path": "migrations/0008_query_read_models.up.sql", "search": "CREATE VIEW agent_economy.dashboard_facts"}, "page": "canonical"},
     {"authority": "mechanical", "component": "runtime", "id": "http:investigations", "kind": "endpoint", "label": "GET /api/v1/investigations", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/investigations"}, "page": "delivery"},
     {"authority": "specified", "component": "runtime", "id": "cockpit", "kind": "surface", "label": "Leptos private cockpit", "origin": {"path": "src/cockpit.rs", "search": "fn Cockpit()"}, "page": "experience"},
-    {"authority": "specified", "component": "semantic-projection", "id": "evidence-snapshot", "kind": "boundary", "label": "Bounded evidence snapshots", "origin": {"path": "migrations/0010_semantic_projection.up.sql", "search": "CREATE TABLE agent_economy.projection_snapshots"}, "page": "projection"},
+    {"authority": "specified", "component": "semantic-projection", "id": "evidence-snapshot", "kind": "boundary", "label": "Bounded evidence snapshots", "origin": {"path": "migrations/0011_semantic_projection.up.sql", "search": "CREATE TABLE agent_economy.projection_snapshots"}, "page": "projection"},
     {"authority": "specified", "component": "semantic-projection", "id": "llm-projector", "kind": "projector", "label": "LLM projector", "origin": {"path": "src/projection_runtime.rs", "search": "impl Projector for HttpProjector"}, "page": "projection"},
     {"authority": "specified", "component": "semantic-projection", "id": "semantic-wiki", "kind": "projection", "label": "Agentic Commerce Intelligence wiki", "origin": {"path": "src/projection.rs", "search": "const WIKI_ID"}, "page": "projection"},
     {"authority": "specified", "component": "semantic-projection", "id": "local-wiki-projector", "kind": "worker", "label": "Local Hermes projection worker", "origin": {"path": "src/projection_runtime.rs", "search": "pub async fn run_projection_once"}, "page": "projection"},
-    {"authority": "specified", "component": "semantic-projection", "id": "projection-mirror", "kind": "projection", "label": "Approved read-only projection mirror", "origin": {"path": "migrations/0010_semantic_projection.up.sql", "search": "CREATE VIEW agent_economy.projection_mirror_pages"}, "page": "projection"},
+    {"authority": "specified", "component": "semantic-projection", "id": "projection-mirror", "kind": "projection", "label": "Approved read-only projection mirror", "origin": {"path": "migrations/0011_semantic_projection.up.sql", "search": "CREATE VIEW agent_economy.projection_mirror_pages"}, "page": "projection"},
     {"authority": "mechanical", "component": "semantic-projection", "id": "http:projection-jobs-next", "kind": "endpoint", "label": "GET /api/v1/projection/jobs/next", "origin": {"method": "get", "path": "src/projection_gateway.rs", "route": "/api/v1/projection/jobs/next"}, "page": "projection"},
     {"authority": "mechanical", "component": "semantic-projection", "id": "http:projection-snapshot", "kind": "endpoint", "label": "GET /api/v1/projection/jobs/{job_id}/snapshot", "origin": {"method": "get", "path": "src/projection_gateway.rs", "route": "/api/v1/projection/jobs/{job_id}/snapshot"}, "page": "projection"},
     {"authority": "mechanical", "component": "semantic-projection", "id": "http:projection-approval", "kind": "endpoint", "label": "GET /api/v1/projection/jobs/{job_id}/approvals/{candidate_sha256}", "origin": {"method": "get", "path": "src/projection_gateway.rs", "route": "/api/v1/projection/jobs/{job_id}/approvals/{candidate_sha256}"}, "page": "projection"},
@@ -556,6 +558,7 @@
     {"authority": "mechanical", "component": "runtime", "id": "http:pulse", "kind": "endpoint", "label": "GET /api/v1/pulse", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/pulse"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:buyers", "kind": "endpoint", "label": "GET /api/v1/buyers", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:buyer", "kind": "endpoint", "label": "GET /api/v1/buyers/{id}", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers/{id}"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:buyer-dossier", "kind": "endpoint", "label": "GET /api/v1/buyers/{id}/dossier", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers/{id}/dossier"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:buyer-timeline", "kind": "endpoint", "label": "GET /api/v1/buyers/{id}/timeline", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers/{id}/timeline"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:services", "kind": "endpoint", "label": "GET /api/v1/services", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/services"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:service", "kind": "endpoint", "label": "GET /api/v1/services/{id}", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/services/{id}"}, "page": "delivery"},

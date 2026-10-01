@@ -35,6 +35,86 @@ class CockpitBrowserTest(unittest.TestCase):
                 elif path == "/api/v1/buyers":
                     body = json.dumps({"api_version": "v1", "items": [self.fact("buyer:fixture", "buyer", "Buyer fixture")], "next_cursor": None}).encode()
                     content_type = "application/json"
+                elif path == "/api/v1/buyers/buyer%3Afixture/dossier":
+                    buyer = self.fact("buyer:fixture", "buyer", "Buyer fixture")
+                    timeline = self.fact("settlement:fixture", "settlement", "Settled x402 payment")
+                    timeline["value"].update({"settled_at": "2000-01-01T00:00:00Z", "service_id": "service:fixture"})
+                    service = self.fact("service:fixture", "service", "Service fixture")
+                    edge = self.fact("edge:fixture", "attribution", "explicit_requirement")
+                    edge["provenance_ids"] = [
+                        "11111111-1111-1111-1111-111111111111",
+                        "22222222-2222-2222-2222-222222222222",
+                    ]
+                    edge["value"] = {
+                        "source": {"kind": "buyer", "id": "buyer:fixture"},
+                        "target": {"kind": "service", "id": "service:fixture"},
+                        "predicate": "paid_for",
+                        "direction": "outbound",
+                        "attribution_method": "explicit_requirement",
+                        "confidence": "0.9100",
+                    }
+                    body = json.dumps({
+                        "api_version": "v1",
+                        "data": {
+                            "buyer": buyer,
+                            "classifications": [{
+                                "claim_id": "claim:automation",
+                                "label": "automated-buyer",
+                                "status": "disputed",
+                                "confidence": "0.7300",
+                                "method": "rules@1",
+                                "evidence_window_start": "1999-12-01T00:00:00Z",
+                                "evidence_window_end": "2000-01-01T00:00:00Z",
+                                "valid_to": "2000-01-02T00:00:00Z",
+                                "is_stale": True,
+                                "provenance_ids": ["11111111-1111-1111-1111-111111111111"],
+                                "supporting_evidence_ids": ["sha256:supporting"],
+                                "conflicting_evidence_ids": ["sha256:conflicting"],
+                                "supporting_evidence": [{
+                                    "evidence_id": "sha256:supporting",
+                                    "provenance_ids": ["22222222-2222-2222-2222-222222222222"],
+                                }],
+                                "conflicting_evidence": [{
+                                    "evidence_id": "sha256:conflicting",
+                                    "provenance_ids": ["33333333-3333-3333-3333-333333333333"],
+                                }],
+                            }],
+                            "timeline": {"api_version": "v1", "items": [timeline], "next_cursor": None},
+                            "graph": {"root": buyer, "nodes": [service], "edges": [edge]},
+                        },
+                    }).encode()
+                    content_type = "application/json"
+                elif path.startswith("/api/v1/provenance/"):
+                    provenance_id = path.rsplit("/", 1)[-1]
+                    source_by_provenance = {
+                        "11111111-1111-1111-1111-111111111111": "runtime-402:fixture",
+                        "22222222-2222-2222-2222-222222222222": "supporting-source:fixture",
+                        "33333333-3333-3333-3333-333333333333": "conflicting-source:fixture",
+                    }
+                    if provenance_id not in source_by_provenance:
+                        self.send_error(404)
+                        return
+                    body = json.dumps({
+                        "api_version": "v1",
+                        "data": {
+                            "provenance_id": provenance_id,
+                            "source_id": source_by_provenance[provenance_id],
+                            "observed_at": "2000-01-01T00:00:00Z",
+                            "parser_version": "x402-adapter@1",
+                            "provider": "fixture-rpc",
+                            "chain_scope": "base",
+                            "block_reference": "12345",
+                            "transaction_reference": "0xfixture",
+                            "finality": "finalized",
+                            "evidence_id": "sha256:fixture",
+                            "evidence_sha256": "a" * 64,
+                        },
+                    }).encode()
+                    content_type = "application/json"
+                elif path == "/api/v1/graph/service/service%3Afixture":
+                    service = self.fact("service:fixture", "service", "Service fixture")
+                    body = json.dumps({"api_version": "v1", "data": {"root": service, "nodes": [], "edges": []}}).encode()
+                    content_type = "application/json"
                 else:
                     self.send_error(404)
                     return
@@ -85,6 +165,22 @@ class CockpitBrowserTest(unittest.TestCase):
         expect(page.locator("#view-description")).to_contain_text("A handle is not a real-world identity")
         page.close()
 
+    def test_buyer_list_keeps_dossier_and_provenance_as_sibling_controls(self):
+        page = self.browser.new_page(viewport={"width": 1440, "height": 900})
+        page.goto(f"http://127.0.0.1:{self.port}/?view=buyers")
+
+        card = page.locator('article[data-buyer-id="buyer:fixture"]')
+        expect(card).to_have_count(1)
+        expect(card.locator('button[data-open-buyer-id="buyer:fixture"]')).to_have_count(1)
+        provenance = card.locator("button[data-provenance-id]")
+        expect(provenance).to_have_count(1)
+
+        provenance.click()
+        expect(page).to_have_url(f"http://127.0.0.1:{self.port}/?view=buyers")
+        expect(page.locator("#provenance-drawer")).to_have_attribute("aria-hidden", "false")
+        expect(page.locator("#provenance-drawer")).to_contain_text("runtime-402:fixture")
+        page.close()
+
     def test_slow_previous_view_cannot_overwrite_current_navigation(self):
         page = self.browser.new_page(viewport={"width": 1440, "height": 900})
 
@@ -115,6 +211,61 @@ class CockpitBrowserTest(unittest.TestCase):
         expect(page.locator("#view-title")).to_have_text("Buyers")
         expect(page.locator(".fact-card")).to_contain_text("Buyer fixture")
         expect(page.locator("#view-root")).not_to_contain_text("Slow Pulse")
+        page.close()
+
+    def test_buyer_dossier_exposes_classification_graph_and_provenance_lineage(self):
+        page = self.browser.new_page(viewport={"width": 1440, "height": 900})
+        page.goto(f"http://127.0.0.1:{self.port}/?view=buyers")
+        page.locator('[data-open-buyer-id="buyer:fixture"]').click()
+
+        expect(page.locator(".dossier-title")).to_have_text("Buyer fixture")
+        classification = page.locator(".classification-card")
+        expect(classification).to_contain_text("automated-buyer")
+        expect(classification).to_contain_text("DISPUTED")
+        expect(classification).to_contain_text("73.00%")
+        expect(classification).to_contain_text("STALE")
+        expect(classification).to_contain_text("1 CONFLICT")
+        expect(classification).to_contain_text("sha256:conflicting")
+
+        edge = page.locator('[data-source-kind="buyer"][data-target-kind="service"]')
+        expect(edge).to_contain_text("paid_for")
+        expect(edge).to_contain_text("91.00%")
+        expect(edge.locator(".provenance-trigger")).to_have_count(2)
+
+        edge.locator('[data-related-kind="service"]').click()
+        expect(page.locator(".graph-title")).to_have_text("Service fixture")
+        page.go_back()
+        expect(page.locator(".dossier-title")).to_have_text("Buyer fixture")
+
+        classification.locator(
+            '[data-provenance-id="11111111-1111-1111-1111-111111111111"]'
+        ).click()
+        drawer = page.locator("#provenance-drawer")
+        expect(drawer).to_have_attribute("aria-hidden", "false")
+        expect(drawer).to_contain_text("runtime-402:fixture")
+        expect(drawer).to_contain_text("x402-adapter@1")
+        expect(drawer).to_contain_text("finalized")
+        expect(drawer).to_contain_text("a" * 64)
+        expect(drawer).to_contain_text("rules@1")
+        expect(drawer).to_contain_text("73.00%")
+        page.close()
+
+    def test_classification_evidence_opens_supporting_and_conflicting_lineage(self):
+        page = self.browser.new_page(viewport={"width": 1440, "height": 900})
+        page.goto(f"http://127.0.0.1:{self.port}/?view=buyers&buyer=buyer%3Afixture")
+
+        supporting = page.locator('[data-evidence-role="supporting"]')
+        conflicting = page.locator('[data-evidence-role="conflicting"]')
+        expect(supporting).to_contain_text("sha256:supporting")
+        expect(conflicting).to_contain_text("sha256:conflicting")
+
+        supporting.locator("button[data-provenance-id]").click()
+        drawer = page.locator("#provenance-drawer")
+        expect(drawer).to_contain_text("supporting-source:fixture")
+        page.locator("#drawer-close").click()
+
+        conflicting.locator("button[data-provenance-id]").click()
+        expect(drawer).to_contain_text("conflicting-source:fixture")
         page.close()
 
 

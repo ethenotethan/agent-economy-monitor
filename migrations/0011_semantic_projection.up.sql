@@ -327,7 +327,12 @@ GRANT SELECT ON
     agent_economy.attribution_run_seals,
     agent_economy.attribution_candidates,
     agent_economy.settlements,
+    agent_economy.current_event_finality,
     agent_economy.payment_requirements,
+    agent_economy.current_buyer_classification_runs,
+    agent_economy.classification_run_claims,
+    agent_economy.classification_claims,
+    agent_economy.classification_claim_evidence,
     agent_economy.provenance_records,
     agent_economy.evidence_objects
 TO agent_economy_dashboard_reader;

@@ -169,7 +169,7 @@ async fn spawn_mock_server() -> (String, JoinHandle<()>) {
 }
 
 #[tokio::test]
-#[ignore = "requires a disposable PostgreSQL migrated through 0010"]
+#[ignore = "requires a disposable PostgreSQL migrated through 0011"]
 async fn project_wiki_uses_authenticated_postgres_gateway_end_to_end() {
     let database_url = std::env::var("AEM_PROJECTION_TEST_DATABASE_URL")
         .expect("AEM_PROJECTION_TEST_DATABASE_URL must identify disposable PostgreSQL");

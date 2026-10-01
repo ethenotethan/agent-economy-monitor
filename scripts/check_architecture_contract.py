@@ -33,6 +33,8 @@ import json
 import os
 import subprocess
 import sys
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any, Callable, List
@@ -90,8 +92,21 @@ def fetch_url(url: str) -> bytes:
     if token:
         headers["Authorization"] = f"Bearer {token}"
     request = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(request, timeout=30) as response:
-        return response.read()
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                return response.read()
+        except urllib.error.HTTPError as exc:
+            if exc.code != 429 or attempt == 2:
+                raise
+            retry_after = exc.headers.get("Retry-After") if exc.headers else None
+            try:
+                delay = float(retry_after) if retry_after is not None else float(2**attempt)
+            except ValueError:
+                delay = float(2**attempt)
+            time.sleep(min(max(delay, 0.0), 60.0))
+
+    raise AssertionError("unreachable retry loop")
 
 
 def evaluate(root: Path = ROOT, fetch: Callable[[str], bytes] = fetch_url) -> List[str]:

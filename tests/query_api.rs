@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use agent_economy_monitor::query::{
-    DashboardPage, Fact, GraphReadModel, PostgresQueryStore, ProjectionPage, ProjectionPageList,
-    ProvenanceReadModel, QueryError, QueryStore, SystemReadModel, api_router,
+    BuyerDossierReadModel, ClassificationReadModel, DashboardPage, EvidenceProvenanceBinding, Fact,
+    GraphReadModel, PostgresQueryStore, ProjectionPage, ProjectionPageList, ProvenanceReadModel,
+    QueryError, QueryStore, SystemReadModel, api_router,
 };
 use async_trait::async_trait;
 use axum::{
@@ -44,6 +45,52 @@ impl QueryStore for FixtureStore {
 
     async fn buyer(&self, id: &str) -> Result<Option<Fact>, QueryError> {
         Ok(Some(fact(id, "buyer")))
+    }
+
+    async fn buyer_dossier(&self, id: &str) -> Result<Option<BuyerDossierReadModel>, QueryError> {
+        Ok(Some(BuyerDossierReadModel {
+            buyer: fact(id, "buyer"),
+            classifications: vec![ClassificationReadModel {
+                claim_id: "claim:automation".into(),
+                label: "automated-buyer".into(),
+                status: "disputed".into(),
+                confidence: "0.7300".into(),
+                method: "rules@1".into(),
+                evidence_window_start: "2026-09-01T00:00:00Z".into(),
+                evidence_window_end: "2026-09-30T00:00:00Z".into(),
+                valid_to: Some("2026-09-30T01:00:00Z".into()),
+                is_stale: true,
+                provenance_ids: vec!["11111111-1111-1111-1111-111111111111".into()],
+                supporting_evidence_ids: vec!["sha256:supporting".into()],
+                conflicting_evidence_ids: vec!["sha256:conflicting".into()],
+                supporting_evidence: vec![EvidenceProvenanceBinding {
+                    evidence_id: "sha256:supporting".into(),
+                    provenance_ids: vec!["22222222-2222-2222-2222-222222222222".into()],
+                }],
+                conflicting_evidence: vec![EvidenceProvenanceBinding {
+                    evidence_id: "sha256:conflicting".into(),
+                    provenance_ids: vec!["33333333-3333-3333-3333-333333333333".into()],
+                }],
+            }],
+            timeline: DashboardPage::new(vec![fact(&format!("timeline:{id}"), "settlement")], None),
+            graph: GraphReadModel {
+                root: fact(id, "buyer"),
+                nodes: vec![fact("service:1", "service")],
+                edges: vec![Fact {
+                    value: json!({
+                        "source": {"kind": "buyer", "id": id},
+                        "target": {"kind": "service", "id": "service:1"},
+                        "predicate": "paid_for",
+                        "direction": "outbound",
+                        "attribution_method": "explicit_requirement",
+                        "confidence": "0.9100",
+                        "supporting_evidence_ids": ["sha256:supporting"],
+                        "conflicting_evidence_ids": ["sha256:conflicting"]
+                    }),
+                    ..fact("edge:1", "attribution")
+                }],
+            },
+        }))
     }
 
     async fn buyer_timeline(
@@ -191,6 +238,7 @@ async fn purpose_built_surface_is_documented_without_graphql_or_sql() {
         "/api/v1/pulse",
         "/api/v1/buyers",
         "/api/v1/buyers/buyer:1",
+        "/api/v1/buyers/buyer:1/dossier",
         "/api/v1/buyers/buyer:1/timeline",
         "/api/v1/services",
         "/api/v1/services/service:1",
@@ -231,6 +279,7 @@ async fn purpose_built_surface_is_documented_without_graphql_or_sql() {
     );
     for path in [
         "/api/v1/buyers/{id}",
+        "/api/v1/buyers/{id}/dossier",
         "/api/v1/buyers/{id}/timeline",
         "/api/v1/services/{id}",
         "/api/v1/graph/{kind}/{id}",
@@ -295,7 +344,7 @@ fn postgres_store_is_the_runtime_query_backend() {
 }
 
 #[tokio::test]
-#[ignore = "requires a disposable PostgreSQL migrated through 0010"]
+#[ignore = "requires a disposable PostgreSQL migrated through 0011"]
 async fn restricted_dashboard_role_serves_every_query_path() {
     let database_url = std::env::var("AEM_QUERY_TEST_DATABASE_URL")
         .expect("AEM_QUERY_TEST_DATABASE_URL must identify disposable PostgreSQL");
@@ -358,6 +407,7 @@ async fn restricted_dashboard_role_serves_every_query_path() {
         "/api/v1/pulse",
         "/api/v1/buyers",
         "/api/v1/buyers/buyer:test",
+        "/api/v1/buyers/buyer:test/dossier",
         "/api/v1/buyers/buyer:test/timeline",
         "/api/v1/services",
         "/api/v1/services/service:test",
@@ -374,4 +424,49 @@ async fn restricted_dashboard_role_serves_every_query_path() {
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK, "{path}");
     }
+}
+
+#[tokio::test]
+async fn buyer_dossier_keeps_classification_and_relationship_evidence_explicit() {
+    let response = api_router(Arc::new(FixtureStore))
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/buyers/buyer:1/dossier")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body: Value =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    let classification = &body["data"]["classifications"][0];
+    assert_eq!(classification["status"], "disputed");
+    assert_eq!(classification["confidence"], "0.7300");
+    assert!(
+        classification["valid_to"].is_string(),
+        "stale validity must remain visible"
+    );
+    assert_eq!(classification["is_stale"], true);
+    assert_eq!(
+        classification["conflicting_evidence_ids"][0],
+        "sha256:conflicting"
+    );
+    assert_eq!(
+        classification["supporting_evidence"][0]["provenance_ids"][0],
+        "22222222-2222-2222-2222-222222222222"
+    );
+    assert_eq!(
+        classification["conflicting_evidence"][0]["provenance_ids"][0],
+        "33333333-3333-3333-3333-333333333333"
+    );
+
+    let edge = &body["data"]["graph"]["edges"][0]["value"];
+    assert_eq!(edge["source"]["kind"], "buyer");
+    assert_eq!(edge["target"]["kind"], "service");
+    assert_eq!(edge["predicate"], "paid_for");
+    assert_eq!(edge["direction"], "outbound");
+    assert_eq!(edge["attribution_method"], "explicit_requirement");
+    assert_eq!(edge["confidence"], "0.9100");
 }
