@@ -69,6 +69,18 @@ class SemanticProjectionMigrationTest(unittest.TestCase):
         self.assertIn("dashboard_facts,", sql)
         self.assertIn("dashboard_pulse,", sql)
         self.assertIn("dashboard_system,", sql)
+        for relation in (
+            "namespaces",
+            "attribution_runs",
+            "attribution_run_seals",
+            "attribution_candidates",
+            "settlements",
+            "payment_requirements",
+            "provenance_records",
+            "evidence_objects",
+        ):
+            self.assertIn(f"agent_economy.{relation}", sql)
+        self.assertIn("GRANT agent_economy_dashboard_reader TO CURRENT_USER", sql)
 
     def test_down_migration_fails_closed_before_removing_projection_history(self):
         sql = DOWN.read_text()

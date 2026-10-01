@@ -467,7 +467,7 @@
       "line_count": 27
     },
     {
-      "declaration_count": 82,
+      "declaration_count": 83,
       "declarations": [
         "CountingStore",
         "Error",
@@ -537,6 +537,7 @@
         "rendered_markdown_links_must_exactly_match_safe_sidecar_links",
         "repeated_bad_passwords_are_rate_limited",
         "replace_generated_section",
+        "restricted_dashboard_role_serves_every_query_path",
         "runtime_config_requires_outbound_https_and_redacts_bearer_tokens",
         "search",
         "service",
@@ -586,7 +587,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 4743
+      "line_count": 4838
     },
     {
       "declaration_count": 73,
@@ -1375,7 +1376,7 @@
       "id": "semantic-projection",
       "label": "Isolated semantic-wiki projection",
       "layer": "projection",
-      "line_count": 1517
+      "line_count": 1527
     },
     {
       "declaration_count": 0,
@@ -9781,7 +9782,7 @@
         "component": "semantic-projection",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 318,
+        "line_count": 328,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -12539,11 +12540,11 @@
       {
         "citations": 0,
         "component": "delivery-gates",
-        "declaration_count": 16,
+        "declaration_count": 17,
         "declarations": [
           {
             "kind": "struct",
-            "line": 17,
+            "line": 18,
             "name": "FixtureStore",
             "passes": [
               "rust.declaration"
@@ -12551,7 +12552,7 @@
           },
           {
             "kind": "fn",
-            "line": 18,
+            "line": 19,
             "name": "fact",
             "passes": [
               "rust.declaration"
@@ -12559,7 +12560,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 32,
+            "line": 33,
             "name": "pulse",
             "passes": [
               "rust.declaration"
@@ -12567,7 +12568,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 35,
+            "line": 36,
             "name": "buyers",
             "passes": [
               "rust.declaration"
@@ -12575,7 +12576,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 43,
+            "line": 44,
             "name": "buyer",
             "passes": [
               "rust.declaration"
@@ -12583,7 +12584,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 47,
+            "line": 48,
             "name": "buyer_timeline",
             "passes": [
               "rust.declaration"
@@ -12591,7 +12592,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 59,
+            "line": 60,
             "name": "services",
             "passes": [
               "rust.declaration"
@@ -12599,7 +12600,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 67,
+            "line": 68,
             "name": "service",
             "passes": [
               "rust.declaration"
@@ -12607,7 +12608,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 71,
+            "line": 72,
             "name": "graph",
             "passes": [
               "rust.declaration"
@@ -12615,7 +12616,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 84,
+            "line": 85,
             "name": "provenance",
             "passes": [
               "rust.declaration"
@@ -12623,7 +12624,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 100,
+            "line": 101,
             "name": "search",
             "passes": [
               "rust.declaration"
@@ -12631,7 +12632,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 109,
+            "line": 110,
             "name": "system",
             "passes": [
               "rust.declaration"
@@ -12639,7 +12640,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 115,
+            "line": 116,
             "name": "investigations",
             "passes": [
               "rust.declaration"
@@ -12647,7 +12648,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 146,
+            "line": 147,
             "name": "list_queries_are_bounded_and_cacheable_with_provenance",
             "passes": [
               "rust.declaration"
@@ -12655,7 +12656,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 187,
+            "line": 188,
             "name": "purpose_built_surface_is_documented_without_graphql_or_sql",
             "passes": [
               "rust.declaration"
@@ -12663,14 +12664,22 @@
           },
           {
             "kind": "fn",
-            "line": 290,
+            "line": 291,
             "name": "postgres_store_is_the_runtime_query_backend",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 299,
+            "name": "restricted_dashboard_role_serves_every_query_path",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 294,
+        "line_count": 377,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -12911,7 +12920,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 88,
+        "line_count": 100,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -12965,7 +12974,7 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1103,
+        "citations": 1104,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
         "files": 36,
@@ -12997,7 +13006,7 @@
         "worker": 6
       },
       "citations": 54,
-      "declarations": 1103,
+      "declarations": 1104,
       "entities": 54,
       "entities_with_origin": 54,
       "files": 120,
@@ -14466,9 +14475,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1103,
+    "declarations": 1104,
     "files": 120,
-    "lines": 32419
+    "lines": 32524
   },
   "layers": [
     {
@@ -14509,7 +14518,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "fa68ab0de57bae7745489fd3e6f4c9ae32b04080a3a80d131434e0352651af69",
+  "source_tree_sha256": "641461081fe96d40103ba88faf7dba1cf611b6a5b0d687158695f706c0c532eb",
   "stores": {
     "count": 2,
     "items": [

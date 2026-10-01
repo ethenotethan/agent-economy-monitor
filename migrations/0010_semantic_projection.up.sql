@@ -312,7 +312,17 @@ GRANT SELECT ON
     agent_economy.dashboard_facts,
     agent_economy.dashboard_pulse,
     agent_economy.dashboard_system,
-    agent_economy.projection_mirror_pages
+    agent_economy.projection_mirror_pages,
+    agent_economy.namespaces,
+    agent_economy.attribution_runs,
+    agent_economy.attribution_run_seals,
+    agent_economy.attribution_candidates,
+    agent_economy.settlements,
+    agent_economy.payment_requirements,
+    agent_economy.provenance_records,
+    agent_economy.evidence_objects
 TO agent_economy_dashboard_reader;
+
+GRANT agent_economy_dashboard_reader TO CURRENT_USER;
 
 COMMIT;
