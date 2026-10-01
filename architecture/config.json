@@ -161,7 +161,8 @@
       "layer": "canonical",
       "patterns": [
         "crates/classification/**",
-        "migrations/0007_buyer_classification.*.sql"
+        "migrations/0007_buyer_classification.*.sql",
+        "migrations/0010_classification_promotions.*.sql"
       ]
     },
     {

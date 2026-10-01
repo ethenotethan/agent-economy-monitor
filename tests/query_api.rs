@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use agent_economy_monitor::query::{
-    BuyerDossierReadModel, ClassificationReadModel, DashboardPage, Fact, GraphReadModel,
-    PostgresQueryStore, ProvenanceReadModel, QueryError, QueryStore, SystemReadModel, api_router,
+    BuyerDossierReadModel, ClassificationReadModel, DashboardPage, EvidenceProvenanceBinding, Fact,
+    GraphReadModel, PostgresQueryStore, ProvenanceReadModel, QueryError, QueryStore,
+    SystemReadModel, api_router,
 };
 use async_trait::async_trait;
 use axum::{
@@ -61,6 +62,14 @@ impl QueryStore for FixtureStore {
                 provenance_ids: vec!["11111111-1111-1111-1111-111111111111".into()],
                 supporting_evidence_ids: vec!["sha256:supporting".into()],
                 conflicting_evidence_ids: vec!["sha256:conflicting".into()],
+                supporting_evidence: vec![EvidenceProvenanceBinding {
+                    evidence_id: "sha256:supporting".into(),
+                    provenance_ids: vec!["22222222-2222-2222-2222-222222222222".into()],
+                }],
+                conflicting_evidence: vec![EvidenceProvenanceBinding {
+                    evidence_id: "sha256:conflicting".into(),
+                    provenance_ids: vec!["33333333-3333-3333-3333-333333333333".into()],
+                }],
             }],
             timeline: DashboardPage::new(vec![fact(&format!("timeline:{id}"), "settlement")], None),
             graph: GraphReadModel {
@@ -323,6 +332,14 @@ async fn buyer_dossier_keeps_classification_and_relationship_evidence_explicit()
     assert_eq!(
         classification["conflicting_evidence_ids"][0],
         "sha256:conflicting"
+    );
+    assert_eq!(
+        classification["supporting_evidence"][0]["provenance_ids"][0],
+        "22222222-2222-2222-2222-222222222222"
+    );
+    assert_eq!(
+        classification["conflicting_evidence"][0]["provenance_ids"][0],
+        "33333333-3333-3333-3333-333333333333"
     );
 
     let edge = &body["data"]["graph"]["edges"][0]["value"];

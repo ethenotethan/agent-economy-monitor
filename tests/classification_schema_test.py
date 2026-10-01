@@ -9,6 +9,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 UP = ROOT / "migrations" / "0007_buyer_classification.up.sql"
 DOWN = ROOT / "migrations" / "0007_buyer_classification.down.sql"
+PROMOTION_UP = ROOT / "migrations" / "0010_classification_promotions.up.sql"
+PROMOTION_DOWN = ROOT / "migrations" / "0010_classification_promotions.down.sql"
 PREREQUISITES = sorted((ROOT / "migrations").glob("000[1-6]_*.up.sql"))
 
 
@@ -65,6 +67,25 @@ class BuyerClassificationMigrationContractTest(unittest.TestCase):
         self.assertIn("cannot roll back buyer classification history", down)
         self.assertLess(down.index("LOCK TABLE"), down.index("IF EXISTS"))
         self.assertLess(down.index("RAISE EXCEPTION"), down.index("DROP TABLE"))
+        self.assertNotIn("CASCADE", down)
+        self.assertTrue(down.rstrip().endswith("COMMIT;"))
+
+    def test_promotion_migration_adds_append_only_explicit_current_authority(self):
+        up = PROMOTION_UP.read_text(encoding="utf-8")
+        down = PROMOTION_DOWN.read_text(encoding="utf-8")
+
+        self.assertIn("CREATE TABLE agent_economy.classification_run_promotions", up)
+        self.assertIn("promotion_sequence bigint NOT NULL", up)
+        self.assertIn("promotion_method text NOT NULL", up)
+        self.assertIn("provenance_id uuid NOT NULL", up)
+        self.assertIn("validate_classification_run_promotion", up)
+        self.assertIn("classification promotion must target a sealed run for the same buyer", up)
+        self.assertIn("CREATE VIEW agent_economy.current_buyer_classification_runs", up)
+        self.assertIn("ORDER BY promotion.namespace_id, promotion.buyer_handle_id, promotion.promotion_sequence DESC", up)
+        self.assertIn("CREATE TRIGGER classification_run_promotions_immutable", up)
+        self.assertTrue(up.rstrip().endswith("COMMIT;"))
+
+        self.assertIn("cannot roll back classification promotion history", down)
         self.assertNotIn("CASCADE", down)
         self.assertTrue(down.rstrip().endswith("COMMIT;"))
 
@@ -145,7 +166,7 @@ class BuyerClassificationMigrationLiveTest(unittest.TestCase):
         return result
 
     def test_sealed_replays_measure_exact_label_drift(self):
-        for migration in [*PREREQUISITES, UP]:
+        for migration in [*PREREQUISITES, UP, PROMOTION_UP]:
             self.psql(migration.read_text(encoding="utf-8"))
         namespace = "00000000-0000-0000-0000-000000000001"
         provenance = "00000000-0000-0000-0000-000000000010"
@@ -285,6 +306,32 @@ class BuyerClassificationMigrationLiveTest(unittest.TestCase):
             "FROM agent_economy.classification_run_seals;"
         ).stdout.strip()
         self.assertEqual("1:2", bindings)
+        self.psql(
+            f"""
+            INSERT INTO agent_economy.classification_run_promotions
+                (namespace_id, buyer_handle_id, promotion_sequence, run_id,
+                 run_version, promotion_method, provenance_id)
+            VALUES ('{namespace}', 'buyer:one', 1, 'run:baseline', 1,
+                    'operator-review', '{provenance}');
+            """
+        )
+        current_before_explicit_replay_promotion = self.psql(
+            "SELECT run_id FROM agent_economy.current_buyer_classification_runs;"
+        ).stdout.strip()
+        self.assertEqual("run:baseline", current_before_explicit_replay_promotion)
+        self.psql(
+            f"""
+            INSERT INTO agent_economy.classification_run_promotions
+                (namespace_id, buyer_handle_id, promotion_sequence, run_id,
+                 run_version, promotion_method, provenance_id)
+            VALUES ('{namespace}', 'buyer:one', 2, 'run:replay', 1,
+                    'operator-review', '{provenance}');
+            """
+        )
+        current_after_explicit_replay_promotion = self.psql(
+            "SELECT run_id FROM agent_economy.current_buyer_classification_runs;"
+        ).stdout.strip()
+        self.assertEqual("run:replay", current_after_explicit_replay_promotion)
         late_feature = self.psql(
             f"""
             INSERT INTO agent_economy.classification_run_features

@@ -74,6 +74,21 @@
     return actions;
   }
 
+  function evidenceLineage(bindings, role, context = {}) {
+    const group = element("div", "evidence-lineage");
+    group.dataset.evidenceRole = role;
+    group.append(element("div", "evidence-role", `${role} evidence`));
+    for (const binding of bindings || []) {
+      const row = element("div", "evidence-binding");
+      row.append(
+        element("div", "evidence-id", binding.evidence_id),
+        provenanceButtons(binding.provenance_ids, context)
+      );
+      group.append(row);
+    }
+    return group;
+  }
+
   function relationshipButton(entity) {
     const button = element("button", "graph-node edge-node", `${entity.kind}:${entity.id}`);
     button.type = "button";
@@ -101,13 +116,10 @@
     const list = document.createElement("div");
     list.className = currentView === "pulse" ? "metric-grid" : "fact-list";
     for (const item of items) {
-      const card = document.createElement(currentView === "buyers" ? "button" : "article");
+      const card = document.createElement("article");
       card.className = currentView === "pulse" ? "metric-card" : "fact-card";
       if (currentView === "buyers") {
-        card.type = "button";
-        card.classList.add("dossier-link");
         card.dataset.buyerId = item.id;
-        card.setAttribute("aria-label", `Open dossier for ${item.label}`);
       }
       if (currentView === "pulse") {
         const kicker = document.createElement("div");
@@ -136,11 +148,16 @@
         const value = document.createElement("div");
         value.className = "fact-value";
         value.textContent = JSON.stringify(item.value || {});
-        const provenance = document.createElement("a");
-        provenance.className = "provenance";
-        provenance.textContent = "Provenance ↗";
-        provenance.href = `/api/v1/provenance/${encodeURIComponent(item.provenance_ids[0] || "")}`;
-        card.append(identity, value, provenance);
+        const actions = element("div", "fact-actions");
+        if (currentView === "buyers") {
+          const dossier = element("button", "dossier-link", "Open dossier →");
+          dossier.type = "button";
+          dossier.dataset.openBuyerId = item.id;
+          dossier.setAttribute("aria-label", `Open dossier for ${item.label}`);
+          actions.append(dossier);
+        }
+        actions.append(provenanceButtons(item.provenance_ids));
+        card.append(identity, value, actions);
       }
       list.append(card);
     }
@@ -202,8 +219,15 @@
       const conflicts = (claim.conflicting_evidence_ids || []).length;
       if (conflicts) badges.append(element("span", "badge conflict", `${conflicts} CONFLICT${conflicts === 1 ? "" : "S"}`));
       const meta = element("div", "classification-meta", `${claim.method} · ${claim.evidence_window_start} → ${claim.evidence_window_end}`);
-      const evidence = [...(claim.supporting_evidence_ids || []), ...(claim.conflicting_evidence_ids || [])];
-      card.append(top, badges, meta, element("div", "evidence-ids", evidence.join(" · ")), provenanceButtons(claim.provenance_ids, { method: claim.method, confidence: claim.confidence }));
+      const lineageContext = { method: claim.method, confidence: claim.confidence };
+      card.append(
+        top,
+        badges,
+        meta,
+        evidenceLineage(claim.supporting_evidence, "supporting", lineageContext),
+        evidenceLineage(claim.conflicting_evidence, "conflicting", lineageContext),
+        provenanceButtons(claim.provenance_ids, lineageContext)
+      );
       classificationGrid.append(card);
     }
     if (!classifications.length) classificationGrid.append(element("div", "section-note", "No sealed classification claims."));
@@ -431,10 +455,10 @@
       openProvenance(provenance);
       return;
     }
-    const buyer = event.target.closest("button[data-buyer-id]");
+    const buyer = event.target.closest("button[data-open-buyer-id]");
     if (buyer) {
-      history.pushState({ view: "buyers", buyer: buyer.dataset.buyerId }, "", `/?view=buyers&buyer=${encodeURIComponent(buyer.dataset.buyerId)}`);
-      loadDossier(buyer.dataset.buyerId);
+      history.pushState({ view: "buyers", buyer: buyer.dataset.openBuyerId }, "", `/?view=buyers&buyer=${encodeURIComponent(buyer.dataset.openBuyerId)}`);
+      loadDossier(buyer.dataset.openBuyerId);
       return;
     }
     const related = event.target.closest("button[data-related-kind]");

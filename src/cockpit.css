@@ -65,7 +65,8 @@ h1 { margin: 10px 0 8px; font-size: clamp(42px, 6vw, 74px); line-height: .94; le
 .provenance { color: var(--mint); font: 600 9px ui-monospace, monospace; text-decoration: none; text-transform: uppercase; letter-spacing: .08em; }
 .stale-banner { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; padding: 12px 14px; border: 1px solid rgba(255,197,110,.24); border-radius: 10px; color: var(--amber); background: rgba(255,197,110,.06); font: 500 10px ui-monospace, monospace; }
 .section-note { margin-bottom: 18px; color: var(--muted); font-size: 12px; }
-.dossier-link { width: 100%; color: inherit; text-align: left; cursor: pointer; }
+.fact-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.dossier-link { padding: 0; border: 0; color: var(--ink); background: transparent; cursor: pointer; font: 600 9px ui-monospace, monospace; letter-spacing: .07em; text-transform: uppercase; }
 .dossier { display: grid; gap: 24px; }
 .dossier-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
 .dossier-title { margin: 4px 0 7px; font-size: 25px; letter-spacing: -.035em; }
@@ -86,7 +87,12 @@ h1 { margin: 10px 0 8px; font-size: clamp(42px, 6vw, 74px); line-height: .94; le
 .classification-meta, .edge-meta, .timeline-meta { color: var(--muted); font: 500 9px/1.65 ui-monospace, monospace; }
 .provenance-trigger, .graph-node { margin-top: 12px; padding: 0; border: 0; color: var(--mint); background: transparent; cursor: pointer; font: 600 9px ui-monospace, monospace; letter-spacing: .07em; text-transform: uppercase; }
 .provenance-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.evidence-ids { margin-top: 8px; overflow-wrap: anywhere; color: var(--dim); font: 500 8px/1.6 ui-monospace, monospace; }
+.fact-actions .provenance-trigger { margin-top: 0; }
+.evidence-lineage { display: grid; gap: 6px; margin-top: 10px; }
+.evidence-role { color: var(--dim); font: 600 8px ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.evidence-binding { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+.evidence-id { overflow-wrap: anywhere; color: var(--muted); font: 500 8px/1.6 ui-monospace, monospace; }
+.evidence-binding .provenance-trigger { margin-top: 0; }
 .graph-edge { position: relative; overflow: hidden; }
 .graph-edge::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 2px; background: var(--mint); }
 .edge-node { color: var(--ink); font: 600 10px ui-monospace, monospace; }

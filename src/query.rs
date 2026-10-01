@@ -53,6 +53,12 @@ pub struct GraphReadModel {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct EvidenceProvenanceBinding {
+    pub evidence_id: String,
+    pub provenance_ids: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ClassificationReadModel {
     pub claim_id: String,
     pub label: String,
@@ -66,6 +72,8 @@ pub struct ClassificationReadModel {
     pub provenance_ids: Vec<String>,
     pub supporting_evidence_ids: Vec<String>,
     pub conflicting_evidence_ids: Vec<String>,
+    pub supporting_evidence: Vec<EvidenceProvenanceBinding>,
+    pub conflicting_evidence: Vec<EvidenceProvenanceBinding>,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq)]
@@ -226,10 +234,7 @@ impl PostgresQueryStore {
     ) -> Result<Vec<ClassificationReadModel>, QueryError> {
         let rows = self
             .client
-            .query(
-                "WITH latest_run AS (SELECT run.namespace_id, run.run_id, run.run_version FROM agent_economy.classification_runs AS run JOIN agent_economy.classification_run_seals AS seal USING (namespace_id, run_id, run_version) WHERE run.namespace_id = $1::text::uuid AND run.buyer_handle_id = $2 ORDER BY run.created_at DESC, run.run_id DESC, run.run_version DESC LIMIT 1) SELECT claim.claim_id, claim.label, claim.status, claim.confidence::text, claim.method, claim.evidence_window_start::text, claim.evidence_window_end::text, claim.valid_to::text, (claim.valid_to IS NOT NULL AND claim.valid_to <= CURRENT_TIMESTAMP) AS is_stale, claim.provenance_id::text, coalesce(array_agg(evidence.evidence_id ORDER BY evidence.evidence_id) FILTER (WHERE evidence.evidence_role = 'supporting'), '{}')::text[] AS supporting_evidence_ids, coalesce(array_agg(evidence.evidence_id ORDER BY evidence.evidence_id) FILTER (WHERE evidence.evidence_role = 'conflicting'), '{}')::text[] AS conflicting_evidence_ids FROM latest_run AS latest JOIN agent_economy.classification_run_claims AS run_claim USING (namespace_id, run_id, run_version) JOIN agent_economy.classification_claims AS claim ON claim.namespace_id = run_claim.namespace_id AND claim.claim_id = run_claim.claim_id AND claim.version = run_claim.claim_version LEFT JOIN agent_economy.classification_claim_evidence AS evidence ON evidence.namespace_id = claim.namespace_id AND evidence.claim_id = claim.claim_id AND evidence.claim_version = claim.version GROUP BY claim.claim_id, claim.version, claim.label, claim.status, claim.confidence, claim.method, claim.evidence_window_start, claim.evidence_window_end, claim.valid_to, claim.provenance_id ORDER BY claim.label, claim.claim_id",
-                &[&self.namespace_id, &id],
-            )
+            .query(BUYER_CLASSIFICATIONS_SQL, &[&self.namespace_id, &id])
             .await
             .map_err(|_| QueryError::Unavailable)?;
         rows.iter().map(row_to_classification).collect()
@@ -285,7 +290,17 @@ fn row_to_classification(row: &Row) -> Result<ClassificationReadModel, QueryErro
         conflicting_evidence_ids: row
             .try_get("conflicting_evidence_ids")
             .map_err(|_| QueryError::Unavailable)?,
+        supporting_evidence: evidence_bindings(row, "supporting_evidence")?,
+        conflicting_evidence: evidence_bindings(row, "conflicting_evidence")?,
     })
+}
+
+fn evidence_bindings(
+    row: &Row,
+    column: &str,
+) -> Result<Vec<EvidenceProvenanceBinding>, QueryError> {
+    let encoded: String = row.try_get(column).map_err(|_| QueryError::Unavailable)?;
+    serde_json::from_str(&encoded).map_err(|_| QueryError::Unavailable)
 }
 
 fn type_graph_edge(edge: &mut Fact) {
@@ -352,6 +367,79 @@ fn decode_cursor(cursor: &str, expected_parts: usize) -> Result<Vec<String>, Que
 }
 
 const FACT_COLUMNS: &str = "fact.id, fact.kind, fact.label, fact.value::text AS value, fact.observed_at::text AS observed_at, fact.provenance_ids";
+
+const BUYER_CLASSIFICATIONS_SQL: &str = r#"
+WITH current_run AS (
+    SELECT current.namespace_id, current.run_id, current.run_version
+    FROM agent_economy.current_buyer_classification_runs AS current
+    WHERE current.namespace_id = $1::text::uuid
+      AND current.buyer_handle_id = $2
+)
+SELECT
+    claim.claim_id,
+    claim.label,
+    claim.status,
+    claim.confidence::text,
+    claim.method,
+    claim.evidence_window_start::text,
+    claim.evidence_window_end::text,
+    claim.valid_to::text,
+    (claim.valid_to IS NOT NULL AND claim.valid_to <= CURRENT_TIMESTAMP) AS is_stale,
+    claim.provenance_id::text,
+    coalesce(array_agg(evidence.evidence_id ORDER BY evidence.evidence_id)
+        FILTER (WHERE evidence.evidence_role = 'supporting'), '{}')::text[]
+        AS supporting_evidence_ids,
+    coalesce(array_agg(evidence.evidence_id ORDER BY evidence.evidence_id)
+        FILTER (WHERE evidence.evidence_role = 'conflicting'), '{}')::text[]
+        AS conflicting_evidence_ids,
+    coalesce((
+        SELECT jsonb_agg(jsonb_build_object(
+            'evidence_id', bound.evidence_id,
+            'provenance_ids', coalesce((
+                SELECT jsonb_agg(provenance.provenance_id::text ORDER BY provenance.provenance_id)
+                FROM agent_economy.provenance_records AS provenance
+                WHERE provenance.namespace_id = bound.namespace_id
+                  AND provenance.evidence_id = bound.evidence_id
+            ), '[]'::jsonb)
+        ) ORDER BY bound.evidence_id)
+        FROM agent_economy.classification_claim_evidence AS bound
+        WHERE bound.namespace_id = claim.namespace_id
+          AND bound.claim_id = claim.claim_id
+          AND bound.claim_version = claim.version
+          AND bound.evidence_role = 'supporting'
+    ), '[]'::jsonb)::text AS supporting_evidence,
+    coalesce((
+        SELECT jsonb_agg(jsonb_build_object(
+            'evidence_id', bound.evidence_id,
+            'provenance_ids', coalesce((
+                SELECT jsonb_agg(provenance.provenance_id::text ORDER BY provenance.provenance_id)
+                FROM agent_economy.provenance_records AS provenance
+                WHERE provenance.namespace_id = bound.namespace_id
+                  AND provenance.evidence_id = bound.evidence_id
+            ), '[]'::jsonb)
+        ) ORDER BY bound.evidence_id)
+        FROM agent_economy.classification_claim_evidence AS bound
+        WHERE bound.namespace_id = claim.namespace_id
+          AND bound.claim_id = claim.claim_id
+          AND bound.claim_version = claim.version
+          AND bound.evidence_role = 'conflicting'
+    ), '[]'::jsonb)::text AS conflicting_evidence
+FROM current_run AS current
+JOIN agent_economy.classification_run_claims AS run_claim
+  USING (namespace_id, run_id, run_version)
+JOIN agent_economy.classification_claims AS claim
+  ON claim.namespace_id = run_claim.namespace_id
+ AND claim.claim_id = run_claim.claim_id
+ AND claim.version = run_claim.claim_version
+LEFT JOIN agent_economy.classification_claim_evidence AS evidence
+  ON evidence.namespace_id = claim.namespace_id
+ AND evidence.claim_id = claim.claim_id
+ AND evidence.claim_version = claim.version
+GROUP BY claim.namespace_id, claim.claim_id, claim.version, claim.label, claim.status,
+         claim.confidence, claim.method, claim.evidence_window_start,
+         claim.evidence_window_end, claim.valid_to, claim.provenance_id
+ORDER BY claim.label, claim.claim_id
+"#;
 
 #[async_trait]
 impl QueryStore for PostgresQueryStore {
@@ -774,7 +862,13 @@ async fn system(State(store): State<Store>) -> Result<Response, QueryError> {
 mod tests {
     use serde_json::json;
 
-    use super::{Fact, decode_cursor, encode_cursor, type_graph_edge};
+    use super::{BUYER_CLASSIFICATIONS_SQL, Fact, decode_cursor, encode_cursor, type_graph_edge};
+
+    #[test]
+    fn buyer_classification_query_uses_explicit_promotion_authority() {
+        assert!(BUYER_CLASSIFICATIONS_SQL.contains("current_buyer_classification_runs"));
+        assert!(!BUYER_CLASSIFICATIONS_SQL.contains("run.created_at DESC"));
+    }
 
     #[test]
     fn composite_cursor_round_trips_delimiter_characters() {
