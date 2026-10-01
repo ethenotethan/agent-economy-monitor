@@ -2,6 +2,7 @@ use std::{env, net::SocketAddr};
 
 use agent_economy_monitor::{
     auth::{AuthState, PostgresAuthStore, protect_router},
+    classification_promotion::{PostgresClassificationPromotionStore, PromotionRequest},
     cockpit::mount_cockpit,
     query::{PostgresQueryStore, api_router},
 };
@@ -32,6 +33,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
+
+    let mut arguments = env::args().skip(1);
+    if let Some(command) = arguments.next() {
+        if command != "promote-classification" {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("unknown command: {command}"),
+            )
+            .into());
+        }
+        let request = PromotionRequest::from_args(arguments)?;
+        let database_url = env::var("DATABASE_URL")?;
+        let namespace_id = env::var("NAMESPACE_ID")?;
+        let (client, connection) = tokio_postgres::connect(&database_url, NoTls).await?;
+        tokio::spawn(async move {
+            if connection.await.is_err() {
+                tracing::error!("PostgreSQL promotion connection closed unexpectedly");
+            }
+        });
+        let store =
+            PostgresClassificationPromotionStore::new(std::sync::Arc::new(client), namespace_id)?;
+        let promotion_sequence = store.promote(&request).await?;
+        info!(promotion_sequence, "classification run promoted");
+        return Ok(());
+    }
 
     let port = env::var("PORT")
         .ok()
