@@ -69,6 +69,16 @@ requests require the login response's CSRF token in `X-CSRF-Token`. Login admiss
 service-wide and permits at most five failed or in-flight attempts per minute, which
 bounds Argon2 work without trusting proxy-supplied client addresses.
 
+An owner can atomically promote a sealed buyer-classification run without issuing raw SQL.
+The command validates the sealed run, buyer binding, contiguous append-only sequence, and
+provenance record in PostgreSQL before the dossier reader can observe it:
+
+```bash
+DATABASE_URL=postgresql://... NAMESPACE_ID=... cargo run -- \
+  promote-classification <buyer-handle-id> <run-id> <run-version> \
+  <promotion-method> <provenance-id>
+```
+
 Every dashboard read is scoped to the exact namespace UUID. The purpose-built API is
 documented at `/api/v1/openapi.json`; Pulse, buyers, buyer timelines, services, graph
 neighborhoods, provenance, search, and system read models live under `/api/v1`. List

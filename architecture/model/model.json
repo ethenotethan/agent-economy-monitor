@@ -269,7 +269,7 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 326
+      "line_count": 336
     },
     {
       "declaration_count": 0,
@@ -436,7 +436,7 @@
       "id": "buyer-classification",
       "label": "Buyer behavioral classification",
       "layer": "canonical",
-      "line_count": 1699
+      "line_count": 1805
     },
     {
       "declaration_count": 0,
@@ -469,7 +469,7 @@
       "line_count": 27
     },
     {
-      "declaration_count": 57,
+      "declaration_count": 59,
       "declarations": [
         "CountingStore",
         "Error",
@@ -511,6 +511,8 @@
         "observation_id_is_content_addressed",
         "observe",
         "postgres_store_is_the_runtime_query_backend",
+        "promotion_command_requires_exactly_five_arguments",
+        "promotion_request_requires_complete_bounded_authority",
         "protected_api_rejects_before_extractors_and_store_access",
         "protobuf_replay_preserves_the_canonical_event",
         "protobuf_replay_preserves_the_observation",
@@ -531,7 +533,7 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 23,
+      "file_count": 24,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -542,6 +544,7 @@
         "tests/access_control.rs",
         "tests/adapter_boundary.rs",
         "tests/buyer_enrichment_schema_test.py",
+        "tests/classification_promotion.rs",
         "tests/classification_schema_test.py",
         "tests/cockpit.rs",
         "tests/cockpit_auth_schema_test.py",
@@ -560,7 +563,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 4418
+      "line_count": 4575
     },
     {
       "declaration_count": 73,
@@ -1131,7 +1134,7 @@
       "line_count": 3628
     },
     {
-      "declaration_count": 107,
+      "declaration_count": 116,
       "declarations": [
         "API_VERSION",
         "AuthConfig",
@@ -1160,15 +1163,20 @@
         "LoginAttempts",
         "LoginRequest",
         "LoginResponse",
+        "MAX_IDENTIFIER_LENGTH",
         "MAX_LOGIN_FAILURES",
         "MAX_PAGE_SIZE",
         "MAX_SESSIONS",
         "MAX_SESSION_TTL",
         "MemoryState",
         "NavLink",
+        "PROMOTE_SQL",
         "PageQuery",
         "PostgresAuthStore",
+        "PostgresClassificationPromotionStore",
         "PostgresQueryStore",
+        "PromotionError",
+        "PromotionRequest",
         "ProvenanceReadModel",
         "QueryError",
         "QueryStore",
@@ -1192,6 +1200,7 @@
         "buyer_timeline",
         "buyers",
         "cacheable",
+        "classification_promotion",
         "cockpit",
         "cockpit_document",
         "cockpit_router",
@@ -1206,6 +1215,7 @@
         "facts",
         "finish_login",
         "fmt",
+        "from_args",
         "from_env",
         "from_shared",
         "graph",
@@ -1222,6 +1232,7 @@
         "one_fact",
         "openapi",
         "page",
+        "promote",
         "protect_router",
         "provenance",
         "pulse",
@@ -1231,6 +1242,7 @@
         "require_session",
         "row_to_classification",
         "row_to_fact",
+        "run_version",
         "search",
         "secret_hash",
         "service",
@@ -1243,12 +1255,13 @@
       ],
       "description": "Axum process entry point and versioned, bounded, provenance-bearing query API.",
       "external": false,
-      "file_count": 10,
+      "file_count": 11,
       "files": [
         ".env.example",
         "Cargo.lock",
         "Cargo.toml",
         "src/auth.rs",
+        "src/classification_promotion.rs",
         "src/cockpit.css",
         "src/cockpit.js",
         "src/cockpit.rs",
@@ -1259,7 +1272,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 6013
+      "line_count": 6170
     },
     {
       "declaration_count": 0,
@@ -1883,7 +1896,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 58,
+            "line": 84,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/healthz\", get(status))"
@@ -2033,7 +2046,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 56,
+            "line": 82,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/status\", get(status))"
@@ -2213,7 +2226,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 60,
+            "line": 86,
             "path": "src/main.rs",
             "rule": "declared.topology",
             "via": "info!(%address, \"agent economy monitor listening\");"
@@ -2409,7 +2422,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 79,
+        "line_count": 89,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -9651,7 +9664,7 @@
         "component": "buyer-classification",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 17,
+        "line_count": 20,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -9665,7 +9678,7 @@
         "component": "buyer-classification",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 96,
+        "line_count": 199,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -10278,6 +10291,109 @@
       {
         "citations": 0,
         "component": "runtime",
+        "declaration_count": 11,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 4,
+            "name": "MAX_IDENTIFIER_LENGTH",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 6,
+            "name": "PROMOTE_SQL",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 9,
+            "name": "PromotionRequest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 18,
+            "name": "from_args",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 44,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 73,
+            "name": "run_version",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 78,
+            "name": "PostgresClassificationPromotionStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 85,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 94,
+            "name": "promote",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 116,
+            "name": "PromotionError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 122,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 130,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "src/classification_promotion.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
         "line_count": 141,
@@ -10393,7 +10509,7 @@
       {
         "citations": 0,
         "component": "runtime",
-        "declaration_count": 3,
+        "declaration_count": 4,
         "declarations": [
           {
             "kind": "mod",
@@ -10406,7 +10522,7 @@
           {
             "kind": "mod",
             "line": 2,
-            "name": "cockpit",
+            "name": "classification_promotion",
             "passes": [
               "rust.declaration"
             ]
@@ -10414,13 +10530,21 @@
           {
             "kind": "mod",
             "line": 3,
+            "name": "cockpit",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "mod",
+            "line": 4,
             "name": "query",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 3,
+        "line_count": 4,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -10436,7 +10560,7 @@
         "declarations": [
           {
             "kind": "struct",
-            "line": 16,
+            "line": 17,
             "name": "Status",
             "passes": [
               "rust.declaration"
@@ -10444,7 +10568,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 21,
+            "line": 22,
             "name": "status",
             "passes": [
               "rust.declaration"
@@ -10452,14 +10576,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 31,
+            "line": 32,
             "name": "main",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 63,
+        "line_count": 89,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -11402,9 +11526,40 @@
       {
         "citations": 0,
         "component": "delivery-gates",
+        "declaration_count": 2,
+        "declarations": [
+          {
+            "kind": "fn",
+            "line": 4,
+            "name": "promotion_request_requires_complete_bounded_authority",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 38,
+            "name": "promotion_command_requires_exactly_five_arguments",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 53,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/classification_promotion.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 411,
+        "line_count": 515,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -11911,10 +12066,10 @@
         "id": "declared.topology"
       },
       {
-        "citations": 995,
+        "citations": 1009,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 32,
+        "files": 34,
         "id": "rust.declaration"
       },
       {
@@ -11943,15 +12098,15 @@
         "worker": 6
       },
       "citations": 54,
-      "declarations": 995,
+      "declarations": 1009,
       "entities": 54,
       "entities_with_origin": 54,
-      "files": 115,
+      "files": 117,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
       "touched_files": 25,
-      "untouched_files": 90
+      "untouched_files": 92
     }
   },
   "interplay": {
@@ -12950,7 +13105,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/healthz\", get(status))",
-            "line": 58,
+            "line": 84,
             "path": "src/main.rs"
           }
         ],
@@ -13090,7 +13245,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/status\", get(status))",
-            "line": 56,
+            "line": 82,
             "path": "src/main.rs"
           }
         ],
@@ -13258,7 +13413,7 @@
         "evidence": [
           {
             "excerpt": "info!(%address, \"agent economy monitor listening\");",
-            "line": 60,
+            "line": 86,
             "path": "src/main.rs"
           }
         ],
@@ -13411,9 +13566,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 995,
-    "files": 115,
-    "lines": 31225
+    "declarations": 1009,
+    "files": 117,
+    "lines": 31655
   },
   "layers": [
     {
@@ -13454,7 +13609,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "d33a02b3059675ac276206ec24dd17767ab9c1d1c7950db225affa774dbb83a6",
+  "source_tree_sha256": "9a9fb5e54e32d33e57f36fc6889dbf4812e69427e5bb99d9274755d64da1a2d9",
   "stores": {
     "count": 2,
     "items": [

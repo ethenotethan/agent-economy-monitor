@@ -80,12 +80,16 @@ class BuyerClassificationMigrationContractTest(unittest.TestCase):
         self.assertIn("provenance_id uuid NOT NULL", up)
         self.assertIn("validate_classification_run_promotion", up)
         self.assertIn("classification promotion must target a sealed run for the same buyer", up)
+        self.assertIn("CREATE FUNCTION agent_economy.promote_buyer_classification_run", up)
+        self.assertIn("migration-0010-earliest-sealed-series", up)
+        self.assertIn("INSERT INTO agent_economy.classification_run_promotions", up)
         self.assertIn("CREATE VIEW agent_economy.current_buyer_classification_runs", up)
         self.assertIn("ORDER BY promotion.namespace_id, promotion.buyer_handle_id, promotion.promotion_sequence DESC", up)
         self.assertIn("CREATE TRIGGER classification_run_promotions_immutable", up)
         self.assertTrue(up.rstrip().endswith("COMMIT;"))
 
         self.assertIn("cannot roll back classification promotion history", down)
+        self.assertIn("DROP FUNCTION agent_economy.promote_buyer_classification_run", down)
         self.assertNotIn("CASCADE", down)
         self.assertTrue(down.rstrip().endswith("COMMIT;"))
 
@@ -164,6 +168,114 @@ class BuyerClassificationMigrationLiveTest(unittest.TestCase):
         if check and result.returncode != 0:
             self.fail(result.stderr)
         return result
+
+    def setUp(self):
+        self.psql("DROP SCHEMA IF EXISTS agent_economy CASCADE;")
+
+    def test_upgrade_backfills_the_earliest_sealed_series(self):
+        for migration in [*PREREQUISITES, UP]:
+            self.psql(migration.read_text(encoding="utf-8"))
+        namespace = "00000000-0000-0000-0000-000000000001"
+        provenance = "00000000-0000-0000-0000-000000000010"
+        features = (
+            "('total_spend_atomic', '600'),"
+            "('payment_count', '1'),"
+            "('median_cadence_seconds', 'null'),"
+            "('x402_count', '1'),"
+            "('mpp_count', '0'),"
+            "('unique_counterparties', '1'),"
+            "('autonomous_count', '0'),"
+            "('autonomy_observed_count', '0')"
+        )
+        self.psql(
+            f"""
+            INSERT INTO agent_economy.namespaces
+                (namespace_id, namespace_kind, namespace_key)
+            VALUES ('{namespace}', 'tenant', 'classification-upgrade-test');
+            INSERT INTO agent_economy.evidence_objects
+                (namespace_id, evidence_id, sha256, storage_uri, media_type,
+                 byte_length, observed_at)
+            VALUES ('{namespace}', 'evidence:baseline', repeat('a', 64),
+                    'evidence://baseline', 'application/json', 2,
+                    '2026-09-01T00:00:00Z');
+            INSERT INTO agent_economy.provenance_records
+                (namespace_id, provenance_id, source_id, observed_at, parser_version,
+                 evidence_id)
+            VALUES ('{namespace}', '{provenance}', 'source:test',
+                    '2026-09-01T00:00:00Z', 'parser@1', 'evidence:baseline');
+            INSERT INTO agent_economy.buyer_handles
+                (namespace_id, buyer_handle_id, handle_kind, chain_scope,
+                 handle_value, provenance_id)
+            VALUES ('{namespace}', 'buyer:one', 'wallet', 'base', '0x01', '{provenance}');
+            INSERT INTO agent_economy.classification_label_definitions
+                (namespace_id, label_id, label_version, label_kind,
+                 rule_definition, definition_hash)
+            VALUES ('{namespace}', 'local:high-spend', 7, 'extension',
+                    '{{"metric":"total_spend_atomic","at_least":"500"}}',
+                    repeat('c', 64));
+            INSERT INTO agent_economy.classification_claims
+                (namespace_id, claim_id, version, buyer_handle_id, label, method,
+                 confidence, evidence_window_start, evidence_window_end,
+                 valid_from, status, provenance_id)
+            VALUES ('{namespace}', 'claim:high-spend', 1, 'buyer:one',
+                    'local:high-spend', 'buyer-classifier@1', 1.0000,
+                    '2026-09-01T00:00:00Z', '2026-09-02T00:00:00Z',
+                    '2026-09-02T00:00:00Z', 'inferred', '{provenance}');
+            INSERT INTO agent_economy.classification_runs
+                (namespace_id, run_id, run_version, buyer_handle_id,
+                 classifier_version, feature_version, label_set_hash,
+                 input_snapshot_hash, window_start, window_end, created_at)
+            VALUES
+                ('{namespace}', 'run:baseline', 1, 'buyer:one',
+                 'buyer-classifier@1', 'behavior-features@1', repeat('d', 64),
+                 repeat('e', 64), '2026-09-01T00:00:00Z',
+                 '2026-09-02T00:00:00Z', '2026-09-02T01:00:00Z'),
+                ('{namespace}', 'run:later-replay', 1, 'buyer:one',
+                 'buyer-classifier@1', 'behavior-features@1', repeat('d', 64),
+                 repeat('f', 64), '2026-09-01T00:00:00Z',
+                 '2026-09-02T00:00:00Z', '2026-09-03T01:00:00Z');
+            INSERT INTO agent_economy.classification_run_features
+                (namespace_id, run_id, run_version, feature_name, feature_value)
+            SELECT '{namespace}', run_id, 1, feature_name, value::jsonb
+            FROM (VALUES ('run:baseline'), ('run:later-replay')) AS run(run_id)
+            CROSS JOIN LATERAL (VALUES {features}) AS feature(feature_name, value);
+            INSERT INTO agent_economy.classification_run_label_definitions
+                (namespace_id, run_id, run_version, label_id, label_version)
+            VALUES
+                ('{namespace}', 'run:baseline', 1, 'local:high-spend', 7),
+                ('{namespace}', 'run:later-replay', 1, 'local:high-spend', 7);
+            INSERT INTO agent_economy.classification_run_evidence
+                (namespace_id, run_id, run_version, evidence_id, evidence_role)
+            VALUES
+                ('{namespace}', 'run:baseline', 1,
+                 'evidence:baseline', 'supporting'),
+                ('{namespace}', 'run:later-replay', 1,
+                 'evidence:baseline', 'supporting');
+            INSERT INTO agent_economy.classification_run_claims
+                (namespace_id, run_id, run_version, claim_id, claim_version,
+                 label_id, label_version, status)
+            VALUES ('{namespace}', 'run:baseline', 1, 'claim:high-spend', 1,
+                    'local:high-spend', 7, 'inferred');
+            INSERT INTO agent_economy.classification_run_seals
+                (namespace_id, run_id, run_version, result_encoding, state_hash)
+            VALUES
+                ('{namespace}', 'run:baseline', 1,
+                 convert_to('baseline-result', 'UTF8'),
+                 encode(sha256(convert_to('baseline-result', 'UTF8')), 'hex')),
+                ('{namespace}', 'run:later-replay', 1,
+                 convert_to('replay-result', 'UTF8'),
+                 encode(sha256(convert_to('replay-result', 'UTF8')), 'hex'));
+            """
+        )
+
+        self.psql(PROMOTION_UP.read_text(encoding="utf-8"))
+        current = self.psql(
+            "SELECT run_id || ':' || run_version || ':' || promotion_method "
+            "FROM agent_economy.current_buyer_classification_runs;"
+        ).stdout.strip()
+        self.assertEqual(
+            "run:baseline:1:migration-0010-earliest-sealed-series", current
+        )
 
     def test_sealed_replays_measure_exact_label_drift(self):
         for migration in [*PREREQUISITES, UP, PROMOTION_UP]:
@@ -307,26 +419,18 @@ class BuyerClassificationMigrationLiveTest(unittest.TestCase):
         ).stdout.strip()
         self.assertEqual("1:2", bindings)
         self.psql(
-            f"""
-            INSERT INTO agent_economy.classification_run_promotions
-                (namespace_id, buyer_handle_id, promotion_sequence, run_id,
-                 run_version, promotion_method, provenance_id)
-            VALUES ('{namespace}', 'buyer:one', 1, 'run:baseline', 1,
-                    'operator-review', '{provenance}');
-            """
+            "SELECT agent_economy.promote_buyer_classification_run("
+            f"'{namespace}', 'buyer:one', 'run:baseline', 1, "
+            f"'operator-review', '{provenance}');"
         )
         current_before_explicit_replay_promotion = self.psql(
             "SELECT run_id FROM agent_economy.current_buyer_classification_runs;"
         ).stdout.strip()
         self.assertEqual("run:baseline", current_before_explicit_replay_promotion)
         self.psql(
-            f"""
-            INSERT INTO agent_economy.classification_run_promotions
-                (namespace_id, buyer_handle_id, promotion_sequence, run_id,
-                 run_version, promotion_method, provenance_id)
-            VALUES ('{namespace}', 'buyer:one', 2, 'run:replay', 1,
-                    'operator-review', '{provenance}');
-            """
+            "SELECT agent_economy.promote_buyer_classification_run("
+            f"'{namespace}', 'buyer:one', 'run:replay', 1, "
+            f"'operator-review', '{provenance}');"
         )
         current_after_explicit_replay_promotion = self.psql(
             "SELECT run_id FROM agent_economy.current_buyer_classification_runs;"
