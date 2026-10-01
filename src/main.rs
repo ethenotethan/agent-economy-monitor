@@ -1,7 +1,11 @@
 use std::{env, io, net::SocketAddr};
 
-use agent_economy_monitor::projection_runtime::{ProjectionRuntimeConfig, run_projection_once};
-use agent_economy_monitor::query::{PostgresQueryStore, api_router};
+use agent_economy_monitor::{
+    auth::{AuthState, PostgresAuthStore, protect_router},
+    cockpit::mount_cockpit,
+    projection_runtime::{ProjectionRuntimeConfig, run_projection_once},
+    query::{PostgresQueryStore, api_router},
+};
 use axum::{Json, Router, routing::get};
 use serde::Serialize;
 use tokio::net::TcpListener;
@@ -64,19 +68,33 @@ async fn serve() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(address).await?;
     let database_url = env::var("DATABASE_URL")?;
     let namespace_id = env::var("NAMESPACE_ID")?;
-    let (client, connection) = tokio_postgres::connect(&database_url, NoTls).await?;
-    client
+
+    let (auth_client, auth_connection) = tokio_postgres::connect(&database_url, NoTls).await?;
+    tokio::spawn(async move {
+        if auth_connection.await.is_err() {
+            tracing::error!("PostgreSQL authentication connection closed unexpectedly");
+        }
+    });
+    let auth_store = std::sync::Arc::new(PostgresAuthStore::new(
+        std::sync::Arc::new(auth_client),
+        namespace_id.clone(),
+    ));
+    let auth = AuthState::from_env(auth_store)?;
+
+    let (query_client, query_connection) = tokio_postgres::connect(&database_url, NoTls).await?;
+    query_client
         .batch_execute("SET ROLE agent_economy_dashboard_reader")
         .await?;
     tokio::spawn(async move {
-        if connection.await.is_err() {
+        if query_connection.await.is_err() {
             tracing::error!("PostgreSQL query connection closed unexpectedly");
         }
     });
-    let query_store = PostgresQueryStore::new(client, namespace_id);
-    let app: Router = api_router(std::sync::Arc::new(query_store))
-        .route("/healthz", get(status))
-        .route("/api/v1/status", get(status));
+    let query_store = PostgresQueryStore::new(query_client, namespace_id);
+    let app: Router =
+        api_router(std::sync::Arc::new(query_store)).route("/api/v1/status", get(status));
+    let app = mount_cockpit(app);
+    let app = protect_router(app, auth).route("/healthz", get(status));
 
     info!(%address, "agent economy monitor listening");
     axum::serve(listener, app).await?;

@@ -33,7 +33,11 @@
         "Cargo.toml",
         "src/lib.rs",
         "src/main.rs",
-        "src/query.rs"
+        "src/query.rs",
+        "src/auth.rs",
+        "src/cockpit.rs",
+        "src/cockpit.css",
+        "src/cockpit.js"
       ]
     },
     {
@@ -44,7 +48,16 @@
       "patterns": [
         "src/projection.rs",
         "src/projection_runtime.rs",
-        "migrations/0009_semantic_projection.*.sql"
+        "migrations/0010_semantic_projection.*.sql"
+      ]
+    },
+    {
+      "description": "Namespace-scoped PostgreSQL session hashes and atomic shared-password login admission state.",
+      "id": "cockpit-auth-schema",
+      "label": "Cockpit authentication state",
+      "layer": "canonical",
+      "patterns": [
+        "migrations/0009_cockpit_auth.*.sql"
       ]
     },
     {
@@ -207,6 +220,8 @@
       "patterns": [
         ".gitignore",
         ".github/workflows/**",
+        "examples/**",
+        "requirements-dev.txt",
         "scripts/verify",
         "tests/**"
       ]
@@ -417,7 +432,12 @@
     {"class": "lifecycle", "relation": "promotes-two-signal", "source": "shadow-catalog", "target": "store:postgresql"},
     {"class": "structure", "relation": "materializes-in", "source": "shadow-catalog", "target": "store:postgresql"},
     {"class": "structure", "relation": "exposes", "source": "runtime-service", "target": "http:healthz"},
-    {"class": "structure", "relation": "exposes", "source": "runtime-service", "target": "http:status"}
+    {"class": "structure", "relation": "hosts", "source": "runtime-service", "target": "cockpit-access-control"},
+    {"class": "boundary", "relation": "protects", "source": "cockpit-access-control", "target": "query-api"},
+    {"class": "structure", "relation": "persists-auth-state", "source": "cockpit-access-control", "target": "cockpit-auth-state"},
+    {"class": "structure", "relation": "exposes", "source": "cockpit-access-control", "target": "http:login"},
+    {"class": "structure", "relation": "exposes", "source": "cockpit-access-control", "target": "http:logout"},
+    {"class": "structure", "relation": "exposes", "source": "cockpit-access-control", "target": "http:status"}
   ],
   "invariants": [
     {
@@ -463,7 +483,9 @@
     "crates/**/*.rs",
     "crates/**/*.sql",
     "docs/*.md",
+    "examples/**/*.rs",
     "migrations/*.sql",
+    "requirements-dev.txt",
     "scripts/build_architecture.py",
     "scripts/build_architecture_site.py",
     "scripts/check_architecture_contract.py",
@@ -472,6 +494,8 @@
     "scripts/test_architecture_site.py",
     "scripts/verify",
     "site/*",
+    "src/**/*.css",
+    "src/**/*.js",
     "src/**/*.rs",
     "tests/**/*_test.py",
     "tests/**/*.rs"
@@ -503,19 +527,26 @@
     {"authority": "specified", "component": "rpc-collector", "id": "enrichment", "kind": "worker", "label": "Targeted buyer enrichment", "origin": {"path": "crates/rpc-collector/src/enrichment.rs", "search": "pub struct BuyerHistoryEnricher"}, "page": "canonical"},
     {"authority": "specified", "component": "buyer-enrichment-schema", "id": "buyer-enrichment-schema", "kind": "schema", "label": "Chain-scoped enrichment state and finalized cache", "origin": {"path": "migrations/0004_buyer_enrichment.up.sql", "search": "CREATE TABLE agent_economy.buyer_enrichment_cursors ("}, "page": "canonical"},
     {"authority": "specified", "component": "runtime", "id": "query-api", "kind": "service", "label": "Axum query API", "origin": {"path": "src/query.rs", "search": "pub fn api_router"}, "page": "delivery"},
+    {"authority": "specified", "component": "runtime", "id": "cockpit-access-control", "kind": "boundary", "label": "Shared-password access control", "origin": {"path": "src/auth.rs", "search": "pub struct AuthState"}, "page": "delivery"},
+    {"authority": "specified", "component": "cockpit-auth-schema", "id": "cockpit-auth-state", "kind": "schema", "label": "Shared session and login-limit state", "origin": {"path": "migrations/0009_cockpit_auth.up.sql", "search": "CREATE TABLE agent_economy.auth_sessions"}, "page": "canonical"},
     {"authority": "specified", "component": "query-read-models", "id": "dashboard-read-models", "kind": "schema", "label": "Dashboard query read models", "origin": {"path": "migrations/0008_query_read_models.up.sql", "search": "CREATE VIEW agent_economy.dashboard_facts"}, "page": "canonical"},
-    {"authority": "specified", "component": "architecture-policy", "id": "cockpit", "kind": "surface", "label": "Leptos private cockpit", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Leptos private cockpit"}, "page": "experience"},
-    {"authority": "specified", "component": "semantic-projection", "id": "evidence-snapshot", "kind": "boundary", "label": "Bounded evidence snapshots", "origin": {"path": "migrations/0009_semantic_projection.up.sql", "search": "CREATE TABLE agent_economy.projection_snapshots"}, "page": "projection"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:investigations", "kind": "endpoint", "label": "GET /api/v1/investigations", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/investigations"}, "page": "delivery"},
+    {"authority": "specified", "component": "runtime", "id": "cockpit", "kind": "surface", "label": "Leptos private cockpit", "origin": {"path": "src/cockpit.rs", "search": "fn Cockpit()"}, "page": "experience"},
+    {"authority": "specified", "component": "semantic-projection", "id": "evidence-snapshot", "kind": "boundary", "label": "Bounded evidence snapshots", "origin": {"path": "migrations/0010_semantic_projection.up.sql", "search": "CREATE TABLE agent_economy.projection_snapshots"}, "page": "projection"},
     {"authority": "specified", "component": "semantic-projection", "id": "llm-projector", "kind": "projector", "label": "LLM projector", "origin": {"path": "src/projection_runtime.rs", "search": "impl Projector for HttpProjector"}, "page": "projection"},
     {"authority": "specified", "component": "semantic-projection", "id": "semantic-wiki", "kind": "projection", "label": "Agentic Commerce Intelligence wiki", "origin": {"path": "src/projection.rs", "search": "const WIKI_ID"}, "page": "projection"},
     {"authority": "specified", "component": "semantic-projection", "id": "local-wiki-projector", "kind": "worker", "label": "Local Hermes projection worker", "origin": {"path": "src/projection_runtime.rs", "search": "pub async fn run_projection_once"}, "page": "projection"},
-    {"authority": "specified", "component": "semantic-projection", "id": "projection-mirror", "kind": "projection", "label": "Approved read-only projection mirror", "origin": {"path": "migrations/0009_semantic_projection.up.sql", "search": "CREATE VIEW agent_economy.projection_mirror_pages"}, "page": "projection"},
+    {"authority": "specified", "component": "semantic-projection", "id": "projection-mirror", "kind": "projection", "label": "Approved read-only projection mirror", "origin": {"path": "migrations/0010_semantic_projection.up.sql", "search": "CREATE VIEW agent_economy.projection_mirror_pages"}, "page": "projection"},
     {"authority": "specified", "component": "runtime", "id": "runtime-service", "kind": "service", "label": "agent-economy-monitor", "origin": {"path": "src/main.rs", "search": "agent economy monitor listening"}, "page": "delivery"},
     {"authority": "specified", "component": "architecture-policy", "id": "cloud-run-api", "kind": "deployment", "label": "Cloud Run dashboard service", "origin": {"path": "docs/ARCHITECTURE.md", "search": "API[Cloud Run service]"}, "page": "delivery"},
     {"authority": "specified", "component": "architecture-policy", "id": "cloud-run-jobs", "kind": "deployment", "label": "Cloud Run worker jobs", "origin": {"path": "docs/ARCHITECTURE.md", "search": "J[Cloud Run jobs]"}, "page": "delivery"},
     {"authority": "specified", "component": "architecture-policy", "id": "cloud-scheduler", "kind": "scheduler", "label": "Cloud Scheduler", "origin": {"path": "docs/ARCHITECTURE.md", "search": "CS[Cloud Scheduler]"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:healthz", "kind": "endpoint", "label": "GET /healthz", "origin": {"method": "get", "path": "src/main.rs", "route": "/healthz"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:login", "kind": "endpoint", "label": "POST /auth/login", "origin": {"method": "post", "path": "src/auth.rs", "route": "/auth/login"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:logout", "kind": "endpoint", "label": "POST /auth/logout", "origin": {"method": "post", "path": "src/auth.rs", "route": "/auth/logout"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:status", "kind": "endpoint", "label": "GET /api/v1/status", "origin": {"method": "get", "path": "src/main.rs", "route": "/api/v1/status"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:cockpit", "kind": "endpoint", "label": "GET /", "origin": {"method": "get", "path": "src/cockpit.rs", "route": "/"}, "page": "experience"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:live-updates", "kind": "endpoint", "label": "GET /api/v1/stream", "origin": {"method": "get", "path": "src/cockpit.rs", "route": "/api/v1/stream"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:openapi", "kind": "endpoint", "label": "GET /api/v1/openapi.json", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/openapi.json"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:pulse", "kind": "endpoint", "label": "GET /api/v1/pulse", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/pulse"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:buyers", "kind": "endpoint", "label": "GET /api/v1/buyers", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers"}, "page": "delivery"},
@@ -526,7 +557,6 @@
     {"authority": "mechanical", "component": "runtime", "id": "http:graph", "kind": "endpoint", "label": "GET /api/v1/graph/{kind}/{id}", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/graph/{kind}/{id}"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:provenance", "kind": "endpoint", "label": "GET /api/v1/provenance/{id}", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/provenance/{id}"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:search", "kind": "endpoint", "label": "GET /api/v1/search", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/search"}, "page": "delivery"},
-    {"authority": "mechanical", "component": "runtime", "id": "http:investigations", "kind": "endpoint", "label": "GET /api/v1/investigations", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/investigations"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:system", "kind": "endpoint", "label": "GET /api/v1/system", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/system"}, "page": "delivery"},
     {"authority": "specified", "component": "architecture-policy", "id": "store:evidence", "kind": "store", "label": "Google Cloud Storage", "origin": {"path": "docs/ARCHITECTURE.md", "search": "Google Cloud Storage immutable evidence"}, "page": "evidence"},
     {"authority": "specified", "component": "architecture-policy", "id": "store:postgresql", "kind": "store", "label": "PostgreSQL operational and analytical store", "origin": {"path": "docs/ARCHITECTURE.md", "search": "PostgreSQL jobs"}, "page": "canonical"},
@@ -538,7 +568,7 @@
   "pages": [
     {"components": ["runtime"], "id": "experience", "label": "Private cockpit", "roots": ["cockpit"]},
     {"components": ["architecture-policy", "observation-contracts", "adapter-api", "evidence-store", "mpp-adapter", "rpc-collector", "x402-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "observation-contract", "adapter-boundary", "filesystem-evidence-store", "mpp-discovery-adapter", "protocol-adapters"]},
-    {"components": ["architecture-policy", "attribution-engine", "buyer-classification", "buyer-enrichment-schema", "deterministic-reducer", "knowledge-graph-schema", "operational-analytics-schema", "query-read-models", "shadow-catalog-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "attribution", "classification", "buyer-classification-schema", "buyer-enrichment-schema", "canonical-knowledge-schema", "dashboard-read-models", "operational-analytics-schema", "shadow-catalog"]},
+    {"components": ["architecture-policy", "attribution-engine", "buyer-classification", "buyer-enrichment-schema", "cockpit-auth-schema", "deterministic-reducer", "knowledge-graph-schema", "operational-analytics-schema", "query-read-models", "shadow-catalog-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "attribution", "classification", "buyer-classification-schema", "buyer-enrichment-schema", "canonical-knowledge-schema", "cockpit-auth-state", "dashboard-read-models", "operational-analytics-schema", "shadow-catalog"]},
     {"components": ["architecture-policy", "semantic-projection"], "id": "projection", "label": "Semantic projection", "roots": ["evidence-snapshot"]},
     {"components": ["runtime", "development-stack"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service", "query-api", "local-development-stack"]}
   ],

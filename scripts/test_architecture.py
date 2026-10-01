@@ -130,7 +130,7 @@ class ArchitectureCompilerTests(unittest.TestCase):
             {workflow["id"] for workflow in model["ci"]["workflows"]},
         )
         self.assertEqual(
-            {"architecture": 2, "verify": 6, "build-pages": 6, "deploy-pages": 1},
+            {"architecture": 2, "verify": 7, "build-pages": 6, "deploy-pages": 1},
             {job["id"]: job["step_count"] for job in model["ci"]["jobs"]},
         )
 
@@ -214,6 +214,7 @@ class ArchitectureCompilerTests(unittest.TestCase):
         workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
         self.assertIn('RUN_KNOWLEDGE_GRAPH_LIVE: "1"', workflow)
         self.assertIn('RUN_OPERATIONAL_ANALYTICS_LIVE: "1"', workflow)
+        self.assertIn("python3 -m playwright install --with-deps firefox", workflow)
         self.assertIn(
             "      - name: Verify\n"
             "        env:\n"
