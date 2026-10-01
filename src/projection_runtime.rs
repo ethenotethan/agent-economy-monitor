@@ -54,7 +54,7 @@ impl ProjectionRuntimeConfig {
         wiki_rpc_url: &str,
         wiki_token: SecretString,
     ) -> Result<Self, String> {
-        let gateway_url = secure_url(gateway_url, false)?;
+        let gateway_url = secure_url(gateway_url, true)?;
         let model_url = secure_url(model_url, true)?;
         let wiki_rpc_url = secure_url(wiki_rpc_url, true)?;
         if !is_loopback(&model_url) {

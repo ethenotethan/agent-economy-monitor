@@ -47,6 +47,7 @@
       "layer": "projection",
       "patterns": [
         "src/projection.rs",
+        "src/projection_gateway.rs",
         "src/projection_runtime.rs",
         "migrations/0010_semantic_projection.*.sql"
       ]
@@ -537,6 +538,10 @@
     {"authority": "specified", "component": "semantic-projection", "id": "semantic-wiki", "kind": "projection", "label": "Agentic Commerce Intelligence wiki", "origin": {"path": "src/projection.rs", "search": "const WIKI_ID"}, "page": "projection"},
     {"authority": "specified", "component": "semantic-projection", "id": "local-wiki-projector", "kind": "worker", "label": "Local Hermes projection worker", "origin": {"path": "src/projection_runtime.rs", "search": "pub async fn run_projection_once"}, "page": "projection"},
     {"authority": "specified", "component": "semantic-projection", "id": "projection-mirror", "kind": "projection", "label": "Approved read-only projection mirror", "origin": {"path": "migrations/0010_semantic_projection.up.sql", "search": "CREATE VIEW agent_economy.projection_mirror_pages"}, "page": "projection"},
+    {"authority": "mechanical", "component": "semantic-projection", "id": "http:projection-jobs-next", "kind": "endpoint", "label": "GET /api/v1/projection/jobs/next", "origin": {"method": "get", "path": "src/projection_gateway.rs", "route": "/api/v1/projection/jobs/next"}, "page": "projection"},
+    {"authority": "mechanical", "component": "semantic-projection", "id": "http:projection-snapshot", "kind": "endpoint", "label": "GET /api/v1/projection/jobs/{job_id}/snapshot", "origin": {"method": "get", "path": "src/projection_gateway.rs", "route": "/api/v1/projection/jobs/{job_id}/snapshot"}, "page": "projection"},
+    {"authority": "mechanical", "component": "semantic-projection", "id": "http:projection-approval", "kind": "endpoint", "label": "GET /api/v1/projection/jobs/{job_id}/approvals/{candidate_sha256}", "origin": {"method": "get", "path": "src/projection_gateway.rs", "route": "/api/v1/projection/jobs/{job_id}/approvals/{candidate_sha256}"}, "page": "projection"},
+    {"authority": "mechanical", "component": "semantic-projection", "id": "http:projection-publication", "kind": "endpoint", "label": "PUT /api/v1/projection/jobs/{job_id}/bundles/{bundle_sha256}", "origin": {"method": "put", "path": "src/projection_gateway.rs", "route": "/api/v1/projection/jobs/{job_id}/bundles/{bundle_sha256}"}, "page": "projection"},
     {"authority": "specified", "component": "runtime", "id": "runtime-service", "kind": "service", "label": "agent-economy-monitor", "origin": {"path": "src/main.rs", "search": "agent economy monitor listening"}, "page": "delivery"},
     {"authority": "specified", "component": "architecture-policy", "id": "cloud-run-api", "kind": "deployment", "label": "Cloud Run dashboard service", "origin": {"path": "docs/ARCHITECTURE.md", "search": "API[Cloud Run service]"}, "page": "delivery"},
     {"authority": "specified", "component": "architecture-policy", "id": "cloud-run-jobs", "kind": "deployment", "label": "Cloud Run worker jobs", "origin": {"path": "docs/ARCHITECTURE.md", "search": "J[Cloud Run jobs]"}, "page": "delivery"},

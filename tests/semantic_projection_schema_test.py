@@ -34,6 +34,7 @@ class SemanticProjectionMigrationTest(unittest.TestCase):
         self.assertIn("page_sha256", sql)
         self.assertIn("changeset_sha256", sql)
         self.assertIn("snapshot_sha256", sql)
+        self.assertIn("snapshot_payload jsonb NOT NULL", sql)
         self.assertIn("model_sha256", sql)
         self.assertIn("prompt_sha256", sql)
         self.assertIn("output_sha256", sql)
@@ -81,6 +82,11 @@ class SemanticProjectionMigrationTest(unittest.TestCase):
         ):
             self.assertIn(f"agent_economy.{relation}", sql)
         self.assertIn("GRANT agent_economy_dashboard_reader TO CURRENT_USER", sql)
+        self.assertIn("GRANT agent_economy_projection_writer TO CURRENT_USER", sql)
+        self.assertIn(
+            "GRANT SELECT ON agent_economy.projection_publications TO agent_economy_projection_writer",
+            sql,
+        )
 
     def test_down_migration_fails_closed_before_removing_projection_history(self):
         sql = DOWN.read_text()

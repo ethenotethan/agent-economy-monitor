@@ -7,6 +7,14 @@ CREATE TABLE agent_economy.projection_snapshots (
     snapshot_sha256 text NOT NULL CHECK (snapshot_sha256 ~ '^[0-9a-f]{64}$'),
     storage_uri text NOT NULL CHECK (storage_uri ~ '^gcs://'),
     byte_length bigint NOT NULL CHECK (byte_length >= 0),
+    snapshot_payload jsonb NOT NULL CHECK (
+        jsonb_typeof(snapshot_payload) = 'object'
+        AND snapshot_payload ?& ARRAY['bytes', 'sha256', 'projection_input', 'private_fragments']
+        AND snapshot_payload ->> 'sha256' = snapshot_sha256
+        AND jsonb_typeof(snapshot_payload -> 'bytes') = 'array'
+        AND jsonb_typeof(snapshot_payload -> 'projection_input') = 'object'
+        AND jsonb_typeof(snapshot_payload -> 'private_fragments') = 'array'
+    ),
     created_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (namespace_id, snapshot_id),
     UNIQUE (namespace_id, snapshot_sha256),
@@ -299,6 +307,7 @@ GRANT USAGE ON SCHEMA agent_economy TO agent_economy_projection_writer;
 GRANT SELECT ON agent_economy.projection_snapshots TO agent_economy_projection_writer;
 GRANT SELECT ON agent_economy.projection_jobs TO agent_economy_projection_writer;
 GRANT SELECT ON agent_economy.projection_approvals TO agent_economy_projection_writer;
+GRANT SELECT ON agent_economy.projection_publications TO agent_economy_projection_writer;
 GRANT UPDATE (status, lease_owner, lease_expires_at, attempt_count, updated_at)
     ON agent_economy.projection_jobs TO agent_economy_projection_writer;
 GRANT INSERT ON agent_economy.projection_publications TO agent_economy_projection_writer;
@@ -324,5 +333,6 @@ GRANT SELECT ON
 TO agent_economy_dashboard_reader;
 
 GRANT agent_economy_dashboard_reader TO CURRENT_USER;
+GRANT agent_economy_projection_writer TO CURRENT_USER;
 
 COMMIT;

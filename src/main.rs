@@ -3,6 +3,9 @@ use std::{env, io, net::SocketAddr};
 use agent_economy_monitor::{
     auth::{AuthState, PostgresAuthStore, protect_router},
     cockpit::mount_cockpit,
+    projection_gateway::{
+        PostgresProjectionGatewayStore, ProjectionGatewayState, mount_projection_gateway,
+    },
     projection_runtime::{ProjectionRuntimeConfig, run_projection_once},
     query::{PostgresQueryStore, api_router},
 };
@@ -90,11 +93,33 @@ async fn serve() -> Result<(), Box<dyn std::error::Error>> {
             tracing::error!("PostgreSQL query connection closed unexpectedly");
         }
     });
-    let query_store = PostgresQueryStore::new(query_client, namespace_id);
+    let query_store = PostgresQueryStore::new(query_client, namespace_id.clone());
+    let (gateway_client, gateway_connection) =
+        tokio_postgres::connect(&database_url, NoTls).await?;
+    gateway_client
+        .batch_execute("SET ROLE agent_economy_projection_writer")
+        .await?;
+    tokio::spawn(async move {
+        if gateway_connection.await.is_err() {
+            tracing::error!("PostgreSQL projection gateway connection closed unexpectedly");
+        }
+    });
+    let gateway_token = env::var("PROJECTION_GATEWAY_TOKEN")?;
+    let lease_owner =
+        env::var("PROJECTION_LEASE_OWNER").unwrap_or_else(|_| "agent-economy-monitor".into());
+    let gateway = ProjectionGatewayState::new(
+        std::sync::Arc::new(PostgresProjectionGatewayStore::new(
+            gateway_client,
+            namespace_id.clone(),
+        )),
+        &gateway_token,
+        &lease_owner,
+    );
     let app: Router =
         api_router(std::sync::Arc::new(query_store)).route("/api/v1/status", get(status));
     let app = mount_cockpit(app);
     let app = protect_router(app, auth).route("/healthz", get(status));
+    let app = mount_projection_gateway(app, gateway);
 
     info!(%address, "agent economy monitor listening");
     axum::serve(listener, app).await?;
