@@ -307,7 +307,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5508
+      "line_count": 5558
     },
     {
       "declaration_count": 44,
@@ -9721,7 +9721,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 180,
+        "line_count": 195,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -9749,7 +9749,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1491,
+        "line_count": 1526,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -13413,7 +13413,7 @@
   "inventory": {
     "declarations": 995,
     "files": 115,
-    "lines": 31175
+    "lines": 31225
   },
   "layers": [
     {
@@ -13454,7 +13454,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "daef33177fa819179303d26201b2fb0ea628364c4e67b0d68ef0a47a375d91c1",
+  "source_tree_sha256": "d33a02b3059675ac276206ec24dd17767ab9c1d1c7950db225affa774dbb83a6",
   "stores": {
     "count": 2,
     "items": [
