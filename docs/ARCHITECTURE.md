@@ -43,6 +43,14 @@ The product has one canonical runtime identity: `agent-economy-monitor`. One Rus
 
 PostgreSQL transactional job leases own distributed record assignment. Workers claim bounded batches with `FOR UPDATE SKIP LOCKED`, idempotency keys, lease expiry, retry state, and dead-letter status. Cloud SQL and Google Cloud Storage remain honest dependency nodes rather than application runtimes.
 
+The Rust worker dispatcher is fail-closed: an invocation names exactly one of `collect`,
+`reduce`, `classify`, or `enrich`, validates that a real handler is registered before
+claiming work, and processes at most one job. Every claim receives a unique lease token;
+renewal and result commit require that still-live token. Unknown modes, missing handlers,
+empty queues, handler failures, and stale result commits all exit non-zero. Until a domain
+handler is explicitly registered, its process mode is intentionally unavailable rather
+than reporting synthetic success.
+
 ## Storage authority
 
 - Google Cloud Storage: content-addressed raw evidence, approved wiki projection bundles, and the durable replay source

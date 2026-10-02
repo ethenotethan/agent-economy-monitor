@@ -51,6 +51,13 @@ PostgreSQL compare-and-set checkpoints, and every bounded run returns request-bu
 retry, evidence-object, and gap metrics. RPC endpoints are typed secrets with redacted
 debug output; collectors never log endpoint URLs or JSON-RPC request bodies.
 
+The shared worker control plane uses PostgreSQL transactional leases for the explicit
+`collect`, `reduce`, `classify`, and `enrich` process modes. A run claims at most one job,
+commits an exact output digest under its live lease token, and exits non-zero for an empty
+queue, unknown mode, failed handler, or mode without a registered production handler.
+Expired leases are safely reassigned, while retries, poison jobs, and cancellation remain
+bounded and deterministic.
+
 ```bash
 python3 -m pip install --requirement requirements-dev.txt
 python3 -m playwright install firefox

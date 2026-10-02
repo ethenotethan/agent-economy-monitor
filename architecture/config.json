@@ -53,6 +53,16 @@
       ]
     },
     {
+      "description": "Transactional PostgreSQL lease state and fail-closed, one-job process-mode dispatch for bounded production workers.",
+      "id": "worker-control",
+      "label": "Worker lease control plane",
+      "layer": "canonical",
+      "patterns": [
+        "src/worker.rs",
+        "migrations/0012_worker_jobs.*.sql"
+      ]
+    },
+    {
       "description": "Namespace-scoped PostgreSQL session hashes and atomic shared-password login admission state.",
       "id": "cockpit-auth-schema",
       "label": "Cockpit authentication state",
@@ -255,7 +265,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem evidence adapter are implemented at this revision; Google Cloud Storage and remaining production PostgreSQL clients, production registrations for domain worker handlers, and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -589,7 +599,7 @@
   "title": "Agent Economy Monitor Architecture",
   "unresolved": [
     {"id": "rust.runtime-mpp-adapter", "reason": "MPP OpenAPI and x402 discovery adapters exist, but no runtime MPP challenge parser exists yet."},
-    {"id": "rust.workers", "reason": "The local project-wiki mode is implemented, while the external RPC collector, targeted buyer enrichment, deterministic reducer/finality engine, settlement attribution engine, and buyer classification engine remain libraries without collect/reduce/attribute/classify/enrich process modes."},
+    {"id": "rust.workers", "reason": "Transactional leases and fail-closed collect/reduce/classify/enrich dispatch are implemented, but the domain engines remain intentionally unregistered until production job handlers bind leased inputs to their real repositories."},
     {"id": "runtime.storage-clients", "reason": "The filesystem evidence adapter and PostgreSQL RPC cursor and buyer-enrichment clients are implemented; no Google Cloud Storage client or remaining production PostgreSQL repositories exist yet."}
   ]
 }
