@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use agent_economy_monitor::query::{
     BuyerDossierReadModel, ClassificationReadModel, DashboardPage, EvidenceProvenanceBinding, Fact,
-    GraphReadModel, PostgresQueryStore, ProvenanceReadModel, QueryError, QueryStore,
-    SystemReadModel, api_router,
+    GraphReadModel, PostgresQueryStore, ProjectionPage, ProjectionPageList, ProvenanceReadModel,
+    QueryError, QueryStore, SystemReadModel, api_router,
 };
 use async_trait::async_trait;
 use axum::{
@@ -12,6 +12,7 @@ use axum::{
 };
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
+use tokio_postgres::NoTls;
 use tower::ServiceExt;
 
 #[derive(Default)]
@@ -159,6 +160,34 @@ impl QueryStore for FixtureStore {
             facts: vec![fact("system:jobs", "system_metric")],
         })
     }
+
+    async fn investigations(
+        &self,
+        _after: Option<&str>,
+        _limit: usize,
+    ) -> Result<ProjectionPageList, QueryError> {
+        Ok(ProjectionPageList::new(
+            vec![ProjectionPage {
+                page_path: "investigations/weather".into(),
+                stable_entity_id: "service:weather".into(),
+                generated_markdown: "# Weather".into(),
+                citations: json!([{"stable_id": "evidence:weather", "evidence_sha256": "d".repeat(64)}]),
+                wikilinks: vec!["services/weather".into()],
+                model_id: "projector-v1".into(),
+                model_sha256: "a".repeat(64),
+                prompt_sha256: "b".repeat(64),
+                snapshot_sha256: "c".repeat(64),
+                output_sha256: "d".repeat(64),
+                bundle_sha256: "e".repeat(64),
+                changeset_id: "changeset-7".into(),
+                changeset_sha256: "f".repeat(64),
+                approved_by: "owner".into(),
+                approved_at: "2026-09-30T00:00:00Z".into(),
+                published_at: "2026-09-30T00:01:00Z".into(),
+            }],
+            None,
+        ))
+    }
 }
 
 #[tokio::test]
@@ -216,6 +245,7 @@ async fn purpose_built_surface_is_documented_without_graphql_or_sql() {
         "/api/v1/graph/buyer/buyer:1",
         "/api/v1/provenance/11111111-1111-1111-1111-111111111111",
         "/api/v1/search?q=buyer",
+        "/api/v1/investigations",
         "/api/v1/system",
     ];
     for path in paths {
@@ -281,6 +311,12 @@ async fn purpose_built_surface_is_documented_without_graphql_or_sql() {
         "q"
     );
     assert!(document["components"]["schemas"]["Fact"].is_object());
+    assert!(
+        document["paths"]
+            .as_object()
+            .unwrap()
+            .contains_key("/api/v1/investigations")
+    );
     let serialized = serde_json::to_string(&document).unwrap().to_lowercase();
     assert!(!serialized.contains("graphql"));
     assert!(!serialized.contains("sql"));
@@ -304,6 +340,90 @@ async fn purpose_built_surface_is_documented_without_graphql_or_sql() {
 fn postgres_store_is_the_runtime_query_backend() {
     let _constructor: fn(tokio_postgres::Client, String) -> PostgresQueryStore =
         PostgresQueryStore::new;
+    assert!(include_str!("../src/main.rs").contains("SET ROLE agent_economy_dashboard_reader"));
+}
+
+#[tokio::test]
+#[ignore = "requires a disposable PostgreSQL migrated through 0011"]
+async fn restricted_dashboard_role_serves_every_query_path() {
+    let database_url = std::env::var("AEM_QUERY_TEST_DATABASE_URL")
+        .expect("AEM_QUERY_TEST_DATABASE_URL must identify disposable PostgreSQL");
+    let (client, connection) = tokio_postgres::connect(&database_url, NoTls)
+        .await
+        .expect("connect to disposable PostgreSQL");
+    tokio::spawn(async move {
+        connection.await.expect("PostgreSQL test connection");
+    });
+
+    let namespace = "00000000-0000-0000-0000-000000000017";
+    let provenance = "00000000-0000-0000-0000-000000000117";
+    client
+        .batch_execute(&format!(
+            r#"
+            DO $$ BEGIN
+                CREATE ROLE agent_economy_dashboard_test_login LOGIN NOINHERIT;
+            EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+            GRANT agent_economy_dashboard_reader TO agent_economy_dashboard_test_login;
+            INSERT INTO agent_economy.namespaces
+                (namespace_id, namespace_kind, namespace_key)
+            VALUES ('{namespace}', 'tenant', 'dashboard-role-test');
+            INSERT INTO agent_economy.evidence_objects
+                (namespace_id, evidence_id, sha256, storage_uri, media_type, byte_length, observed_at)
+            VALUES ('{namespace}', 'evidence:dashboard-role', repeat('a', 64),
+                    'evidence://dashboard-role', 'application/json', 2, now());
+            INSERT INTO agent_economy.provenance_records
+                (namespace_id, provenance_id, source_id, observed_at, parser_version,
+                 chain_scope, evidence_id)
+            VALUES ('{namespace}', '{provenance}', 'source:test', now(), 'test@1',
+                    'base', 'evidence:dashboard-role');
+            INSERT INTO agent_economy.services
+                (namespace_id, service_id, display_name, trust_state, provenance_id)
+            VALUES ('{namespace}', 'service:test', 'Test service', 'observed', '{provenance}');
+            INSERT INTO agent_economy.buyer_handles
+                (namespace_id, buyer_handle_id, handle_kind, chain_scope, handle_value, provenance_id)
+            VALUES ('{namespace}', 'buyer:test', 'wallet', 'base', '0xtest', '{provenance}');
+            SET SESSION AUTHORIZATION agent_economy_dashboard_test_login;
+            SET ROLE agent_economy_dashboard_reader;
+            "#
+        ))
+        .await
+        .expect("prepare restricted dashboard fixture");
+
+    let write_error = client
+        .execute(
+            "INSERT INTO agent_economy.namespaces (namespace_id, namespace_kind, namespace_key) VALUES ('00000000-0000-0000-0000-000000000999', 'tenant', 'forbidden')",
+            &[],
+        )
+        .await
+        .expect_err("dashboard reader must remain read-only");
+    assert_eq!(
+        write_error.code(),
+        Some(&tokio_postgres::error::SqlState::INSUFFICIENT_PRIVILEGE)
+    );
+
+    let app = api_router(Arc::new(PostgresQueryStore::new(client, namespace.into())));
+    let provenance_path = format!("/api/v1/provenance/{provenance}");
+    for path in [
+        "/api/v1/pulse",
+        "/api/v1/buyers",
+        "/api/v1/buyers/buyer:test",
+        "/api/v1/buyers/buyer:test/dossier",
+        "/api/v1/buyers/buyer:test/timeline",
+        "/api/v1/services",
+        "/api/v1/services/service:test",
+        "/api/v1/graph/service/service:test",
+        provenance_path.as_str(),
+        "/api/v1/search?q=test",
+        "/api/v1/investigations",
+        "/api/v1/system",
+    ] {
+        let response = app
+            .clone()
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
+    }
 }
 
 #[tokio::test]

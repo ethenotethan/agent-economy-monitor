@@ -9,8 +9,8 @@ use std::{
 use agent_economy_monitor::{
     auth::{AuthConfig, AuthState, InMemoryAuthStore, protect_router},
     query::{
-        BuyerDossierReadModel, DashboardPage, Fact, GraphReadModel, ProvenanceReadModel,
-        QueryError, QueryStore, SystemReadModel, api_router,
+        BuyerDossierReadModel, DashboardPage, Fact, GraphReadModel, ProjectionPageList,
+        ProvenanceReadModel, QueryError, QueryStore, SystemReadModel, api_router,
     },
 };
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version, password_hash::SaltString};
@@ -104,6 +104,14 @@ impl QueryStore for CountingStore {
         _after: Option<&str>,
         _limit: usize,
     ) -> Result<DashboardPage, QueryError> {
+        unreachable!()
+    }
+
+    async fn investigations(
+        &self,
+        _after: Option<&str>,
+        _limit: usize,
+    ) -> Result<ProjectionPageList, QueryError> {
         unreachable!()
     }
 
