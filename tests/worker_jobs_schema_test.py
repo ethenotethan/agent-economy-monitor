@@ -40,6 +40,10 @@ class WorkerJobsMigrationContractTest(unittest.TestCase):
         self.assertNotIn("request_body", up.lower())
         self.assertNotIn("GRANT UPDATE", up)
         self.assertNotIn("GRANT SELECT ON agent_economy.worker_jobs", up)
+        self.assertIn(
+            "REVOKE ALL ON agent_economy.worker_jobs FROM agent_economy_worker;",
+            up,
+        )
         self.assertIn("GRANT EXECUTE ON FUNCTION agent_economy.claim_worker_job", up)
 
     def test_down_migration_fails_closed_when_worker_history_exists(self):

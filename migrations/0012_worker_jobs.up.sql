@@ -249,6 +249,7 @@ END
 $$;
 
 REVOKE ALL ON agent_economy.worker_jobs FROM PUBLIC;
+REVOKE ALL ON agent_economy.worker_jobs FROM agent_economy_worker;
 REVOKE ALL ON FUNCTION agent_economy.protect_worker_job_identity() FROM PUBLIC;
 REVOKE ALL ON FUNCTION agent_economy.claim_worker_job(uuid, text, text, bigint) FROM PUBLIC;
 REVOKE ALL ON FUNCTION agent_economy.renew_worker_job_lease(uuid, uuid, text, uuid, bigint) FROM PUBLIC;

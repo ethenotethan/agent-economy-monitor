@@ -6,6 +6,20 @@ use agent_economy_monitor::worker::{
 use tokio_postgres::{Client, NoTls};
 
 const NAMESPACE: &str = "00000000-0000-0000-0000-000000000047";
+const MIGRATIONS_BEFORE_WORKER_JOBS: &[&str] = &[
+    include_str!("../migrations/0001_knowledge_graph.up.sql"),
+    include_str!("../migrations/0002_operational_analytics.up.sql"),
+    include_str!("../migrations/0003_shadow_catalog.up.sql"),
+    include_str!("../migrations/0004_buyer_enrichment.up.sql"),
+    include_str!("../migrations/0005_reducer_finality.up.sql"),
+    include_str!("../migrations/0006_settlement_attribution.up.sql"),
+    include_str!("../migrations/0007_buyer_classification.up.sql"),
+    include_str!("../migrations/0008_query_read_models.up.sql"),
+    include_str!("../migrations/0009_cockpit_auth.up.sql"),
+    include_str!("../migrations/0010_classification_promotions.up.sql"),
+    include_str!("../migrations/0011_semantic_projection.up.sql"),
+];
+const WORKER_JOBS_MIGRATION: &str = include_str!("../migrations/0012_worker_jobs.up.sql");
 
 async fn connect(database_url: &str) -> Client {
     let (client, connection) = tokio_postgres::connect(database_url, NoTls).await.unwrap();
@@ -32,6 +46,69 @@ async fn insert_job(client: &Client, job_id: &str, mode: &str, max_attempts: i16
         )
         .await
         .unwrap();
+}
+
+#[tokio::test]
+#[ignore = "requires a fresh AEM_WORKER_PRIVILEGE_TEST_DATABASE_URL with role creation authority"]
+async fn migration_revokes_worker_table_privileges_inherited_from_owner_defaults() {
+    let database_url = std::env::var("AEM_WORKER_PRIVILEGE_TEST_DATABASE_URL").unwrap();
+    let owner = connect(&database_url).await;
+    for migration in MIGRATIONS_BEFORE_WORKER_JOBS {
+        owner.batch_execute(migration).await.unwrap();
+    }
+
+    owner
+        .batch_execute(
+            "CREATE ROLE agent_economy_worker NOLOGIN; \
+             ALTER DEFAULT PRIVILEGES IN SCHEMA agent_economy \
+             GRANT SELECT, UPDATE ON TABLES TO agent_economy_worker;",
+        )
+        .await
+        .unwrap();
+    owner.batch_execute(WORKER_JOBS_MIGRATION).await.unwrap();
+    owner
+        .execute(
+            "INSERT INTO agent_economy.namespaces (namespace_id, namespace_kind, namespace_key) \
+             VALUES ($1::text::uuid, 'tenant', 'worker-privilege-test')",
+            &[&NAMESPACE],
+        )
+        .await
+        .unwrap();
+    let job_id = "00000000-0000-0000-0000-000000000647";
+    insert_job(&owner, job_id, "collect", 3).await;
+
+    let worker = connect_worker(&database_url).await;
+    let select_error = worker
+        .query("SELECT status FROM agent_economy.worker_jobs", &[])
+        .await
+        .expect_err("the worker role must not read worker_jobs directly");
+    assert_eq!(
+        select_error.code(),
+        Some(&tokio_postgres::error::SqlState::INSUFFICIENT_PRIVILEGE)
+    );
+    let update_error = worker
+        .execute(
+            "UPDATE agent_economy.worker_jobs SET status = 'cancelled', \
+             last_error_code = 'bypass' WHERE job_id = $1::text::uuid",
+            &[&job_id],
+        )
+        .await
+        .expect_err("the worker role must not mutate worker_jobs directly");
+    assert_eq!(
+        update_error.code(),
+        Some(&tokio_postgres::error::SqlState::INSUFFICIENT_PRIVILEGE)
+    );
+
+    let claimed = worker
+        .query_one(
+            "SELECT job_id::text FROM agent_economy.claim_worker_job( \
+             $1::text::uuid, 'collect', 'worker-privilege-test', 60)",
+            &[&NAMESPACE],
+        )
+        .await
+        .expect("the worker role must retain function-only lease authority")
+        .get::<_, String>(0);
+    assert_eq!(claimed, job_id);
 }
 
 #[tokio::test]
