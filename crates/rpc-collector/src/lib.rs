@@ -3,7 +3,7 @@ use std::{
     fmt,
 };
 
-use agent_economy_evidence_store::{EvidenceContext, EvidenceStore};
+use agent_economy_evidence_store::{EvidenceContext, EvidenceProvenance, EvidenceStore};
 use serde::de::{self, DeserializeSeed, MapAccess, SeqAccess, Visitor};
 use serde_json::{Value, json};
 use thiserror::Error;
@@ -377,8 +377,9 @@ impl RpcTransport for AlchemyTransport {
     }
 }
 
+#[allow(async_fn_in_trait)]
 pub trait EvidenceArchive {
-    fn archive(
+    async fn archive(
         &mut self,
         observed_date: &str,
         evidence: &RpcEvidence,
@@ -396,17 +397,41 @@ impl<'a, S> StoreEvidenceArchive<'a, S> {
 }
 
 impl<S: EvidenceStore> EvidenceArchive for StoreEvidenceArchive<'_, S> {
-    fn archive(
+    async fn archive(
         &mut self,
         observed_date: &str,
         evidence: &RpcEvidence,
     ) -> Result<String, CollectorError> {
         let source = format!("alchemy-{}", evidence.chain());
+        let observation_id = format!(
+            "alchemy:{}:block:{}:attempt:{}",
+            evidence.chain(),
+            evidence.requested_height(),
+            evidence.attempt()
+        );
+        let height = evidence.requested_height().to_string();
+        let attempt = evidence.attempt().to_string();
+        let http_status = evidence.http_status().to_string();
+        let provenance = EvidenceProvenance::new(
+            "rpc-evidence-v1",
+            &observation_id,
+            [
+                ("attempt", attempt.as_str()),
+                ("chain", evidence.chain().as_str()),
+                ("height", height.as_str()),
+                ("http-status", http_status.as_str()),
+                ("method", evidence.method()),
+                ("provider", evidence.provider()),
+            ],
+        )
+        .map_err(|error| CollectorError::Evidence(error.to_string()))?;
         let context = EvidenceContext::new(&source, observed_date)
-            .map_err(|error| CollectorError::Evidence(error.to_string()))?;
+            .map_err(|error| CollectorError::Evidence(error.to_string()))?
+            .with_provenance(provenance);
         let encoded = evidence.encode();
         self.store
             .create(&context, &encoded)
+            .await
             .map(|receipt| receipt.object.name().to_owned())
             .map_err(|error| CollectorError::Evidence(error.to_string()))
     }
@@ -778,7 +803,11 @@ where
                             retries,
                             &response,
                         );
-                        let object = match self.archive.archive(&request.observed_date, &evidence) {
+                        let object = match self
+                            .archive
+                            .archive(&request.observed_date, &evidence)
+                            .await
+                        {
                             Ok(object) => object,
                             Err(error) => return Err(error.with_report(report)),
                         };

@@ -45,6 +45,16 @@ objects are addressed by SHA-256 beneath source and observation-date prefixes, r
 identical writes are idempotent, and every replay verifies the digest before returning
 bytes. Production uses the same object names and semantics with Google Cloud Storage.
 
+The production adapter obtains credentials exclusively through Google Application Default
+Credentials. On Cloud Run, bind a dedicated workload identity with
+`roles/storage.objectCreator` and `roles/storage.objectViewer` on the evidence bucket; do
+not mount or embed a service-account key. Configure the bucket name outside the evidence
+payload, construct `GoogleCloudStorageClient::from_application_default_credentials()`, and
+use `GcsEvidenceStore` with a bounded retry policy. Every upload carries
+`ifGenerationMatch=0` plus deterministic source, parser-version, observation-identity,
+replay-input, and SHA-256 metadata; neither payload bytes nor credentials enter metadata
+or error text.
+
 The external RPC collector uses one evidence-first contract for Ethereum, Base, Solana,
 and Tempo. Alchemy responses are archived before validation, cursor updates use
 PostgreSQL compare-and-set checkpoints, and every bounded run returns request-budget,

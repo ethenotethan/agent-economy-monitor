@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     error::Error,
     fmt,
     io::{Read, Write},
@@ -7,6 +8,7 @@ use std::{
         Arc,
         atomic::{AtomicU64, Ordering},
     },
+    time::Duration,
 };
 
 use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt};
@@ -15,6 +17,8 @@ use cap_std::{
     ambient_authority,
     fs::{Dir, OpenOptions},
 };
+use google_cloud_gax::{error::rpc::Code, retry_policy::NeverRetry};
+use google_cloud_storage::{client::Storage, read_resume_policy::NeverResume};
 use sha2::{Digest, Sha256};
 
 static TEMP_FILE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -23,6 +27,7 @@ static TEMP_FILE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 pub struct EvidenceContext {
     source: String,
     observed_date: String,
+    provenance: Option<EvidenceProvenance>,
 }
 
 impl EvidenceContext {
@@ -36,6 +41,50 @@ impl EvidenceContext {
         Ok(Self {
             source: source.to_owned(),
             observed_date: observed_date.to_owned(),
+            provenance: None,
+        })
+    }
+
+    pub fn with_provenance(mut self, provenance: EvidenceProvenance) -> Self {
+        self.provenance = Some(provenance);
+        self
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EvidenceProvenance {
+    parser_version: String,
+    observation_id: String,
+    replay_inputs: BTreeMap<String, String>,
+}
+
+impl EvidenceProvenance {
+    pub fn new<K, V>(
+        parser_version: &str,
+        observation_id: &str,
+        replay_inputs: impl IntoIterator<Item = (K, V)>,
+    ) -> Result<Self, StoreError>
+    where
+        K: Into<String>,
+        V: Into<String>,
+    {
+        if !valid_metadata_value(parser_version, 128) {
+            return Err(StoreError::InvalidContext("parser_version"));
+        }
+        if !valid_metadata_value(observation_id, 256) {
+            return Err(StoreError::InvalidContext("observation_id"));
+        }
+        let replay_inputs = replay_inputs
+            .into_iter()
+            .map(|(key, value)| (key.into(), value.into()))
+            .collect::<BTreeMap<_, _>>();
+        if !valid_rpc_replay_inputs(&replay_inputs) {
+            return Err(StoreError::InvalidContext("replay_inputs"));
+        }
+        Ok(Self {
+            parser_version: parser_version.to_owned(),
+            observation_id: observation_id.to_owned(),
+            replay_inputs,
         })
     }
 }
@@ -106,14 +155,15 @@ pub struct CreateReceipt {
     pub disposition: CreateDisposition,
 }
 
+#[allow(async_fn_in_trait)]
 pub trait EvidenceStore {
-    fn create(
+    async fn create(
         &self,
         context: &EvidenceContext,
         evidence: &[u8],
     ) -> Result<CreateReceipt, StoreError>;
 
-    fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError>;
+    async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError>;
 }
 
 #[derive(Clone, Debug)]
@@ -194,7 +244,7 @@ impl FilesystemEvidenceStore {
 }
 
 impl EvidenceStore for FilesystemEvidenceStore {
-    fn create(
+    async fn create(
         &self,
         context: &EvidenceContext,
         evidence: &[u8],
@@ -237,8 +287,277 @@ impl EvidenceStore for FilesystemEvidenceStore {
         })
     }
 
-    fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError> {
+    async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError> {
         self.read_verified(object)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GcsCreateRequest {
+    bucket: String,
+    name: String,
+    bytes: Vec<u8>,
+    metadata: BTreeMap<String, String>,
+    if_generation_match: Option<i64>,
+}
+
+impl GcsCreateRequest {
+    pub fn bucket(&self) -> &str {
+        &self.bucket
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+
+    pub fn metadata(&self) -> &BTreeMap<String, String> {
+        &self.metadata
+    }
+
+    pub const fn if_generation_match(&self) -> Option<i64> {
+        self.if_generation_match
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum GcsClientError {
+    PreconditionFailed,
+    Retryable,
+    Fatal,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GcsReadObject {
+    bytes: Vec<u8>,
+    metadata: BTreeMap<String, String>,
+}
+
+impl GcsReadObject {
+    pub fn new(bytes: Vec<u8>, metadata: BTreeMap<String, String>) -> Self {
+        Self { bytes, metadata }
+    }
+
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+
+    pub fn metadata(&self) -> &BTreeMap<String, String> {
+        &self.metadata
+    }
+}
+
+#[allow(async_fn_in_trait)]
+pub trait GcsObjectClient: Send + Sync {
+    async fn create_object(&self, request: GcsCreateRequest) -> Result<(), GcsClientError>;
+
+    async fn read_object(&self, bucket: &str, name: &str) -> Result<GcsReadObject, GcsClientError>;
+}
+
+#[derive(Clone)]
+pub struct GoogleCloudStorageClient {
+    client: Storage,
+}
+
+impl GoogleCloudStorageClient {
+    pub async fn from_application_default_credentials() -> Result<Self, StoreError> {
+        let client = Storage::builder()
+            .build()
+            .await
+            .map_err(|_| StoreError::Authentication)?;
+        Ok(Self { client })
+    }
+}
+
+impl GcsObjectClient for GoogleCloudStorageClient {
+    async fn create_object(&self, request: GcsCreateRequest) -> Result<(), GcsClientError> {
+        self.client
+            .write_object(
+                bucket_resource(&request.bucket),
+                request.name,
+                bytes::Bytes::from(request.bytes),
+            )
+            .set_if_generation_match(
+                request
+                    .if_generation_match
+                    .expect("GCS create request always carries a precondition"),
+            )
+            .set_metadata(request.metadata)
+            .with_retry_policy(NeverRetry)
+            .send_buffered()
+            .await
+            .map(|_| ())
+            .map_err(classify_gcs_error)
+    }
+
+    async fn read_object(&self, bucket: &str, name: &str) -> Result<GcsReadObject, GcsClientError> {
+        let mut reader = self
+            .client
+            .read_object(bucket_resource(bucket), name)
+            .with_retry_policy(NeverRetry)
+            .with_read_resume_policy(NeverResume)
+            .send()
+            .await
+            .map_err(classify_gcs_error)?;
+        let metadata = reader.object().metadata.into_iter().collect();
+        let mut bytes = Vec::new();
+        while let Some(chunk) = reader
+            .next()
+            .await
+            .transpose()
+            .map_err(classify_gcs_error)?
+        {
+            bytes.extend_from_slice(&chunk);
+        }
+        Ok(GcsReadObject { bytes, metadata })
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct GcsRetryPolicy {
+    max_attempts: u8,
+    base_delay: Duration,
+}
+
+impl GcsRetryPolicy {
+    pub fn new(max_attempts: u8) -> Result<Self, StoreError> {
+        if !(1..=10).contains(&max_attempts) {
+            return Err(StoreError::InvalidRetryPolicy);
+        }
+        Ok(Self {
+            max_attempts,
+            base_delay: Duration::ZERO,
+        })
+    }
+
+    pub fn with_base_delay(mut self, base_delay: Duration) -> Result<Self, StoreError> {
+        if base_delay > Duration::from_secs(5) {
+            return Err(StoreError::InvalidRetryPolicy);
+        }
+        self.base_delay = base_delay;
+        Ok(self)
+    }
+
+    async fn delay(self, completed_attempts: u8) {
+        if !self.base_delay.is_zero() {
+            let factor = 1_u32 << u32::from(completed_attempts.saturating_sub(1).min(6));
+            tokio::time::sleep(self.base_delay.saturating_mul(factor)).await;
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct GcsEvidenceStore<C> {
+    client: C,
+    bucket: String,
+    retry: GcsRetryPolicy,
+}
+
+impl<C> GcsEvidenceStore<C> {
+    pub fn new(client: C, bucket: &str, retry: GcsRetryPolicy) -> Result<Self, StoreError> {
+        if !valid_bucket(bucket) {
+            return Err(StoreError::InvalidContext("bucket"));
+        }
+        Ok(Self {
+            client,
+            bucket: bucket.to_owned(),
+            retry,
+        })
+    }
+}
+
+impl<C: GcsObjectClient> GcsEvidenceStore<C> {
+    async fn read_verified(
+        &self,
+        object: &EvidenceObject,
+        expected_metadata: Option<&BTreeMap<String, String>>,
+    ) -> Result<Vec<u8>, StoreError> {
+        let mut attempts = 0_u8;
+        let response = loop {
+            attempts += 1;
+            match self.client.read_object(&self.bucket, object.name()).await {
+                Ok(response) => break response,
+                Err(GcsClientError::Retryable) if attempts < self.retry.max_attempts => {
+                    self.retry.delay(attempts).await;
+                }
+                Err(_) => return Err(StoreError::Remote),
+            }
+        };
+        let bytes = verify_digest(object, response.bytes)?;
+        if expected_metadata.is_some_and(|expected| expected != &response.metadata) {
+            return Err(StoreError::MetadataMismatch {
+                object: object.name.clone(),
+            });
+        }
+        Ok(bytes)
+    }
+}
+
+impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
+    async fn create(
+        &self,
+        context: &EvidenceContext,
+        evidence: &[u8],
+    ) -> Result<CreateReceipt, StoreError> {
+        let provenance = context
+            .provenance
+            .as_ref()
+            .ok_or(StoreError::MissingProvenance)?;
+        let object = EvidenceObject::for_bytes(context, evidence);
+        let replay_inputs = serde_json::to_string(&provenance.replay_inputs)
+            .map_err(|_| StoreError::InvalidContext("replay_inputs"))?;
+        let metadata = BTreeMap::from([
+            (
+                "evidence-observation-id".to_owned(),
+                provenance.observation_id.clone(),
+            ),
+            (
+                "evidence-observed-date".to_owned(),
+                context.observed_date.clone(),
+            ),
+            (
+                "evidence-parser-version".to_owned(),
+                provenance.parser_version.clone(),
+            ),
+            ("evidence-replay-inputs".to_owned(), replay_inputs),
+            ("evidence-sha256".to_owned(), object.sha256()),
+            ("evidence-source".to_owned(), context.source.clone()),
+        ]);
+        let request = GcsCreateRequest {
+            bucket: self.bucket.clone(),
+            name: object.name().to_owned(),
+            bytes: evidence.to_vec(),
+            metadata,
+            if_generation_match: Some(0),
+        };
+
+        let mut attempts = 0_u8;
+        let disposition = loop {
+            attempts += 1;
+            match self.client.create_object(request.clone()).await {
+                Ok(()) => break CreateDisposition::Created,
+                Err(GcsClientError::PreconditionFailed) => {
+                    self.read_verified(&object, Some(request.metadata()))
+                        .await?;
+                    break CreateDisposition::AlreadyPresent;
+                }
+                Err(GcsClientError::Retryable) if attempts < self.retry.max_attempts => {
+                    self.retry.delay(attempts).await;
+                }
+                Err(_) => return Err(StoreError::Remote),
+            }
+        };
+        Ok(CreateReceipt {
+            object,
+            disposition,
+        })
+    }
+
+    async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError> {
+        self.read_verified(object, None).await
     }
 }
 
@@ -255,6 +574,13 @@ pub enum StoreError {
         expected: String,
         actual: String,
     },
+    MetadataMismatch {
+        object: String,
+    },
+    MissingProvenance,
+    InvalidRetryPolicy,
+    Authentication,
+    Remote,
     Io(std::io::Error),
 }
 
@@ -270,6 +596,15 @@ impl fmt::Display for StoreError {
             Self::DigestMismatch { object, .. } => {
                 write!(formatter, "evidence digest mismatch for {object}")
             }
+            Self::MetadataMismatch { object } => {
+                write!(formatter, "evidence metadata mismatch for {object}")
+            }
+            Self::MissingProvenance => formatter.write_str("evidence provenance is required"),
+            Self::InvalidRetryPolicy => formatter.write_str("invalid evidence retry policy"),
+            Self::Authentication => {
+                formatter.write_str("GCS application-default authentication failed")
+            }
+            Self::Remote => formatter.write_str("evidence remote storage operation failed"),
             Self::Io(error) => write!(formatter, "evidence storage I/O failed: {error}"),
         }
     }
@@ -304,6 +639,78 @@ fn valid_source(source: &str) -> bool {
             .as_bytes()
             .last()
             .is_some_and(u8::is_ascii_alphanumeric)
+}
+
+fn valid_rpc_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
+    if inputs.len() != 6 {
+        return false;
+    }
+    let valid_attempt = inputs
+        .get("attempt")
+        .is_some_and(|value| value.parse::<u16>().is_ok());
+    let valid_chain = inputs
+        .get("chain")
+        .is_some_and(|value| matches!(value.as_str(), "ethereum" | "base" | "solana" | "tempo"));
+    let valid_height = inputs
+        .get("height")
+        .is_some_and(|value| value.parse::<u64>().is_ok());
+    let valid_http_status = inputs
+        .get("http-status")
+        .and_then(|value| value.parse::<u16>().ok())
+        .is_some_and(|value| (100..=599).contains(&value));
+    let valid_method = inputs
+        .get("method")
+        .is_some_and(|value| matches!(value.as_str(), "eth_getBlockByNumber" | "getBlock"));
+    let valid_provider = inputs
+        .get("provider")
+        .is_some_and(|value| value == "alchemy");
+    valid_attempt
+        && valid_chain
+        && valid_height
+        && valid_http_status
+        && valid_method
+        && valid_provider
+}
+
+fn valid_metadata_value(value: &str, max_length: usize) -> bool {
+    !value.is_empty()
+        && value.len() <= max_length
+        && value.bytes().all(|byte| {
+            byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':' | b'/')
+        })
+}
+
+fn valid_bucket(bucket: &str) -> bool {
+    (3..=222).contains(&bucket.len())
+        && bucket.bytes().all(|byte| {
+            byte.is_ascii_lowercase() || byte.is_ascii_digit() || matches!(byte, b'-' | b'_' | b'.')
+        })
+        && bucket
+            .as_bytes()
+            .first()
+            .is_some_and(u8::is_ascii_alphanumeric)
+        && bucket
+            .as_bytes()
+            .last()
+            .is_some_and(u8::is_ascii_alphanumeric)
+}
+
+fn bucket_resource(bucket: &str) -> String {
+    format!("projects/_/buckets/{bucket}")
+}
+
+fn classify_gcs_error(error: google_cloud_storage::Error) -> GcsClientError {
+    if matches!(error.http_status_code(), Some(409 | 412)) {
+        return GcsClientError::PreconditionFailed;
+    }
+    match error.status().map(|status| status.code) {
+        Some(Code::FailedPrecondition | Code::AlreadyExists) => GcsClientError::PreconditionFailed,
+        Some(
+            Code::DeadlineExceeded | Code::ResourceExhausted | Code::Internal | Code::Unavailable,
+        ) => GcsClientError::Retryable,
+        None if error.is_timeout() => GcsClientError::Retryable,
+        _ => GcsClientError::Fatal,
+    }
 }
 
 fn valid_date(date: &str) -> bool {
@@ -344,6 +751,18 @@ fn parse_hex_digest(value: &str) -> Option<[u8; 32]> {
     } else {
         None
     }
+}
+
+fn verify_digest(object: &EvidenceObject, bytes: Vec<u8>) -> Result<Vec<u8>, StoreError> {
+    let actual: [u8; 32] = Sha256::digest(&bytes).into();
+    if actual != object.digest {
+        return Err(StoreError::DigestMismatch {
+            object: object.name.clone(),
+            expected: object.sha256(),
+            actual: hex_digest(&actual),
+        });
+    }
+    Ok(bytes)
 }
 
 fn open_or_create_directory(

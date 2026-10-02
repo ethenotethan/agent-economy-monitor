@@ -37,7 +37,7 @@ struct FakeArchive {
 }
 
 impl EvidenceArchive for FakeArchive {
-    fn archive(
+    async fn archive(
         &mut self,
         observed_date: &str,
         evidence: &RpcEvidence,
