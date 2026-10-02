@@ -193,6 +193,7 @@ class ArchitectureCompilerTests(unittest.TestCase):
         self.assertIn("evidence-store", component_ids)
         self.assertIn("development-stack", component_ids)
         self.assertIn("filesystem-evidence-store", entity_ids)
+        self.assertIn("gcs-evidence-store", entity_ids)
         evidence_store = next(
             node for node in model["interplay"]["nodes"]
             if node["id"] == "filesystem-evidence-store"
@@ -212,6 +213,10 @@ class ArchitectureCompilerTests(unittest.TestCase):
         )
         self.assertIn(
             ("filesystem-evidence-store", "store:evidence", "implements-contract-of"),
+            edge_keys,
+        )
+        self.assertIn(
+            ("gcs-evidence-store", "store:evidence", "implements-contract-of"),
             edge_keys,
         )
 
@@ -266,11 +271,12 @@ class ArchitectureCompilerTests(unittest.TestCase):
         limitations = " ".join(model["evidence_metadata"]["limitations"])
 
         self.assertIn("local PostgreSQL development stack", limitations)
-        self.assertIn("filesystem evidence adapter are implemented", limitations)
         self.assertIn(
-            "Google Cloud Storage and remaining production PostgreSQL clients",
+            "filesystem and Google Cloud Storage evidence adapters are implemented",
             limitations,
         )
+        self.assertIn("remaining production PostgreSQL clients", limitations)
+        self.assertNotIn("no Google Cloud Storage client", limitations)
         self.assertNotIn(
             "lean PostgreSQL and Google Cloud Storage data plane and other product "
             "pipeline nodes are specified",

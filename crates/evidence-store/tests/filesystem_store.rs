@@ -14,13 +14,16 @@ fn store(root: &std::path::Path) -> FilesystemEvidenceStore {
     FilesystemEvidenceStore::open(root).expect("open evidence store")
 }
 
-#[test]
-fn writes_content_addressed_evidence_and_replays_verified_bytes() {
+#[tokio::test]
+async fn writes_content_addressed_evidence_and_replays_verified_bytes() {
     let temporary = tempfile::tempdir().expect("temporary directory");
     let store = store(temporary.path());
     let payload = br#"{"status":402}"#;
 
-    let receipt = store.create(&context(), payload).expect("create evidence");
+    let receipt = store
+        .create(&context(), payload)
+        .await
+        .expect("create evidence");
 
     assert_eq!(CreateDisposition::Created, receipt.disposition);
     assert_eq!(
@@ -31,20 +34,25 @@ fn writes_content_addressed_evidence_and_replays_verified_bytes() {
         payload,
         store
             .read(&receipt.object)
+            .await
             .expect("replay evidence")
             .as_slice()
     );
 }
 
-#[test]
-fn repeated_identical_write_is_an_idempotent_noop() {
+#[tokio::test]
+async fn repeated_identical_write_is_an_idempotent_noop() {
     let temporary = tempfile::tempdir().expect("temporary directory");
     let store = store(temporary.path());
     let payload = b"same immutable evidence";
 
-    let first = store.create(&context(), payload).expect("first create");
+    let first = store
+        .create(&context(), payload)
+        .await
+        .expect("first create");
     let second = store
         .create(&context(), payload)
+        .await
         .expect("idempotent create");
 
     assert_eq!(CreateDisposition::Created, first.disposition);
@@ -52,18 +60,20 @@ fn repeated_identical_write_is_an_idempotent_noop() {
     assert_eq!(first.object, second.object);
 }
 
-#[test]
-fn replay_rejects_tampered_content() {
+#[tokio::test]
+async fn replay_rejects_tampered_content() {
     let temporary = tempfile::tempdir().expect("temporary directory");
     let store = store(temporary.path());
     let receipt = store
         .create(&context(), b"trusted bytes")
+        .await
         .expect("create evidence");
     let object_path = temporary.path().join(receipt.object.name());
     fs::write(object_path, b"different bytes").expect("tamper fixture");
 
     let error = store
         .read(&receipt.object)
+        .await
         .expect_err("tampering must fail closed");
 
     assert!(matches!(error, StoreError::DigestMismatch { .. }));
@@ -76,13 +86,14 @@ fn rejects_unsafe_source_and_date_prefixes() {
     assert!(EvidenceContext::new("X402", "2026-09-28").is_err());
 }
 
-#[test]
-fn persisted_object_name_can_be_replayed_after_process_restart() {
+#[tokio::test]
+async fn persisted_object_name_can_be_replayed_after_process_restart() {
     let temporary = tempfile::tempdir().expect("temporary directory");
     let name = {
         let store = store(temporary.path());
         store
             .create(&context(), b"durable evidence")
+            .await
             .expect("create evidence")
             .object
             .name()
@@ -96,14 +107,15 @@ fn persisted_object_name_can_be_replayed_after_process_restart() {
         b"durable evidence",
         restarted_store
             .read(&object)
+            .await
             .expect("replay after restart")
             .as_slice()
     );
 }
 
 #[cfg(unix)]
-#[test]
-fn rejects_symlinked_path_components_beneath_the_evidence_root() {
+#[tokio::test]
+async fn rejects_symlinked_path_components_beneath_the_evidence_root() {
     use std::os::unix::fs::symlink;
 
     let temporary = tempfile::tempdir().expect("temporary directory");
@@ -116,6 +128,7 @@ fn rejects_symlinked_path_components_beneath_the_evidence_root() {
 
     let error = store
         .create(&context(), b"must stay contained")
+        .await
         .expect_err("symlink escape must fail closed");
 
     assert!(matches!(error, StoreError::UnsafePath { .. }));
@@ -142,8 +155,8 @@ fn rejects_symlinked_ancestors_of_the_evidence_root() {
 }
 
 #[cfg(unix)]
-#[test]
-fn pins_the_opened_root_when_its_ambient_path_is_replaced() {
+#[tokio::test]
+async fn pins_the_opened_root_when_its_ambient_path_is_replaced() {
     use std::os::unix::fs::symlink;
 
     let temporary = tempfile::tempdir().expect("temporary directory");
@@ -158,6 +171,7 @@ fn pins_the_opened_root_when_its_ambient_path_is_replaced() {
     symlink(&outside, &root).expect("replace ambient path");
     let receipt = store
         .create(&context(), b"capability-bound evidence")
+        .await
         .expect("create through retained directory handle");
 
     assert!(retained_root.join(receipt.object.name()).is_file());

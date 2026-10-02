@@ -57,12 +57,25 @@ creates a restricted local credential file, starts the persistent PostgreSQL con
 waits for `pg_isready`, and initializes a restricted filesystem evidence directory. No
 broker, analytical database, or object-storage emulator runs in v1 development.
 
-The backend-neutral Rust evidence contract requires the filesystem adapter and future
-Google Cloud Storage implementation to use the same create-only and replay semantics. An
+The backend-neutral Rust evidence contract requires the filesystem and Google Cloud Storage
+adapters to use the same create-only and replay semantics. An
 object name is derived from source, observation date, and SHA-256. Filesystem publication uses an atomic
 create-without-replacement operation, matching Google Cloud Storage's
 `ifGenerationMatch=0`; an existing object is accepted only when its bytes match the
 addressed digest. Every read verifies SHA-256 before returning evidence to a parser.
+
+The production `GcsEvidenceStore` uses the official Rust Google Cloud Storage client with
+Application Default Credentials, so Cloud Run obtains short-lived credentials through its
+workload identity and no service-account key is embedded. The adapter disables the client
+library's implicit retries and applies its own hard attempt limit to retryable failures.
+Uploads are create-only and carry deterministic custom metadata for source, observation
+date and identity, parser version, replay inputs, and content digest; metadata fields admit
+only bounded identifier-shaped values and never raw payloads.
+
+The evidence bucket has Object Versioning enabled for operator recovery, but replay safety
+does not depend on versioning: runtime identities have only object create and read access,
+every write uses generation zero, and a locked retention policy of at least 365 days blocks
+premature deletion. No lifecycle rule may delete evidence before the retention period.
 
 ## Partitioning
 
@@ -113,7 +126,7 @@ The local Hermes projection worker makes an outbound authenticated pull for boun
 
 - RPC and password secrets come from Google Secret Manager and Cloud Run secret bindings.
 - Shared-password sessions and the login-attempt window are namespace-scoped in PostgreSQL; only SHA-256 session and CSRF token digests are retained, so authentication remains consistent across Cloud Run instances and cold starts.
-- The evidence bucket has a locked retention policy of at least 365 days and no automatic deletion rule. Runtime writers have create-only `roles/storage.objectCreator`; deletion and retention administration belong to a separate owner-controlled identity.
+- The evidence bucket has locked retention of at least 365 days and Object Versioning enabled, with no lifecycle deletion before retention expiry. Runtime identities combine `roles/storage.objectCreator` and `roles/storage.objectViewer` but have no overwrite, delete, retention, or versioning administration; those controls belong to a separate owner identity.
 - Every content-addressed write uses `ifGenerationMatch=0`; an existing key is accepted only after its stored digest matches. Replay performs read-time SHA-256 verification before parsing.
 - Raw protocol text is untrusted data, never instruction.
 - LLMs receive bounded structured snapshots and cited excerpts.
