@@ -242,9 +242,35 @@ AS $$
 $$;
 
 DO $$
+DECLARE
+    worker_role pg_roles%ROWTYPE;
 BEGIN
-    CREATE ROLE agent_economy_worker NOLOGIN;
-EXCEPTION WHEN duplicate_object THEN NULL;
+    BEGIN
+        CREATE ROLE agent_economy_worker NOLOGIN;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
+
+    SELECT * INTO STRICT worker_role
+    FROM pg_roles
+    WHERE rolname = 'agent_economy_worker';
+
+    IF worker_role.rolcanlogin
+        OR worker_role.rolsuper
+        OR worker_role.rolcreatedb
+        OR worker_role.rolcreaterole
+        OR worker_role.rolreplication
+        OR worker_role.rolbypassrls
+    THEN
+        RAISE EXCEPTION 'agent_economy_worker must be an unprivileged NOLOGIN role';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM pg_auth_members AS membership
+        WHERE membership.member = worker_role.oid
+    ) THEN
+        RAISE EXCEPTION 'agent_economy_worker must not inherit roles';
+    END IF;
 END
 $$;
 

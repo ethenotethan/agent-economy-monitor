@@ -112,6 +112,51 @@ async fn migration_revokes_worker_table_privileges_inherited_from_owner_defaults
 }
 
 #[tokio::test]
+#[ignore = "requires a fresh AEM_WORKER_TRANSITIVE_PRIVILEGE_TEST_DATABASE_URL with role creation authority"]
+async fn migration_rejects_worker_role_with_inherited_table_authority() {
+    let database_url = std::env::var("AEM_WORKER_TRANSITIVE_PRIVILEGE_TEST_DATABASE_URL").unwrap();
+    let owner = connect(&database_url).await;
+    for migration in MIGRATIONS_BEFORE_WORKER_JOBS {
+        owner.batch_execute(migration).await.unwrap();
+    }
+
+    owner
+        .batch_execute(
+            "CREATE ROLE aem_rogue_defaults NOLOGIN; \
+             CREATE ROLE agent_economy_worker NOLOGIN; \
+             GRANT aem_rogue_defaults TO agent_economy_worker; \
+             ALTER DEFAULT PRIVILEGES IN SCHEMA agent_economy \
+             GRANT SELECT, UPDATE ON TABLES TO aem_rogue_defaults;",
+        )
+        .await
+        .unwrap();
+
+    let migration_error = owner
+        .batch_execute(WORKER_JOBS_MIGRATION)
+        .await
+        .expect_err("unsafe inherited worker authority must fail the migration closed");
+    assert!(
+        migration_error
+            .as_db_error()
+            .is_some_and(|error| error.message().contains("must not inherit roles")),
+        "unexpected migration failure: {migration_error}"
+    );
+    owner.batch_execute("ROLLBACK").await.unwrap();
+    let worker_jobs_exists: bool = owner
+        .query_one(
+            "SELECT to_regclass('agent_economy.worker_jobs') IS NOT NULL",
+            &[],
+        )
+        .await
+        .unwrap()
+        .get(0);
+    assert!(
+        !worker_jobs_exists,
+        "the failed migration transaction must not leave worker_jobs behind"
+    );
+}
+
+#[tokio::test]
 #[ignore = "requires AEM_WORKER_TEST_DATABASE_URL migrated through 0012"]
 async fn postgres_leases_are_exclusive_reclaimable_bounded_and_cancellable() {
     let database_url = std::env::var("AEM_WORKER_TEST_DATABASE_URL").unwrap();
