@@ -479,10 +479,11 @@
       "line_count": 27
     },
     {
-      "declaration_count": 106,
+      "declaration_count": 109,
       "declarations": [
         "CapturedChangeset",
         "CountingStore",
+        "DOCUMENTED_PROJECTION_ENV",
         "Error",
         "EventLog",
         "FixtureGateway",
@@ -519,6 +520,8 @@
         "collect",
         "concurrent_bad_passwords_cannot_bypass_the_attempt_budget",
         "configuration_requires_argon2id_and_bounded_session_lifetime",
+        "documented_projection_environment_child",
+        "documented_projection_environment_loads_through_runtime_config",
         "fact",
         "fetch_snapshot",
         "fixture",
@@ -625,7 +628,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 5898
+      "line_count": 5961
     },
     {
       "declaration_count": 73,
@@ -13406,11 +13409,35 @@
       {
         "citations": 0,
         "component": "delivery-gates",
-        "declaration_count": 3,
+        "declaration_count": 6,
         "declarations": [
           {
+            "kind": "const",
+            "line": 5,
+            "name": "DOCUMENTED_PROJECTION_ENV",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "fn",
-            "line": 6,
+            "line": 16,
+            "name": "documented_projection_environment_loads_through_runtime_config",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 61,
+            "name": "documented_projection_environment_child",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 69,
             "name": "runtime_config_requires_outbound_https_and_redacts_bearer_tokens",
             "passes": [
               "rust.declaration"
@@ -13418,7 +13445,7 @@
           },
           {
             "kind": "fn",
-            "line": 59,
+            "line": 122,
             "name": "binary_wires_a_bounded_outbound_projection_mode",
             "passes": [
               "rust.declaration"
@@ -13426,14 +13453,14 @@
           },
           {
             "kind": "fn",
-            "line": 67,
+            "line": 130,
             "name": "native_wiki_adapter_uses_real_rpc_and_preserves_curated_content",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 92,
+        "line_count": 155,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -13895,7 +13922,7 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1188,
+        "citations": 1191,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
         "files": 41,
@@ -13927,7 +13954,7 @@
         "worker": 6
       },
       "citations": 59,
-      "declarations": 1188,
+      "declarations": 1191,
       "entities": 59,
       "entities_with_origin": 59,
       "files": 127,
@@ -15466,9 +15493,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1188,
+    "declarations": 1191,
     "files": 127,
-    "lines": 35197
+    "lines": 35260
   },
   "layers": [
     {
@@ -15509,7 +15536,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "4a8977fcd63f88d1b0d757dd30ed5b25331109181082fa97a0bd49cfaeba5df0",
+  "source_tree_sha256": "ed604b9c3f3265fbda32a486fe5894c0392928438ba9e5785b15aa4fbbc32f09",
   "stores": {
     "count": 2,
     "items": [

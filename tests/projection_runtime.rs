@@ -1,6 +1,69 @@
 use agent_economy_monitor::projection_runtime::{
     ProjectionRuntimeConfig, SecretString, merge_generated_section,
 };
+use std::{collections::BTreeMap, process::Command};
+
+const DOCUMENTED_PROJECTION_ENV: [&str; 6] = [
+    "PROJECTION_GATEWAY_URL",
+    "PROJECTION_GATEWAY_TOKEN",
+    "PROJECTION_MODEL_URL",
+    "PROJECTION_MODEL_TOKEN",
+    "HERMES_WIKI_RPC_URL",
+    "HERMES_WIKI_TOKEN",
+];
+
+#[test]
+fn documented_projection_environment_loads_through_runtime_config() {
+    let documented = include_str!("../.env.example")
+        .lines()
+        .filter_map(|line| line.split_once('='))
+        .filter(|(name, _)| DOCUMENTED_PROJECTION_ENV.contains(name))
+        .map(|(name, value)| (name.to_owned(), value.to_owned()))
+        .collect::<BTreeMap<_, _>>();
+
+    assert_eq!(
+        documented.keys().map(String::as_str).collect::<Vec<_>>(),
+        DOCUMENTED_PROJECTION_ENV
+            .into_iter()
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>()
+    );
+    for legacy_name in [
+        "MODEL_URL",
+        "MODEL_BEARER_TOKEN",
+        "HERMES_GATEWAY_URL",
+        "HERMES_GATEWAY_TOKEN",
+    ] {
+        assert!(!include_str!("../.env.example").lines().any(|line| {
+            line.split_once('=')
+                .is_some_and(|(name, _)| name == legacy_name)
+        }));
+    }
+
+    let output = Command::new(std::env::current_exe().expect("current test executable"))
+        .arg("--exact")
+        .arg("documented_projection_environment_child")
+        .arg("--nocapture")
+        .env("AEM_DOCUMENTED_PROJECTION_ENV_CHILD", "1")
+        .envs(documented)
+        .output()
+        .expect("run isolated environment parser test");
+
+    assert!(
+        output.status.success(),
+        "documented projection environment was rejected:\n{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+}
+
+#[test]
+fn documented_projection_environment_child() {
+    if std::env::var_os("AEM_DOCUMENTED_PROJECTION_ENV_CHILD").is_none() {
+        return;
+    }
+    ProjectionRuntimeConfig::from_env().expect("documented projection environment must parse");
+}
 
 #[test]
 fn runtime_config_requires_outbound_https_and_redacts_bearer_tokens() {
