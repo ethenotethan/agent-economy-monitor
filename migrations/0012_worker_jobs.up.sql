@@ -271,6 +271,24 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'agent_economy_worker must not inherit roles';
     END IF;
+
+    IF EXISTS (
+        WITH RECURSIVE worker_members(member) AS (
+            SELECT membership.member
+            FROM pg_auth_members AS membership
+            WHERE membership.roleid = worker_role.oid
+            UNION
+            SELECT membership.member
+            FROM pg_auth_members AS membership
+            JOIN worker_members
+                ON membership.roleid = worker_members.member
+        )
+        SELECT 1
+        FROM worker_members
+        WHERE member <> (SELECT oid FROM pg_roles WHERE rolname = CURRENT_USER)
+    ) THEN
+        RAISE EXCEPTION 'agent_economy_worker must not have members except CURRENT_USER';
+    END IF;
 END
 $$;
 

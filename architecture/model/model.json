@@ -479,7 +479,7 @@
       "line_count": 27
     },
     {
-      "declaration_count": 134,
+      "declaration_count": 135,
       "declarations": [
         "CapturedChangeset",
         "CountingStore",
@@ -552,6 +552,7 @@
         "login_body_is_bounded_before_password_verification",
         "login_issues_secure_bounded_session_and_logout_requires_csrf",
         "main",
+        "migration_rejects_unauthorized_direct_and_transitive_worker_members",
         "migration_rejects_worker_role_with_inherited_table_authority",
         "migration_revokes_worker_table_privileges_inherited_from_owner_defaults",
         "missing_handler_fails_before_claiming_a_job",
@@ -657,7 +658,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 6586
+      "line_count": 6637
     },
     {
       "declaration_count": 73,
@@ -1586,7 +1587,7 @@
       "id": "worker-control",
       "label": "Worker lease control plane",
       "layer": "canonical",
-      "line_count": 791
+      "line_count": 809
     },
     {
       "declaration_count": 83,
@@ -10546,7 +10547,7 @@
         "component": "worker-control",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 298,
+        "line_count": 316,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -15082,7 +15083,7 @@
       {
         "citations": 0,
         "component": "delivery-gates",
-        "declaration_count": 9,
+        "declaration_count": 10,
         "declarations": [
           {
             "kind": "const",
@@ -15151,13 +15152,21 @@
           {
             "kind": "async-fn",
             "line": 161,
+            "name": "migration_rejects_unauthorized_direct_and_transitive_worker_members",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 212,
             "name": "postgres_leases_are_exclusive_reclaimable_bounded_and_cancellable",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 319,
+        "line_count": 370,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -15183,7 +15192,7 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1317,
+        "citations": 1318,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
         "files": 46,
@@ -15215,7 +15224,7 @@
         "worker": 6
       },
       "citations": 60,
-      "declarations": 1317,
+      "declarations": 1318,
       "entities": 60,
       "entities_with_origin": 60,
       "files": 135,
@@ -16775,9 +16784,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1317,
+    "declarations": 1318,
     "files": 135,
-    "lines": 38666
+    "lines": 38735
   },
   "layers": [
     {
@@ -16818,7 +16827,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "e18bbf0571ebd070b0a5d80ce3e58605811cfe665c6c346248cd2cdbb715e308",
+  "source_tree_sha256": "253fda30af6410a0c82a77634033e8735292ddd4a9979d68e9716986350a3d1a",
   "stores": {
     "count": 2,
     "items": [

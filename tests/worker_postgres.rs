@@ -157,6 +157,57 @@ async fn migration_rejects_worker_role_with_inherited_table_authority() {
 }
 
 #[tokio::test]
+#[ignore = "requires a fresh AEM_WORKER_INBOUND_MEMBERSHIP_TEST_DATABASE_URL with role creation authority"]
+async fn migration_rejects_unauthorized_direct_and_transitive_worker_members() {
+    let database_url = std::env::var("AEM_WORKER_INBOUND_MEMBERSHIP_TEST_DATABASE_URL").unwrap();
+    let owner = connect(&database_url).await;
+    for migration in MIGRATIONS_BEFORE_WORKER_JOBS {
+        owner.batch_execute(migration).await.unwrap();
+    }
+
+    owner
+        .batch_execute(
+            "CREATE ROLE agent_economy_worker NOLOGIN; \
+             CREATE ROLE aem_unauthorized_direct NOLOGIN; \
+             CREATE ROLE aem_unauthorized_bridge NOLOGIN; \
+             CREATE ROLE aem_unauthorized_transitive NOLOGIN; \
+             GRANT agent_economy_worker TO aem_unauthorized_direct; \
+             GRANT agent_economy_worker TO aem_unauthorized_bridge; \
+             GRANT aem_unauthorized_bridge TO aem_unauthorized_transitive;",
+        )
+        .await
+        .unwrap();
+
+    let migration_error = owner
+        .batch_execute(WORKER_JOBS_MIGRATION)
+        .await
+        .expect_err("unexpected inbound worker-role membership must fail the migration closed");
+    assert!(
+        migration_error
+            .as_db_error()
+            .is_some_and(|error| error.message().contains("must not have members")),
+        "unexpected migration failure: {migration_error}"
+    );
+    owner.batch_execute("ROLLBACK").await.unwrap();
+
+    let authority_state = owner
+        .query_one(
+            "SELECT to_regclass('agent_economy.worker_jobs') IS NOT NULL, \
+                    to_regprocedure('agent_economy.claim_worker_job(uuid,text,text,bigint)') \
+                        IS NOT NULL",
+            &[],
+        )
+        .await
+        .unwrap();
+    let worker_jobs_exists: bool = authority_state.get(0);
+    let claim_function_exists: bool = authority_state.get(1);
+    assert!(
+        !worker_jobs_exists && !claim_function_exists,
+        "the failed migration must atomically withhold worker table and function authority"
+    );
+}
+
+#[tokio::test]
 #[ignore = "requires AEM_WORKER_TEST_DATABASE_URL migrated through 0012"]
 async fn postgres_leases_are_exclusive_reclaimable_bounded_and_cancellable() {
     let database_url = std::env::var("AEM_WORKER_TEST_DATABASE_URL").unwrap();
