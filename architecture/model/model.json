@@ -269,7 +269,7 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 359
+      "line_count": 374
     },
     {
       "declaration_count": 0,
@@ -307,7 +307,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5590
+      "line_count": 5600
     },
     {
       "declaration_count": 44,
@@ -479,11 +479,12 @@
       "line_count": 27
     },
     {
-      "declaration_count": 109,
+      "declaration_count": 135,
       "declarations": [
         "CapturedChangeset",
         "CountingStore",
         "DOCUMENTED_PROJECTION_ENV",
+        "DigestHandler",
         "Error",
         "EventLog",
         "FixtureGateway",
@@ -491,15 +492,21 @@
         "FixtureStore",
         "FixtureWiki",
         "JOB_ID",
+        "MIGRATIONS_BEFORE_WORKER_JOBS",
+        "MemoryStore",
         "NAMESPACE",
         "PAGE_SHA",
         "PASSWORD",
         "PublishedBundles",
+        "RetryHandler",
         "SNAPSHOT_ID",
+        "StoreState",
         "UPDATED",
+        "WORKER_JOBS_MIGRATION",
         "X402Adapter",
         "adapters_emit_immutable_observations",
         "additive_unknown_fields_are_covered_by_the_content_address",
+        "an_empty_queue_is_not_reported_as_success",
         "app",
         "app_with_auth",
         "approval",
@@ -517,25 +524,38 @@
         "canonical_event_keys_are_protocol_defined",
         "canonical_event_rejects_mismatched_support",
         "capture_changeset",
+        "claim",
         "collect",
+        "complete",
         "concurrent_bad_passwords_cannot_bypass_the_attempt_budget",
         "configuration_requires_argon2id_and_bounded_session_lifetime",
+        "connect",
+        "connect_worker",
         "documented_projection_environment_child",
         "documented_projection_environment_loads_through_runtime_config",
+        "explicit_worker_mode_without_a_registered_real_handler_fails_closed",
         "fact",
+        "fail",
         "fetch_snapshot",
         "fixture",
         "gateway_routes_require_bearer_auth_and_expose_the_complete_flow",
         "graph",
+        "handler_failure_records_only_a_safe_code_and_returns_nonzero_semantics",
+        "insert_job",
         "investigations",
         "job",
         "lease_next",
+        "leased_job",
         "list_queries_are_bounded_and_cacheable_with_provenance",
         "live_update_stream_is_event_stream_and_emits_refresh_signal",
         "login",
         "login_body_is_bounded_before_password_verification",
         "login_issues_secure_bounded_session_and_logout_requires_csrf",
         "main",
+        "migration_rejects_unauthorized_direct_and_transitive_worker_members",
+        "migration_rejects_worker_role_with_inherited_table_authority",
+        "migration_revokes_worker_table_privileges_inherited_from_owner_defaults",
+        "missing_handler_fails_before_claiming_a_job",
         "model_response",
         "mpp_discovery_contract_rejects_noncanonical_atomic_amounts",
         "mpp_event_key_rejects_invalid_method_grammar",
@@ -547,7 +567,10 @@
         "observation_id_is_content_addressed",
         "observe",
         "output_sha",
+        "postgres_leases_are_exclusive_reclaimable_bounded_and_cancellable",
         "postgres_store_is_the_runtime_query_backend",
+        "process",
+        "process_modes_are_explicit_and_unknown_modes_fail_closed",
         "project",
         "project_wiki_uses_authenticated_postgres_gateway_end_to_end",
         "projection_binds_revision_and_approval_before_exact_byte_publication",
@@ -567,6 +590,7 @@
         "purpose_built_surface_is_documented_without_graphql_or_sql",
         "reducers_can_read_typed_observation_fields",
         "rendered_markdown_links_must_exactly_match_safe_sidecar_links",
+        "renew",
         "repeated_bad_passwords_are_rate_limited",
         "replace_generated_section",
         "request",
@@ -584,7 +608,9 @@
         "snapshot_sha",
         "spawn_mock_server",
         "spawn_server",
+        "successful_handler_commits_the_exact_output_digest",
         "system",
+        "unknown_process_mode_fails_nonzero",
         "unrelated_changeset_revision_and_wrong_approval_candidate_are_rejected",
         "valid_output",
         "wiki_response",
@@ -593,7 +619,7 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 29,
+      "file_count": 33,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -623,12 +649,16 @@
         "tests/semantic_projection.rs",
         "tests/semantic_projection_schema_test.py",
         "tests/settlement_attribution_schema_test.py",
-        "tests/shadow_catalog_schema_test.py"
+        "tests/shadow_catalog_schema_test.py",
+        "tests/worker.rs",
+        "tests/worker_cli.rs",
+        "tests/worker_jobs_schema_test.py",
+        "tests/worker_postgres.rs"
       ],
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 5961
+      "line_count": 6637
     },
     {
       "declaration_count": 73,
@@ -1236,7 +1266,7 @@
       "line_count": 3657
     },
     {
-      "declaration_count": 116,
+      "declaration_count": 117,
       "declarations": [
         "API_VERSION",
         "AuthConfig",
@@ -1353,7 +1383,8 @@
         "system",
         "tests",
         "type_graph_edge",
-        "with_store"
+        "with_store",
+        "worker"
       ],
       "description": "Axum process entry point and versioned, bounded, provenance-bearing query API.",
       "external": false,
@@ -1373,7 +1404,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 7389
+      "line_count": 7399
     },
     {
       "declaration_count": 95,
@@ -1505,6 +1536,60 @@
       "line_count": 369
     },
     {
+      "declaration_count": 37,
+      "declarations": [
+        "CompletedJob",
+        "DEFAULT_LEASE_SECONDS",
+        "HandlerFailure",
+        "JobResult",
+        "LeasedJob",
+        "MAX_LEASE_SECONDS",
+        "PostgresWorkerJobStore",
+        "RETRY_DELAY_SECONDS",
+        "WorkerDispatchError",
+        "WorkerDispatcher",
+        "WorkerHandler",
+        "WorkerJobStore",
+        "WorkerMode",
+        "WorkerStoreError",
+        "cancel",
+        "claim",
+        "code",
+        "complete",
+        "fail",
+        "fmt",
+        "fn",
+        "from",
+        "new",
+        "output_sha256",
+        "parse",
+        "poison",
+        "process",
+        "register",
+        "renew",
+        "retryable",
+        "row_to_job",
+        "run_once",
+        "validate_error_code",
+        "validate_hash",
+        "validate_lease_seconds",
+        "validate_owner",
+        "with_lease_seconds"
+      ],
+      "description": "Transactional PostgreSQL lease state and fail-closed, one-job process-mode dispatch for bounded production workers.",
+      "external": false,
+      "file_count": 3,
+      "files": [
+        "migrations/0012_worker_jobs.down.sql",
+        "migrations/0012_worker_jobs.up.sql",
+        "src/worker.rs"
+      ],
+      "id": "worker-control",
+      "label": "Worker lease control plane",
+      "layer": "canonical",
+      "line_count": 809
+    },
+    {
       "declaration_count": 83,
       "declarations": [
         "AdapterError",
@@ -1617,7 +1702,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients, production registrations for domain worker handlers, and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -1692,7 +1777,7 @@
         },
         {
           "id": "rust.workers",
-          "reason": "The local project-wiki mode is implemented, while the external RPC collector, targeted buyer enrichment, deterministic reducer/finality engine, settlement attribution engine, and buyer classification engine remain libraries without collect/reduce/attribute/classify/enrich process modes."
+          "reason": "Transactional leases and fail-closed collect/reduce/classify/enrich dispatch are implemented, but the domain engines remain intentionally unregistered until production job handlers bind leased inputs to their real repositories."
         }
       ]
     },
@@ -2126,7 +2211,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 141,
+            "line": 150,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/healthz\", get(status))"
@@ -2351,7 +2436,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 139,
+            "line": 148,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/status\", get(status))"
@@ -2531,7 +2616,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 144,
+            "line": 153,
             "path": "src/main.rs",
             "rule": "declared.topology",
             "via": "info!(%address, \"agent economy monitor listening\");"
@@ -2727,7 +2812,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 99,
+        "line_count": 106,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -2741,7 +2826,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 597,
+        "line_count": 607,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -10089,7 +10174,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 138,
+        "line_count": 146,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -10442,6 +10527,34 @@
         "path": "migrations/0011_semantic_projection.up.sql",
         "semantic_citations": 0,
         "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "worker-control",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 19,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0012_worker_jobs.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "worker-control",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 316,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0012_worker_jobs.up.sql",
+        "semantic_citations": 0,
+        "touched": false
       },
       {
         "citations": 0,
@@ -11265,7 +11378,7 @@
       {
         "citations": 0,
         "component": "runtime",
-        "declaration_count": 7,
+        "declaration_count": 8,
         "declarations": [
           {
             "kind": "mod",
@@ -11322,9 +11435,17 @@
             "passes": [
               "rust.declaration"
             ]
+          },
+          {
+            "kind": "mod",
+            "line": 8,
+            "name": "worker",
+            "passes": [
+              "rust.declaration"
+            ]
           }
         ],
-        "line_count": 7,
+        "line_count": 8,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -11340,7 +11461,7 @@
         "declarations": [
           {
             "kind": "struct",
-            "line": 21,
+            "line": 22,
             "name": "Status",
             "passes": [
               "rust.declaration"
@@ -11348,7 +11469,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 26,
+            "line": 27,
             "name": "status",
             "passes": [
               "rust.declaration"
@@ -11356,7 +11477,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 36,
+            "line": 37,
             "name": "main",
             "passes": [
               "rust.declaration"
@@ -11364,14 +11485,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 84,
+            "line": 93,
             "name": "serve",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 147,
+        "line_count": 156,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -13042,6 +13163,397 @@
       },
       {
         "citations": 0,
+        "component": "worker-control",
+        "declaration_count": 47,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 7,
+            "name": "DEFAULT_LEASE_SECONDS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 9,
+            "name": "MAX_LEASE_SECONDS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 10,
+            "name": "RETRY_DELAY_SECONDS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 13,
+            "name": "WorkerMode",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 21,
+            "name": "parse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 30,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 42,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 48,
+            "name": "LeasedJob",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 59,
+            "name": "JobResult",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 64,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 71,
+            "name": "output_sha256",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 78,
+            "name": "HandlerFailure",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 84,
+            "name": "retryable",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 87,
+            "name": "poison",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 91,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 99,
+            "name": "code",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 103,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 110,
+            "name": "CompletedJob",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 119,
+            "name": "WorkerStoreError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 126,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 138,
+            "name": "WorkerDispatchError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 148,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 163,
+            "name": "from",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 169,
+            "name": "WorkerHandler",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 170,
+            "name": "process",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 174,
+            "name": "WorkerJobStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 175,
+            "name": "claim",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 181,
+            "name": "renew",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 183,
+            "name": "complete",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 185,
+            "name": "fail",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 193,
+            "name": "WorkerDispatcher",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 201,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 208,
+            "name": "register",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 213,
+            "name": "with_lease_seconds",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 219,
+            "name": "run_once",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 279,
+            "name": "PostgresWorkerJobStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 286,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 292,
+            "name": "cancel",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 319,
+            "name": "claim",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 346,
+            "name": "renew",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 368,
+            "name": "complete",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 389,
+            "name": "fail",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 418,
+            "name": "row_to_job",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 433,
+            "name": "validate_owner",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 445,
+            "name": "validate_lease_seconds",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 452,
+            "name": "validate_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 463,
+            "name": "validate_error_code",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 474,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "src/worker.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
         "component": "delivery-gates",
         "declaration_count": 27,
         "declarations": [
@@ -14379,6 +14891,289 @@
         "path": "tests/shadow_catalog_schema_test.py",
         "semantic_citations": 0,
         "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 16,
+        "declarations": [
+          {
+            "kind": "struct",
+            "line": 11,
+            "name": "StoreState",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 19,
+            "name": "MemoryStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 23,
+            "name": "claim",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 37,
+            "name": "renew",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 41,
+            "name": "complete",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 50,
+            "name": "fail",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 66,
+            "name": "DigestHandler",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 71,
+            "name": "process",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 76,
+            "name": "RetryHandler",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 81,
+            "name": "process",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 85,
+            "name": "leased_job",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 99,
+            "name": "process_modes_are_explicit_and_unknown_modes_fail_closed",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 109,
+            "name": "missing_handler_fails_before_claiming_a_job",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 132,
+            "name": "successful_handler_commits_the_exact_output_digest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 161,
+            "name": "handler_failure_records_only_a_safe_code_and_returns_nonzero_semantics",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 193,
+            "name": "an_empty_queue_is_not_reported_as_success",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 205,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/worker.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 2,
+        "declarations": [
+          {
+            "kind": "fn",
+            "line": 4,
+            "name": "explicit_worker_mode_without_a_registered_real_handler_fails_closed",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 22,
+            "name": "unknown_process_mode_fails_nonzero",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 34,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/worker_cli.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 67,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/worker_jobs_schema_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 10,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 7,
+            "name": "NAMESPACE",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 9,
+            "name": "MIGRATIONS_BEFORE_WORKER_JOBS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 22,
+            "name": "WORKER_JOBS_MIGRATION",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 23,
+            "name": "connect",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 29,
+            "name": "connect_worker",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 38,
+            "name": "insert_job",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 53,
+            "name": "migration_revokes_worker_table_privileges_inherited_from_owner_defaults",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 116,
+            "name": "migration_rejects_worker_role_with_inherited_table_authority",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 161,
+            "name": "migration_rejects_unauthorized_direct_and_transitive_worker_members",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 212,
+            "name": "postgres_leases_are_exclusive_reclaimable_bounded_and_cancellable",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 370,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/worker_postgres.rs",
+        "semantic_citations": 0,
+        "touched": false
       }
     ],
     "passes": [
@@ -14397,10 +15192,10 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1242,
+        "citations": 1318,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 42,
+        "files": 46,
         "id": "rust.declaration"
       },
       {
@@ -14429,15 +15224,15 @@
         "worker": 6
       },
       "citations": 60,
-      "declarations": 1242,
+      "declarations": 1318,
       "entities": 60,
       "entities_with_origin": 60,
-      "files": 128,
+      "files": 135,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
       "touched_files": 29,
-      "untouched_files": 99
+      "untouched_files": 106
     }
   },
   "interplay": {
@@ -15456,7 +16251,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/healthz\", get(status))",
-            "line": 141,
+            "line": 150,
             "path": "src/main.rs"
           }
         ],
@@ -15666,7 +16461,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/status\", get(status))",
-            "line": 139,
+            "line": 148,
             "path": "src/main.rs"
           }
         ],
@@ -15834,7 +16629,7 @@
         "evidence": [
           {
             "excerpt": "info!(%address, \"agent economy monitor listening\");",
-            "line": 144,
+            "line": 153,
             "path": "src/main.rs"
           }
         ],
@@ -15989,9 +16784,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1242,
-    "files": 128,
-    "lines": 37215
+    "declarations": 1318,
+    "files": 135,
+    "lines": 38735
   },
   "layers": [
     {
@@ -16032,7 +16827,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "840118d7a753d7212c3353a7ba3f0131a09575776620e02eb7d3869111413a95",
+  "source_tree_sha256": "253fda30af6410a0c82a77634033e8735292ddd4a9979d68e9716986350a3d1a",
   "stores": {
     "count": 2,
     "items": [

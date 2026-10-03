@@ -9,6 +9,7 @@ use agent_economy_monitor::{
     },
     projection_runtime::{ProjectionRuntimeConfig, run_projection_once},
     query::{PostgresQueryStore, api_router},
+    worker::{WorkerDispatchError, WorkerMode},
 };
 use axum::{Json, Router, routing::get};
 use serde::Serialize;
@@ -72,6 +73,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let promotion_sequence = store.promote(&request).await?;
             info!(promotion_sequence, "classification run promoted");
             Ok(())
+        }
+        Some(command @ ("collect" | "reduce" | "classify" | "enrich")) => {
+            let mode = WorkerMode::parse(command)?;
+            Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                WorkerDispatchError::MissingHandler(mode),
+            )
+            .into())
         }
         None | Some("serve") => serve().await,
         Some(command) => Err(io::Error::new(
