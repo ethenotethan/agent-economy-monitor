@@ -561,7 +561,7 @@
       "line_count": 1914
     },
     {
-      "declaration_count": 175,
+      "declaration_count": 176,
       "declarations": [
         "ADVERSARIAL_NAMESPACE",
         "CapturedChangeset",
@@ -585,6 +585,7 @@
         "PASSWORD",
         "PublishedBundles",
         "ROLE_TEST_LOCK",
+        "ROLE_TEST_PASSWORD",
         "RecordingCommitStore",
         "RecordingGcsClient",
         "RetryHandler",
@@ -784,7 +785,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 8247
+      "line_count": 8258
     },
     {
       "declaration_count": 73,
@@ -15424,7 +15425,7 @@
       {
         "citations": 0,
         "component": "delivery-gates",
-        "declaration_count": 8,
+        "declaration_count": 9,
         "declarations": [
           {
             "kind": "const",
@@ -15451,8 +15452,16 @@
             ]
           },
           {
-            "kind": "async-fn",
+            "kind": "const",
             "line": 17,
+            "name": "ROLE_TEST_PASSWORD",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 18,
             "name": "connect_as",
             "passes": [
               "rust.declaration"
@@ -15460,7 +15469,7 @@
           },
           {
             "kind": "fn",
-            "line": 25,
+            "line": 27,
             "name": "rpc_evidence",
             "passes": [
               "rust.declaration"
@@ -15468,7 +15477,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 36,
+            "line": 38,
             "name": "insert_job",
             "passes": [
               "rust.declaration"
@@ -15476,7 +15485,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 57,
+            "line": 59,
             "name": "stage_and_complete",
             "passes": [
               "rust.declaration"
@@ -15484,14 +15493,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 99,
+            "line": 101,
             "name": "split_runtimes_reject_fake_readback_and_promote_real_object",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 301,
+        "line_count": 312,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -16760,7 +16769,7 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1471,
+        "citations": 1472,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
         "files": 51,
@@ -16792,7 +16801,7 @@
         "worker": 8
       },
       "citations": 62,
-      "declarations": 1471,
+      "declarations": 1472,
       "entities": 62,
       "entities_with_origin": 62,
       "files": 145,
@@ -18436,9 +18445,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1471,
+    "declarations": 1472,
     "files": 145,
-    "lines": 43286
+    "lines": 43297
   },
   "layers": [
     {
@@ -18479,7 +18488,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "5038fb5943cc84d148bb8904f48633bfee949fc5616b5e4cd58ff61e99fd3ff5",
+  "source_tree_sha256": "95d7f59c6895ba77937f9b859178055c7af3e7161e16aa2c923d655b615e3bd2",
   "stores": {
     "count": 2,
     "items": [

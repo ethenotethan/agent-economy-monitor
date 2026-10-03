@@ -14,10 +14,12 @@ use tokio_postgres::{Config, NoTls};
 const NAMESPACE_A: &str = "00000000-0000-0000-0000-000000009836";
 const NAMESPACE_B: &str = "00000000-0000-0000-0000-000000009837";
 const ROLE_TEST_LOCK: i64 = 0x41454d434f4c4c45;
+const ROLE_TEST_PASSWORD: &str = "aem-custody-test-password";
 
 async fn connect_as(database_url: &str, user: &str) -> tokio_postgres::Client {
     let mut config = Config::from_str(database_url).unwrap();
     config.user(user);
+    config.password(ROLE_TEST_PASSWORD);
     let (client, connection) = config.connect(NoTls).await.unwrap();
     tokio::spawn(async move { connection.await.unwrap() });
     client
@@ -111,8 +113,8 @@ async fn split_runtimes_reject_fake_readback_and_promote_real_object() {
         .unwrap();
     admin
         .batch_execute(&format!(
-            r#"ALTER ROLE agent_economy_collector_runtime LOGIN;
-                ALTER ROLE agent_economy_evidence_verifier_runtime LOGIN;
+            r#"ALTER ROLE agent_economy_collector_runtime LOGIN PASSWORD 'aem-custody-test-password';
+                ALTER ROLE agent_economy_evidence_verifier_runtime LOGIN PASSWORD 'aem-custody-test-password';
                 DELETE FROM agent_economy.collection_runtime_namespaces
                  WHERE login_name IN ('agent_economy_collector_runtime','agent_economy_evidence_verifier_runtime');
                 INSERT INTO agent_economy.namespaces(namespace_id,namespace_kind,namespace_key) VALUES
@@ -294,6 +296,15 @@ async fn split_runtimes_reject_fake_readback_and_promote_real_object() {
     );
 
     fs::remove_dir_all(root).unwrap();
+    admin
+        .batch_execute(
+            r#"DELETE FROM agent_economy.collection_runtime_namespaces
+               WHERE login_name IN ('agent_economy_collector_runtime','agent_economy_evidence_verifier_runtime');
+               ALTER ROLE agent_economy_collector_runtime NOLOGIN PASSWORD NULL;
+               ALTER ROLE agent_economy_evidence_verifier_runtime NOLOGIN PASSWORD NULL;"#,
+        )
+        .await
+        .unwrap();
     admin
         .query_one("SELECT pg_advisory_unlock($1)", &[&ROLE_TEST_LOCK])
         .await
