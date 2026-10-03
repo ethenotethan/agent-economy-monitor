@@ -361,6 +361,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_economy_test
+          AEM_COLLECT_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_economy_test
         run: ./scripts/verify
       - name: Qualify knowledge graph migration
         env:

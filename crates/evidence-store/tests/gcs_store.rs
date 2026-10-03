@@ -7,6 +7,7 @@ use agent_economy_evidence_store::{
     CreateDisposition, EvidenceContext, EvidenceProvenance, EvidenceStore, GcsClientError,
     GcsCreateRequest, GcsEvidenceStore, GcsObjectClient, GcsReadObject, GcsRetryPolicy, StoreError,
 };
+use async_trait::async_trait;
 
 #[derive(Clone, Debug, Default)]
 struct FakeGcsClient {
@@ -40,6 +41,7 @@ impl FakeGcsClient {
     }
 }
 
+#[async_trait]
 impl GcsObjectClient for FakeGcsClient {
     async fn create_object(&self, request: GcsCreateRequest) -> Result<(), GcsClientError> {
         let mut state = self.state.lock().expect("fake state");

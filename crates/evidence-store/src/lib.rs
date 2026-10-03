@@ -11,6 +11,7 @@ use std::{
     time::Duration,
 };
 
+use async_trait::async_trait;
 use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt};
 use cap_primitives::fs::open_dir_nofollow;
 use cap_std::{
@@ -78,7 +79,7 @@ impl EvidenceProvenance {
             .into_iter()
             .map(|(key, value)| (key.into(), value.into()))
             .collect::<BTreeMap<_, _>>();
-        if !valid_rpc_replay_inputs(&replay_inputs) {
+        if !valid_replay_inputs(&replay_inputs) {
             return Err(StoreError::InvalidContext("replay_inputs"));
         }
         Ok(Self {
@@ -157,6 +158,13 @@ pub struct CreateReceipt {
 
 #[allow(async_fn_in_trait)]
 pub trait EvidenceStore {
+    /// Publish by content address without exercising read authority.
+    async fn create_only(
+        &self,
+        context: &EvidenceContext,
+        evidence: &[u8],
+    ) -> Result<CreateReceipt, StoreError>;
+
     async fn create(
         &self,
         context: &EvidenceContext,
@@ -244,7 +252,7 @@ impl FilesystemEvidenceStore {
 }
 
 impl EvidenceStore for FilesystemEvidenceStore {
-    async fn create(
+    async fn create_only(
         &self,
         context: &EvidenceContext,
         evidence: &[u8],
@@ -270,7 +278,6 @@ impl EvidenceStore for FilesystemEvidenceStore {
                 CreateDisposition::Created
             }
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-                self.read_verified(&object)?;
                 CreateDisposition::AlreadyPresent
             }
             Err(error) => {
@@ -285,6 +292,18 @@ impl EvidenceStore for FilesystemEvidenceStore {
             object,
             disposition,
         })
+    }
+
+    async fn create(
+        &self,
+        context: &EvidenceContext,
+        evidence: &[u8],
+    ) -> Result<CreateReceipt, StoreError> {
+        let receipt = self.create_only(context, evidence).await?;
+        if receipt.disposition == CreateDisposition::AlreadyPresent {
+            self.read_verified(&receipt.object)?;
+        }
+        Ok(receipt)
     }
 
     async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError> {
@@ -350,7 +369,7 @@ impl GcsReadObject {
     }
 }
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 pub trait GcsObjectClient: Send + Sync {
     async fn create_object(&self, request: GcsCreateRequest) -> Result<(), GcsClientError>;
 
@@ -372,6 +391,7 @@ impl GoogleCloudStorageClient {
     }
 }
 
+#[async_trait]
 impl GcsObjectClient for GoogleCloudStorageClient {
     async fn create_object(&self, request: GcsCreateRequest) -> Result<(), GcsClientError> {
         self.client
@@ -470,6 +490,35 @@ impl<C> GcsEvidenceStore<C> {
 }
 
 impl<C: GcsObjectClient> GcsEvidenceStore<C> {
+    fn metadata_for(
+        context: &EvidenceContext,
+        object: &EvidenceObject,
+    ) -> Result<BTreeMap<String, String>, StoreError> {
+        let provenance = context
+            .provenance
+            .as_ref()
+            .ok_or(StoreError::MissingProvenance)?;
+        let replay_inputs = serde_json::to_string(&provenance.replay_inputs)
+            .map_err(|_| StoreError::InvalidContext("replay_inputs"))?;
+        Ok(BTreeMap::from([
+            (
+                "evidence-observation-id".to_owned(),
+                provenance.observation_id.clone(),
+            ),
+            (
+                "evidence-observed-date".to_owned(),
+                context.observed_date.clone(),
+            ),
+            (
+                "evidence-parser-version".to_owned(),
+                provenance.parser_version.clone(),
+            ),
+            ("evidence-replay-inputs".to_owned(), replay_inputs),
+            ("evidence-sha256".to_owned(), object.sha256()),
+            ("evidence-source".to_owned(), context.source.clone()),
+        ]))
+    }
+
     async fn read_verified(
         &self,
         object: &EvidenceObject,
@@ -497,35 +546,13 @@ impl<C: GcsObjectClient> GcsEvidenceStore<C> {
 }
 
 impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
-    async fn create(
+    async fn create_only(
         &self,
         context: &EvidenceContext,
         evidence: &[u8],
     ) -> Result<CreateReceipt, StoreError> {
-        let provenance = context
-            .provenance
-            .as_ref()
-            .ok_or(StoreError::MissingProvenance)?;
         let object = EvidenceObject::for_bytes(context, evidence);
-        let replay_inputs = serde_json::to_string(&provenance.replay_inputs)
-            .map_err(|_| StoreError::InvalidContext("replay_inputs"))?;
-        let metadata = BTreeMap::from([
-            (
-                "evidence-observation-id".to_owned(),
-                provenance.observation_id.clone(),
-            ),
-            (
-                "evidence-observed-date".to_owned(),
-                context.observed_date.clone(),
-            ),
-            (
-                "evidence-parser-version".to_owned(),
-                provenance.parser_version.clone(),
-            ),
-            ("evidence-replay-inputs".to_owned(), replay_inputs),
-            ("evidence-sha256".to_owned(), object.sha256()),
-            ("evidence-source".to_owned(), context.source.clone()),
-        ]);
+        let metadata = Self::metadata_for(context, &object)?;
         let request = GcsCreateRequest {
             bucket: self.bucket.clone(),
             name: object.name().to_owned(),
@@ -539,11 +566,7 @@ impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
             attempts += 1;
             match self.client.create_object(request.clone()).await {
                 Ok(()) => break CreateDisposition::Created,
-                Err(GcsClientError::PreconditionFailed) => {
-                    self.read_verified(&object, Some(request.metadata()))
-                        .await?;
-                    break CreateDisposition::AlreadyPresent;
-                }
+                Err(GcsClientError::PreconditionFailed) => break CreateDisposition::AlreadyPresent,
                 Err(GcsClientError::Retryable) if attempts < self.retry.max_attempts => {
                     self.retry.delay(attempts).await;
                 }
@@ -554,6 +577,19 @@ impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
             object,
             disposition,
         })
+    }
+
+    async fn create(
+        &self,
+        context: &EvidenceContext,
+        evidence: &[u8],
+    ) -> Result<CreateReceipt, StoreError> {
+        let receipt = self.create_only(context, evidence).await?;
+        if receipt.disposition == CreateDisposition::AlreadyPresent {
+            let metadata = Self::metadata_for(context, &receipt.object)?;
+            self.read_verified(&receipt.object, Some(&metadata)).await?;
+        }
+        Ok(receipt)
     }
 
     async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError> {
@@ -641,6 +677,10 @@ fn valid_source(source: &str) -> bool {
             .is_some_and(u8::is_ascii_alphanumeric)
 }
 
+fn valid_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
+    valid_rpc_replay_inputs(inputs) || valid_collection_replay_inputs(inputs)
+}
+
 fn valid_rpc_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
     if inputs.len() != 6 {
         return false;
@@ -672,11 +712,37 @@ fn valid_rpc_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
         && valid_provider
 }
 
+fn valid_collection_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
+    inputs.len() == 5
+        && inputs
+            .get("chain")
+            .is_some_and(|value| matches!(value.as_str(), "ethereum" | "base" | "solana" | "tempo"))
+        && inputs
+            .get("height")
+            .is_some_and(|value| value.parse::<u64>().is_ok())
+        && inputs.get("input-kind").is_some_and(|value| {
+            matches!(
+                value.as_str(),
+                "chain_transfer"
+                    | "x402_runtime"
+                    | "x402_well_known"
+                    | "x402_openapi"
+                    | "mpp_openapi"
+            )
+        })
+        && inputs
+            .get("provider")
+            .is_some_and(|value| value == "collection-manifest")
+        && inputs
+            .get("source")
+            .is_some_and(|value| valid_source(value))
+}
+
 fn valid_metadata_value(value: &str, max_length: usize) -> bool {
     !value.is_empty()
         && value.len() <= max_length
         && value.bytes().all(|byte| {
-            byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':' | b'/')
+            byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':' | b'/' | b'@')
         })
 }
 

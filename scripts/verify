@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-python3 -m unittest scripts.test_architecture -v
-python3 -m unittest scripts.test_architecture_site -v
-python3 -m unittest discover -s tests -p '*_test.py' -v
-python3 scripts/check_architecture_contract.py
-python3 scripts/build_architecture.py --check
+PYTHON="${PYTHON:-/usr/bin/python3}"
+
+"$PYTHON" -m unittest scripts.test_architecture -v
+"$PYTHON" -m unittest scripts.test_architecture_site -v
+"$PYTHON" -m unittest discover -s tests -p '*_test.py' -v
+"$PYTHON" scripts/check_architecture_contract.py
+"$PYTHON" scripts/build_architecture.py --check
+
+if [[ -n "${AEM_COLLECT_TEST_DATABASE_URL:-}" ]]; then
+    for migration in migrations/*.up.sql; do
+        psql "$AEM_COLLECT_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
+    done
+fi
 
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings

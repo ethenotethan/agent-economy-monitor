@@ -260,6 +260,7 @@ class ArchitectureCompilerTests(unittest.TestCase):
             "        env:\n"
             "          GH_TOKEN: ${{ github.token }}\n"
             "          TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_economy_test\n"
+            "          AEM_COLLECT_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_economy_test\n"
             "        run: ./scripts/verify",
             workflow,
         )
