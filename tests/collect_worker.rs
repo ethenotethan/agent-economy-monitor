@@ -5,11 +5,14 @@ use std::{
 };
 
 use agent_economy_evidence_store::{
-    FilesystemEvidenceStore, GcsClientError, GcsCreateRequest, GcsEvidenceStore, GcsObjectClient,
-    GcsReadObject, GcsRetryPolicy,
+    EvidenceObject, EvidenceStore, FilesystemEvidenceStore, GcsClientError, GcsCreateRequest,
+    GcsEvidenceStore, GcsObjectClient, GcsReadObject, GcsRetryPolicy,
 };
 use agent_economy_monitor::{
-    collect::{CollectionBatch, CollectionCommitStore, CollectionError, CollectionHandler},
+    collect::{
+        ArchivedEvidence, CollectionBatch, CollectionCommitStore, CollectionError,
+        CollectionHandler, verify_replayed_evidence,
+    },
     worker::{CollectionAdmission, LeasedJob, WorkerHandler, WorkerMode},
 };
 use agent_economy_rpc_collector::{Chain, CollectorError, RawRpcResponse, RpcTransport};
@@ -231,7 +234,12 @@ async fn bounded_launch_chain_fixtures_archive_before_emitting_only_explicit_pro
         fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
         let rpc = rpc_transport_with_protocol(chain, 42, Some((kind, &payload)));
         let rpc_requests = Arc::clone(&rpc.requests);
-        let handler = CollectionHandler::new(input_root, evidence_store, commit_store.clone(), rpc);
+        let handler = CollectionHandler::new(
+            input_root,
+            Arc::clone(&evidence_store),
+            commit_store.clone(),
+            rpc,
+        );
 
         let result = handler
             .process(&leased_job_for(digest, chain, 42, 42))
@@ -239,20 +247,47 @@ async fn bounded_launch_chain_fixtures_archive_before_emitting_only_explicit_pro
             .unwrap_or_else(|error| panic!("{chain} fixture failed: {error:?}"));
 
         assert_eq!(result.output_sha256().len(), 64);
-        let batches = commit_store.0.lock().unwrap();
-        assert_eq!(batches.len(), 1);
-        assert_eq!(batches[0].chain(), chain);
-        assert_eq!(batches[0].start_height(), 42);
-        assert_eq!(batches[0].end_height(), 42);
-        assert_eq!(batches[0].evidence().len(), 1);
-        assert_eq!(batches[0].observations().len(), 1);
-        assert_eq!(batches[0].observations()[0].protocol(), expected_protocol);
-        assert!(batches[0].evidence().iter().all(|item| item.verified()));
+        let (stored, sha256) = {
+            let batches = commit_store.0.lock().unwrap();
+            assert_eq!(batches.len(), 1);
+            assert_eq!(batches[0].chain(), chain);
+            assert_eq!(batches[0].start_height(), 42);
+            assert_eq!(batches[0].end_height(), 42);
+            assert_eq!(batches[0].evidence().len(), 1);
+            assert!(batches[0].observations().is_empty());
+            assert!(batches[0].evidence().iter().all(|item| item.verified()));
+            (
+                batches[0].evidence()[0].storage_uri().to_owned(),
+                batches[0].evidence()[0].sha256().to_owned(),
+            )
+        };
+        let object = EvidenceObject::parse(&stored).unwrap();
+        let readback = EvidenceStore::read(evidence_store.as_ref(), &object)
+            .await
+            .unwrap();
+        let verified = ArchivedEvidence::from_verified_readback(
+            stored,
+            sha256,
+            "application/vnd.agent-economy.rpc".into(),
+            42,
+            readback,
+        )
+        .unwrap();
+        let promoted = verify_replayed_evidence(
+            chain.into(),
+            format!("alchemy-{chain}"),
+            1790986800000,
+            42,
+            42,
+            vec![verified],
+        )
+        .unwrap();
+        assert_eq!(promoted.observations().len(), 1);
+        assert_eq!(promoted.observations()[0].protocol(), expected_protocol);
         assert_eq!(
             rpc_requests.lock().unwrap().as_slice(),
             &[(manifest_chain(chain), 42)]
         );
-        drop(batches);
         fs::remove_dir_all(root).unwrap();
     }
 }
@@ -272,7 +307,7 @@ async fn malformed_explicit_attribution_fails_before_cursor_or_observation_commi
     fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
     let handler = CollectionHandler::new(
         input_root,
-        evidence_store,
+        Arc::clone(&evidence_store),
         commit_store.clone(),
         rpc_transport_with_protocol(
             "base",
@@ -281,11 +316,39 @@ async fn malformed_explicit_attribution_fails_before_cursor_or_observation_commi
         ),
     );
 
-    let failure = handler.process(&leased_job(digest)).await.unwrap_err();
-
-    assert_eq!(failure.code(), "invalid_protocol_evidence");
-    assert!(!failure.is_retryable());
-    assert!(commit_store.0.lock().unwrap().is_empty());
+    handler.process(&leased_job(digest)).await.unwrap();
+    let (stored, sha256) = {
+        let batches = commit_store.0.lock().unwrap();
+        assert_eq!(batches.len(), 1);
+        assert!(batches[0].observations().is_empty());
+        (
+            batches[0].evidence()[0].storage_uri().to_owned(),
+            batches[0].evidence()[0].sha256().to_owned(),
+        )
+    };
+    let object = EvidenceObject::parse(&stored).unwrap();
+    let readback = EvidenceStore::read(evidence_store.as_ref(), &object)
+        .await
+        .unwrap();
+    let verified = ArchivedEvidence::from_verified_readback(
+        stored,
+        sha256,
+        "application/vnd.agent-economy.rpc".into(),
+        42,
+        readback,
+    )
+    .unwrap();
+    assert!(matches!(
+        verify_replayed_evidence(
+            "base".into(),
+            "alchemy-base".into(),
+            1790986800000,
+            42,
+            42,
+            vec![verified],
+        ),
+        Err(CollectionError::InvalidInput)
+    ));
     fs::remove_dir_all(root).unwrap();
 }
 

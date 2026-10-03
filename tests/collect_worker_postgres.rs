@@ -97,9 +97,9 @@ fn rpc_height_fixture(chain: &str, height: u64) -> Vec<u8> {
 
 #[tokio::test]
 async fn leased_collect_binary_archives_verified_rpc_evidence_for_every_launch_chain() {
-    let Ok(database_url) = std::env::var("AEM_COLLECT_TEST_DATABASE_URL") else {
+    let Ok(database_url) = std::env::var("AEM_LEGACY_COLLECT_TEST_DATABASE_URL") else {
         eprintln!(
-            "AEM_COLLECT_TEST_DATABASE_URL is unset; canonical verify runs this with PostgreSQL"
+            "AEM_LEGACY_COLLECT_TEST_DATABASE_URL is unset; canonical verify runs this with PostgreSQL"
         );
         return;
     };
@@ -230,9 +230,9 @@ async fn leased_collect_binary_archives_verified_rpc_evidence_for_every_launch_c
 #[tokio::test]
 async fn binary_leases_collect_job_and_atomically_commits_replayable_evidence_observation_and_cursor()
  {
-    let Ok(database_url) = std::env::var("AEM_COLLECT_TEST_DATABASE_URL") else {
+    let Ok(database_url) = std::env::var("AEM_LEGACY_COLLECT_TEST_DATABASE_URL") else {
         eprintln!(
-            "AEM_COLLECT_TEST_DATABASE_URL is unset; canonical verify runs this with PostgreSQL"
+            "AEM_LEGACY_COLLECT_TEST_DATABASE_URL is unset; canonical verify runs this with PostgreSQL"
         );
         return;
     };
@@ -425,9 +425,9 @@ async fn binary_leases_collect_job_and_atomically_commits_replayable_evidence_ob
 
 #[tokio::test]
 async fn dedicated_collector_cannot_forge_canonical_evidence_through_security_definer() {
-    let Ok(database_url) = std::env::var("AEM_COLLECT_TEST_DATABASE_URL") else {
+    let Ok(database_url) = std::env::var("AEM_LEGACY_COLLECT_TEST_DATABASE_URL") else {
         eprintln!(
-            "AEM_COLLECT_TEST_DATABASE_URL is unset; canonical verify runs this with PostgreSQL"
+            "AEM_LEGACY_COLLECT_TEST_DATABASE_URL is unset; canonical verify runs this with PostgreSQL"
         );
         return;
     };

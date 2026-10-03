@@ -16,6 +16,7 @@ use agent_economy_monitor::{
     },
     projection_runtime::{ProjectionRuntimeConfig, run_projection_once},
     query::{PostgresQueryStore, api_router},
+    verify_evidence::{CollectionEvidenceReader, PostgresEvidenceVerifier},
     worker::{WorkerDispatchError, WorkerDispatcher, WorkerMode},
 };
 use agent_economy_rpc_collector::{
@@ -109,7 +110,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             info!(promotion_sequence, "classification run promoted");
             Ok(())
         }
-        Some("collect") => run_collect_once().await,
+        Some("collect") => {
+            reject_mixed_worker_authority("collect")?;
+            run_collect_once().await
+        }
+        Some("verify-evidence") => {
+            reject_mixed_worker_authority("verify-evidence")?;
+            run_verify_evidence_once().await
+        }
         Some(command @ ("reduce" | "classify" | "enrich")) => {
             let mode = WorkerMode::parse(command)?;
             Err(io::Error::new(
@@ -127,16 +135,100 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
+fn reject_mixed_worker_authority(mode: &str) -> Result<(), io::Error> {
+    if env::var_os("NAMESPACE_ID").is_some() {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "collection runtimes derive namespace from session_user; NAMESPACE_ID is forbidden",
+        ));
+    }
+    let collector_authority = [
+        "COLLECTOR_DATABASE_URL",
+        "COLLECTION_INPUT_ROOT",
+        "EVIDENCE_WRITE_ROOT",
+        "EVIDENCE_WRITE_BUCKET",
+        "ALCHEMY_ETHEREUM_RPC_URL",
+        "ALCHEMY_BASE_RPC_URL",
+        "ALCHEMY_SOLANA_RPC_URL",
+        "ALCHEMY_TEMPO_RPC_URL",
+        "COLLECTION_RPC_REPLAY_ROOT",
+    ];
+    let verifier_authority = [
+        "EVIDENCE_VERIFIER_DATABASE_URL",
+        "EVIDENCE_READ_ROOT",
+        "EVIDENCE_READ_BUCKET",
+    ];
+    let mixed = match mode {
+        "collect" => verifier_authority
+            .iter()
+            .any(|name| env::var_os(name).is_some()),
+        "verify-evidence" => collector_authority
+            .iter()
+            .any(|name| env::var_os(name).is_some()),
+        _ => false,
+    };
+    if mixed {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "mixed collection and verification authority is forbidden",
+        ));
+    }
+    Ok(())
+}
+
+async fn run_verify_evidence_once() -> Result<(), Box<dyn std::error::Error>> {
+    let database_url = required_collection_env("EVIDENCE_VERIFIER_DATABASE_URL")?;
+    let lease_owner = env::var("VERIFY_EVIDENCE_LEASE_OWNER")
+        .unwrap_or_else(|_| format!("agent-economy-verifier:{}", std::process::id()));
+    let evidence_store: Arc<dyn CollectionEvidenceReader> = match (
+        env::var("EVIDENCE_READ_ROOT").ok(),
+        env::var("EVIDENCE_READ_BUCKET").ok(),
+    ) {
+        (Some(root), None) => Arc::new(FilesystemEvidenceStore::open(PathBuf::from(root))?),
+        (None, Some(bucket)) => Arc::new(GcsEvidenceStore::new(
+            GoogleCloudStorageClient::from_application_default_credentials().await?,
+            &bucket,
+            GcsRetryPolicy::new(3)?,
+        )?),
+        _ => return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "configure exactly one read-only evidence backend: EVIDENCE_READ_ROOT or EVIDENCE_READ_BUCKET",
+        ).into()),
+    };
+    let (client, connection) = tokio_postgres::connect(&database_url, NoTls).await?;
+    tokio::spawn(async move {
+        if connection.await.is_err() {
+            tracing::error!("PostgreSQL evidence verifier connection closed unexpectedly");
+        }
+    });
+    let session_user = client
+        .query_one("SELECT session_user", &[])
+        .await?
+        .get::<_, String>(0);
+    if session_user != "agent_economy_evidence_verifier_runtime" {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "EVIDENCE_VERIFIER_DATABASE_URL must authenticate as agent_economy_evidence_verifier_runtime",
+        ).into());
+    }
+    let verifier = PostgresEvidenceVerifier::new(client, evidence_store, lease_owner);
+    match verifier.run_once().await? {
+        Some(pending_id) => {
+            info!(%pending_id, "evidence batch independently verified and promoted")
+        }
+        None => info!("no pending evidence batch available"),
+    }
+    Ok(())
+}
+
 async fn run_collect_once() -> Result<(), Box<dyn std::error::Error>> {
     let database_url = required_collection_env("COLLECTOR_DATABASE_URL")?;
-    let evidence_verifier_database_url = required_collection_env("EVIDENCE_VERIFIER_DATABASE_URL")?;
-    let namespace_id = required_collection_env("NAMESPACE_ID")?;
     let input_root = PathBuf::from(required_collection_env("COLLECTION_INPUT_ROOT")?);
     let lease_owner = env::var("COLLECT_LEASE_OWNER")
         .unwrap_or_else(|_| format!("agent-economy-monitor:{}", std::process::id()));
     let evidence_store: Arc<dyn CollectionEvidenceStore> = match (
-        env::var("EVIDENCE_ROOT").ok(),
-        env::var("EVIDENCE_BUCKET").ok(),
+        env::var("EVIDENCE_WRITE_ROOT").ok(),
+        env::var("EVIDENCE_WRITE_BUCKET").ok(),
     ) {
         (Some(root), None) => Arc::new(FilesystemEvidenceStore::open(PathBuf::from(root))?),
         (None, Some(bucket)) => Arc::new(GcsEvidenceStore::new(
@@ -147,7 +239,7 @@ async fn run_collect_once() -> Result<(), Box<dyn std::error::Error>> {
         _ => {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "configure exactly one evidence backend: EVIDENCE_ROOT or EVIDENCE_BUCKET",
+                "configure exactly one create-only evidence backend: EVIDENCE_WRITE_ROOT or EVIDENCE_WRITE_BUCKET",
             )
             .into());
         }
@@ -172,36 +264,11 @@ async fn run_collect_once() -> Result<(), Box<dyn std::error::Error>> {
         .into());
     }
 
-    let (evidence_verifier_client, evidence_verifier_connection) =
-        tokio_postgres::connect(&evidence_verifier_database_url, NoTls).await?;
-    tokio::spawn(async move {
-        if evidence_verifier_connection.await.is_err() {
-            tracing::error!("PostgreSQL evidence verifier connection closed unexpectedly");
-        }
-    });
-    let evidence_verifier_user = evidence_verifier_client
-        .query_one("SELECT current_user", &[])
-        .await?
-        .get::<_, String>(0);
-    if evidence_verifier_user != "agent_economy_evidence_verifier_runtime" {
-        return Err(io::Error::new(
-            io::ErrorKind::PermissionDenied,
-            "EVIDENCE_VERIFIER_DATABASE_URL must authenticate as agent_economy_evidence_verifier_runtime",
-        )
-        .into());
-    }
-
     let shared_client = Arc::new(tokio::sync::Mutex::new(collector_client));
-    let shared_evidence_verifier = Arc::new(tokio::sync::Mutex::new(evidence_verifier_client));
-    let jobs = Arc::new(PostgresCollectionJobStore::from_shared(
-        Arc::clone(&shared_client),
-        namespace_id.clone(),
-    ));
-    let commits = Arc::new(PostgresCollectionCommitStore::from_shared(
-        shared_client,
-        shared_evidence_verifier,
-        namespace_id,
-    ));
+    let jobs = Arc::new(PostgresCollectionJobStore::from_shared(Arc::clone(
+        &shared_client,
+    )));
+    let commits = Arc::new(PostgresCollectionCommitStore::from_shared(shared_client));
     let rpc_transport = collection_rpc_transport()?;
     let handler = Arc::new(CollectionHandler::new(
         input_root,

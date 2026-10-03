@@ -158,6 +158,13 @@ pub struct CreateReceipt {
 
 #[allow(async_fn_in_trait)]
 pub trait EvidenceStore {
+    /// Publish by content address without exercising read authority.
+    async fn create_only(
+        &self,
+        context: &EvidenceContext,
+        evidence: &[u8],
+    ) -> Result<CreateReceipt, StoreError>;
+
     async fn create(
         &self,
         context: &EvidenceContext,
@@ -245,7 +252,7 @@ impl FilesystemEvidenceStore {
 }
 
 impl EvidenceStore for FilesystemEvidenceStore {
-    async fn create(
+    async fn create_only(
         &self,
         context: &EvidenceContext,
         evidence: &[u8],
@@ -271,7 +278,6 @@ impl EvidenceStore for FilesystemEvidenceStore {
                 CreateDisposition::Created
             }
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-                self.read_verified(&object)?;
                 CreateDisposition::AlreadyPresent
             }
             Err(error) => {
@@ -286,6 +292,18 @@ impl EvidenceStore for FilesystemEvidenceStore {
             object,
             disposition,
         })
+    }
+
+    async fn create(
+        &self,
+        context: &EvidenceContext,
+        evidence: &[u8],
+    ) -> Result<CreateReceipt, StoreError> {
+        let receipt = self.create_only(context, evidence).await?;
+        if receipt.disposition == CreateDisposition::AlreadyPresent {
+            self.read_verified(&receipt.object)?;
+        }
+        Ok(receipt)
     }
 
     async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError> {
@@ -472,6 +490,35 @@ impl<C> GcsEvidenceStore<C> {
 }
 
 impl<C: GcsObjectClient> GcsEvidenceStore<C> {
+    fn metadata_for(
+        context: &EvidenceContext,
+        object: &EvidenceObject,
+    ) -> Result<BTreeMap<String, String>, StoreError> {
+        let provenance = context
+            .provenance
+            .as_ref()
+            .ok_or(StoreError::MissingProvenance)?;
+        let replay_inputs = serde_json::to_string(&provenance.replay_inputs)
+            .map_err(|_| StoreError::InvalidContext("replay_inputs"))?;
+        Ok(BTreeMap::from([
+            (
+                "evidence-observation-id".to_owned(),
+                provenance.observation_id.clone(),
+            ),
+            (
+                "evidence-observed-date".to_owned(),
+                context.observed_date.clone(),
+            ),
+            (
+                "evidence-parser-version".to_owned(),
+                provenance.parser_version.clone(),
+            ),
+            ("evidence-replay-inputs".to_owned(), replay_inputs),
+            ("evidence-sha256".to_owned(), object.sha256()),
+            ("evidence-source".to_owned(), context.source.clone()),
+        ]))
+    }
+
     async fn read_verified(
         &self,
         object: &EvidenceObject,
@@ -499,35 +546,13 @@ impl<C: GcsObjectClient> GcsEvidenceStore<C> {
 }
 
 impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
-    async fn create(
+    async fn create_only(
         &self,
         context: &EvidenceContext,
         evidence: &[u8],
     ) -> Result<CreateReceipt, StoreError> {
-        let provenance = context
-            .provenance
-            .as_ref()
-            .ok_or(StoreError::MissingProvenance)?;
         let object = EvidenceObject::for_bytes(context, evidence);
-        let replay_inputs = serde_json::to_string(&provenance.replay_inputs)
-            .map_err(|_| StoreError::InvalidContext("replay_inputs"))?;
-        let metadata = BTreeMap::from([
-            (
-                "evidence-observation-id".to_owned(),
-                provenance.observation_id.clone(),
-            ),
-            (
-                "evidence-observed-date".to_owned(),
-                context.observed_date.clone(),
-            ),
-            (
-                "evidence-parser-version".to_owned(),
-                provenance.parser_version.clone(),
-            ),
-            ("evidence-replay-inputs".to_owned(), replay_inputs),
-            ("evidence-sha256".to_owned(), object.sha256()),
-            ("evidence-source".to_owned(), context.source.clone()),
-        ]);
+        let metadata = Self::metadata_for(context, &object)?;
         let request = GcsCreateRequest {
             bucket: self.bucket.clone(),
             name: object.name().to_owned(),
@@ -541,11 +566,7 @@ impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
             attempts += 1;
             match self.client.create_object(request.clone()).await {
                 Ok(()) => break CreateDisposition::Created,
-                Err(GcsClientError::PreconditionFailed) => {
-                    self.read_verified(&object, Some(request.metadata()))
-                        .await?;
-                    break CreateDisposition::AlreadyPresent;
-                }
+                Err(GcsClientError::PreconditionFailed) => break CreateDisposition::AlreadyPresent,
                 Err(GcsClientError::Retryable) if attempts < self.retry.max_attempts => {
                     self.retry.delay(attempts).await;
                 }
@@ -556,6 +577,19 @@ impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
             object,
             disposition,
         })
+    }
+
+    async fn create(
+        &self,
+        context: &EvidenceContext,
+        evidence: &[u8],
+    ) -> Result<CreateReceipt, StoreError> {
+        let receipt = self.create_only(context, evidence).await?;
+        if receipt.disposition == CreateDisposition::AlreadyPresent {
+            let metadata = Self::metadata_for(context, &receipt.object)?;
+            self.read_verified(&receipt.object, Some(&metadata)).await?;
+        }
+        Ok(receipt)
     }
 
     async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError> {

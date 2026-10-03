@@ -214,10 +214,12 @@ BEGIN
         SELECT 1
         FROM jsonb_array_elements(p_evidence_json) AS evidence(item)
         WHERE jsonb_typeof(item) <> 'object'
-            OR (SELECT count(*) FROM jsonb_object_keys(item)) <> 6
+            OR (SELECT count(*) FROM jsonb_object_keys(item)) <> 7
             OR NOT (item ?& ARRAY[
-                'evidence_id', 'sha256', 'storage_uri', 'media_type', 'byte_length', 'height'
+                'evidence_id', 'sha256', 'storage_uri', 'storage_generation',
+                'media_type', 'byte_length', 'height'
             ])
+            OR jsonb_typeof(item -> 'storage_generation') NOT IN ('string', 'null')
             OR (item ->> 'sha256') !~ '^[0-9a-f]{64}$'
             OR (item ->> 'evidence_id') <> 'evidence:sha256:' || (item ->> 'sha256')
             OR (item ->> 'storage_uri') <>
@@ -296,13 +298,14 @@ BEGIN
 
     PERFORM 1
     FROM agent_economy.worker_jobs AS job
+    JOIN agent_economy.pending_collection_batches AS pending
+      ON pending.namespace_id = job.namespace_id AND pending.job_id = job.job_id
     WHERE job.namespace_id = p_namespace_id
         AND job.job_id = p_job_id
         AND job.mode = 'collect'
         AND job.job_kind = 'chain-protocol-range'
-        AND job.status = 'leased'
-        AND job.lease_owner = p_lease_owner
-        AND job.lease_token = p_lease_token
+        AND job.status = 'succeeded'
+        AND job.output_sha256 = p_batch_sha256
         AND job.input_sha256 = p_input_sha256
         AND job.collection_chain_scope = p_chain_scope
         AND job.collection_source_id = p_source_id
@@ -310,32 +313,23 @@ BEGIN
         AND job.collection_end_height = p_end_height
         AND job.collection_acquisition_contract = 'alchemy-rpc-block-v1'
         AND job.collection_evidence_contract = 'evidence-store-create-read-sha256-v1'
-        AND job.lease_expires_at > clock_timestamp()
-    FOR UPDATE;
+        AND pending.status = 'verifying'
+        AND pending.verifier_owner = p_lease_owner
+        AND pending.verifier_token = p_lease_token
+        AND pending.verifier_expires_at > clock_timestamp()
+        AND pending.input_sha256 = p_input_sha256
+        AND pending.batch_sha256 = p_batch_sha256
+        AND pending.chain_scope = p_chain_scope
+        AND pending.source_id = p_source_id
+        AND pending.observed_at_unix_ms = p_observed_at_unix_ms
+        AND pending.start_height = p_start_height
+        AND pending.end_height = p_end_height
+        AND pending.evidence_json = p_evidence_json
+    FOR UPDATE OF job, pending;
     IF NOT FOUND THEN
         RETURN false;
     END IF;
 
-    IF EXISTS (
-        SELECT 1
-        FROM jsonb_array_elements(p_evidence_json) AS submitted(item)
-        WHERE NOT EXISTS (
-            SELECT 1
-            FROM agent_economy.collection_evidence_attestations AS attestation
-            WHERE attestation.namespace_id = p_namespace_id
-              AND attestation.job_id = p_job_id
-              AND attestation.lease_token = p_lease_token
-              AND attestation.evidence_id = item ->> 'evidence_id'
-              AND attestation.sha256 = item ->> 'sha256'
-              AND attestation.storage_uri = item ->> 'storage_uri'
-              AND attestation.media_type = item ->> 'media_type'
-              AND attestation.byte_length = (item ->> 'byte_length')::bigint
-              AND attestation.height = (item ->> 'height')::bigint
-              AND attestation.evidence_contract = 'evidence-store-create-read-sha256-v1'
-        )
-    ) THEN
-        RAISE EXCEPTION 'missing verified collection evidence';
-    END IF;
 
     INSERT INTO agent_economy.collection_cursors
         (namespace_id, chain_scope, source_id, next_height)

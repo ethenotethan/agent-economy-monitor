@@ -4,6 +4,8 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 UP = ROOT / "migrations" / "0013_collect_worker.up.sql"
 DOWN = ROOT / "migrations" / "0013_collect_worker.down.sql"
+SPLIT_UP = ROOT / "migrations" / "0014_collection_custody_split.up.sql"
+SPLIT_DOWN = ROOT / "migrations" / "0014_collection_custody_split.down.sql"
 
 
 class CollectWorkerMigrationTest(unittest.TestCase):
@@ -56,9 +58,6 @@ class CollectWorkerMigrationTest(unittest.TestCase):
         self.assertIn("job.collection_source_id = p_source_id", up)
         self.assertIn("job.collection_start_height = p_start_height", up)
         self.assertIn("job.collection_end_height = p_end_height", up)
-        self.assertIn("collection_evidence_attestations", up)
-        self.assertIn("agent_economy_evidence_verifier_runtime", up)
-        self.assertIn("missing verified collection evidence", up)
         self.assertNotIn("'collection-manifest'", up)
 
     def test_dedicated_runtime_role_is_fail_closed(self):
@@ -78,6 +77,25 @@ class CollectWorkerMigrationTest(unittest.TestCase):
             "REVOKE ALL ON agent_economy.collection_range_receipts FROM agent_economy_worker",
             up,
         )
+
+    def test_collection_custody_is_split_by_login_and_staged_handoff(self):
+        up = SPLIT_UP.read_text()
+        self.assertIn("CREATE TABLE agent_economy.collection_runtime_namespaces", up)
+        self.assertIn("session_user", up)
+        self.assertIn("CREATE TABLE agent_economy.pending_collection_batches", up)
+        self.assertIn("CREATE FUNCTION agent_economy.stage_collection_batch", up)
+        self.assertIn("CREATE FUNCTION agent_economy.claim_pending_collection_batch", up)
+        self.assertIn("CREATE FUNCTION agent_economy.promote_pending_collection_batch", up)
+        self.assertIn("DROP TABLE agent_economy.collection_evidence_attestations", up)
+        self.assertIn("TO agent_economy_collector_runtime", up)
+        self.assertIn("TO agent_economy_evidence_verifier_runtime", up)
+        self.assertNotIn("GRANT agent_economy_collector_runtime TO", up)
+        self.assertNotIn("GRANT agent_economy_evidence_verifier_runtime TO", up)
+
+    def test_custody_split_rollback_refuses_live_pending_state(self):
+        down = SPLIT_DOWN.read_text()
+        self.assertLess(down.index("RAISE EXCEPTION"), down.index("DROP TABLE"))
+        self.assertNotIn("CASCADE", down)
 
 
 if __name__ == "__main__":
