@@ -23,15 +23,15 @@ use tokio::sync::Mutex;
 use tokio_postgres::Client;
 
 use crate::worker::{
-    HandlerFailure, JobResult, LeasedJob, WorkerHandler, WorkerJobStore, WorkerMode,
-    WorkerStoreError,
+    CollectionAdmission, HandlerFailure, JobResult, LeasedJob, WorkerHandler, WorkerJobStore,
+    WorkerMode, WorkerStoreError,
 };
 
 const MAX_RANGE_HEIGHTS: u64 = 10_000;
 const MAX_INPUTS: usize = 10_000;
 const MAX_MANIFEST_BYTES: u64 = 8 * 1024 * 1024;
 const MAX_EVIDENCE_BYTES: usize = 4 * 1024 * 1024;
-const MAX_BATCH_ENCODED_BYTES: usize = 24 * 1024 * 1024;
+
 const MAX_OBSERVATIONS: usize = 50_000;
 const X402_PARSER_VERSION: &str = "x402-adapter@1";
 const MPP_PARSER_VERSION: &str = "mpp-adapter@1";
@@ -64,6 +64,7 @@ pub struct ArchivedEvidence {
     byte_length: u64,
     height: u64,
     verified: bool,
+    archived_bytes: Vec<u8>,
 }
 
 impl ArchivedEvidence {
@@ -235,17 +236,27 @@ pub trait CollectionCommitStore: Send + Sync + 'static {
 
 pub struct PostgresCollectionCommitStore {
     client: Arc<Mutex<Client>>,
+    evidence_verifier: Arc<Mutex<Client>>,
     namespace_id: String,
 }
 
 impl PostgresCollectionCommitStore {
-    pub fn new(client: Client, namespace_id: String) -> Self {
-        Self::from_shared(Arc::new(Mutex::new(client)), namespace_id)
+    pub fn new(client: Client, evidence_verifier: Client, namespace_id: String) -> Self {
+        Self::from_shared(
+            Arc::new(Mutex::new(client)),
+            Arc::new(Mutex::new(evidence_verifier)),
+            namespace_id,
+        )
     }
 
-    pub fn from_shared(client: Arc<Mutex<Client>>, namespace_id: String) -> Self {
+    pub fn from_shared(
+        client: Arc<Mutex<Client>>,
+        evidence_verifier: Arc<Mutex<Client>>,
+        namespace_id: String,
+    ) -> Self {
         Self {
             client,
+            evidence_verifier,
             namespace_id,
         }
     }
@@ -254,6 +265,34 @@ impl PostgresCollectionCommitStore {
 #[async_trait]
 impl CollectionCommitStore for PostgresCollectionCommitStore {
     async fn commit(&self, job: &LeasedJob, batch: CollectionBatch) -> Result<(), CollectionError> {
+        {
+            let verifier = self.evidence_verifier.lock().await;
+            for item in batch.evidence() {
+                let height =
+                    i64::try_from(item.height).map_err(|_| CollectionError::InvalidInput)?;
+                let byte_length =
+                    i64::try_from(item.byte_length).map_err(|_| CollectionError::InvalidInput)?;
+                verifier
+                    .execute(
+                        "SELECT agent_economy.attest_collection_evidence(\
+                         $1::text::uuid, $2::text::uuid, $3::text::uuid, $4, $5, $6, $7, \
+                         $8::bigint, $9::bigint)",
+                        &[
+                            &self.namespace_id,
+                            &job.job_id,
+                            &job.lease_token,
+                            &item.evidence_id,
+                            &item.sha256,
+                            &item.storage_uri,
+                            &item.media_type,
+                            &byte_length,
+                            &height,
+                        ],
+                    )
+                    .await
+                    .map_err(|_| CollectionError::CommitUnavailable)?;
+            }
+        }
         let start_height =
             i64::try_from(batch.start_height).map_err(|_| CollectionError::InvalidInput)?;
         let end_height =
@@ -368,7 +407,9 @@ impl WorkerJobStore for PostgresCollectionJobStore {
         let row = client
             .query_opt(
                 "SELECT job_id::text, mode, job_kind, input_sha256, attempt_count, \
-                        lease_owner, lease_token::text \
+                        lease_owner, lease_token::text, collection_chain_scope, \
+                        collection_source_id, collection_start_height, collection_end_height, \
+                        collection_acquisition_contract, collection_evidence_contract \
                  FROM agent_economy.claim_collection_job($1::text::uuid, $2, $3::bigint)",
                 &[&self.namespace_id, &lease_owner, &lease_seconds],
             )
@@ -468,6 +509,16 @@ fn collection_row_to_job(row: tokio_postgres::Row) -> Result<LeasedJob, WorkerSt
         attempt: u16::try_from(attempt).map_err(|_| WorkerStoreError::Unavailable)?,
         lease_owner: row.get(5),
         lease_token: row.get(6),
+        collection_admission: Some(CollectionAdmission {
+            chain_scope: row.get(7),
+            source_id: row.get(8),
+            start_height: u64::try_from(row.get::<_, i64>(9))
+                .map_err(|_| WorkerStoreError::Unavailable)?,
+            end_height: u64::try_from(row.get::<_, i64>(10))
+                .map_err(|_| WorkerStoreError::Unavailable)?,
+            acquisition_contract: row.get(11),
+            evidence_contract: row.get(12),
+        }),
     })
 }
 
@@ -602,6 +653,7 @@ where
             byte_length: encoded.len() as u64,
             height: evidence.requested_height(),
             verified: true,
+            archived_bytes: encoded,
         });
         Ok(object_name)
     }
@@ -708,34 +760,6 @@ enum InputKind {
     MppOpenApi,
 }
 
-impl InputKind {
-    const fn media_type(self) -> &'static str {
-        match self {
-            Self::X402Runtime => "application/http",
-            Self::ChainTransfer | Self::X402WellKnown | Self::X402OpenApi => "application/json",
-            Self::MppOpenApi => "application/vnd.oai.openapi+json",
-        }
-    }
-
-    const fn as_str(self) -> &'static str {
-        match self {
-            Self::ChainTransfer => "chain_transfer",
-            Self::X402Runtime => "x402_runtime",
-            Self::X402WellKnown => "x402_well_known",
-            Self::X402OpenApi => "x402_openapi",
-            Self::MppOpenApi => "mpp_openapi",
-        }
-    }
-
-    const fn parser_version(self) -> &'static str {
-        match self {
-            Self::ChainTransfer => "chain-transfer-archive@1",
-            Self::X402Runtime | Self::X402WellKnown | Self::X402OpenApi => X402_PARSER_VERSION,
-            Self::MppOpenApi => MPP_PARSER_VERSION,
-        }
-    }
-}
-
 #[async_trait]
 impl<S, C, T> WorkerHandler for CollectionHandler<S, C, T>
 where
@@ -751,7 +775,7 @@ where
             .load_manifest(job)
             .map_err(|_| poison("invalid_collect_input"))?;
         let batch = self
-            .build_batch(manifest)
+            .build_batch(job, manifest)
             .await
             .map_err(|error| match error {
                 CollectionError::InvalidInput => poison("invalid_protocol_evidence"),
@@ -813,32 +837,24 @@ where
         Ok(manifest)
     }
 
-    async fn build_batch(&self, manifest: Manifest) -> Result<CollectionBatch, CollectionError> {
-        let encoded_bytes = manifest.inputs.iter().try_fold(0_usize, |total, input| {
-            if input.evidence_base64.len() > MAX_EVIDENCE_BYTES.div_ceil(3) * 4 {
-                return Err(CollectionError::InvalidInput);
-            }
-            total
-                .checked_add(input.evidence_base64.len())
-                .filter(|total| *total <= MAX_BATCH_ENCODED_BYTES)
-                .ok_or(CollectionError::InvalidInput)
-        })?;
-        if encoded_bytes == 0 {
+    async fn build_batch(
+        &self,
+        job: &LeasedJob,
+        manifest: Manifest,
+    ) -> Result<CollectionBatch, CollectionError> {
+        let admission = job
+            .collection_admission
+            .as_ref()
+            .ok_or(CollectionError::InvalidInput)?;
+        if admission.chain_scope != manifest.chain
+            || admission.source_id != manifest.source_id
+            || admission.start_height != manifest.start_height
+            || admission.end_height != manifest.end_height
+            || admission.acquisition_contract != "alchemy-rpc-block-v1"
+            || admission.evidence_contract != "evidence-store-create-read-sha256-v1"
+        {
             return Err(CollectionError::InvalidInput);
         }
-        let decoded_inputs = manifest
-            .inputs
-            .iter()
-            .map(|input| {
-                let bytes = STANDARD
-                    .decode(&input.evidence_base64)
-                    .map_err(|_| CollectionError::InvalidInput)?;
-                if bytes.is_empty() || bytes.len() > MAX_EVIDENCE_BYTES {
-                    return Err(CollectionError::InvalidInput);
-                }
-                Ok(bytes)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
         let chain = manifest_chain(&manifest.chain)?;
         let height_count = manifest
             .end_height
@@ -884,57 +900,36 @@ where
         {
             return Err(CollectionError::InvalidInput);
         }
-        let mut evidence = rpc_archive.evidence;
+        let evidence = rpc_archive.evidence;
         let mut observations = Vec::new();
-        for (input, bytes) in manifest.inputs.iter().zip(decoded_inputs) {
-            let evidence_sha256 = format!("{:x}", Sha256::digest(&bytes));
-            let provenance = EvidenceProvenance::new(
-                input.kind.parser_version(),
-                &format!("collection:{evidence_sha256}"),
-                [
-                    ("chain", manifest.chain.clone()),
-                    ("height", input.height.to_string()),
-                    ("input-kind", input.kind.as_str().to_owned()),
-                    ("provider", "collection-manifest".to_owned()),
-                    ("source", manifest.source_id.clone()),
-                ],
-            )
-            .map_err(|_| CollectionError::InvalidInput)?;
-            let context = EvidenceContext::new(&manifest.source_id, &manifest.observed_date)
-                .map_err(|_| CollectionError::InvalidInput)?
-                .with_provenance(provenance);
-            let receipt = self
-                .evidence_store
-                .archive_verified(&context, &bytes)
-                .await?;
-            let evidence_id = format!("evidence:sha256:{}", receipt.object.sha256());
-            let parsed = parse_protocol_input(&manifest, input, &bytes)?;
-            for observation in parsed {
-                if observations.len() >= MAX_OBSERVATIONS {
+        for archived in &evidence {
+            let rpc = RpcEvidence::decode(&archived.archived_bytes)
+                .map_err(|_| CollectionError::InvalidInput)?;
+            for input in protocol_inputs_from_rpc(rpc.body(), archived.height)? {
+                let bytes = STANDARD
+                    .decode(&input.evidence_base64)
+                    .map_err(|_| CollectionError::InvalidInput)?;
+                if bytes.is_empty() || bytes.len() > MAX_EVIDENCE_BYTES {
                     return Err(CollectionError::InvalidInput);
                 }
-                let protocol = match observation.protocol() {
-                    ProtocolObservation::X402(_) => "x402",
-                    ProtocolObservation::Mpp(_) | ProtocolObservation::MppDiscovery(_) => "mpp",
-                };
-                let observation_hash = format!("{:x}", Sha256::digest(observation.encode()));
-                observations.push(CollectedObservation {
-                    observation,
-                    protocol,
-                    evidence_id: evidence_id.clone(),
-                    observation_hash,
-                    height: input.height,
-                });
+                for observation in parse_protocol_input(&manifest, &input, &bytes)? {
+                    if observations.len() >= MAX_OBSERVATIONS {
+                        return Err(CollectionError::InvalidInput);
+                    }
+                    let protocol = match observation.protocol() {
+                        ProtocolObservation::X402(_) => "x402",
+                        ProtocolObservation::Mpp(_) | ProtocolObservation::MppDiscovery(_) => "mpp",
+                    };
+                    let observation_hash = format!("{:x}", Sha256::digest(observation.encode()));
+                    observations.push(CollectedObservation {
+                        observation,
+                        protocol,
+                        evidence_id: archived.evidence_id.clone(),
+                        observation_hash,
+                        height: input.height,
+                    });
+                }
             }
-            evidence.push(ArchivedEvidence {
-                evidence_id,
-                sha256: receipt.object.sha256(),
-                storage_uri: receipt.object.name().to_owned(),
-                media_type: input.kind.media_type().into(),
-                byte_length: bytes.len() as u64,
-                height: input.height,
-                verified: true,
-            });
         }
         Ok(CollectionBatch {
             chain: manifest.chain,
@@ -946,6 +941,35 @@ where
             observations,
         })
     }
+}
+
+fn protocol_inputs_from_rpc(
+    bytes: &[u8],
+    height: u64,
+) -> Result<Vec<ManifestInput>, CollectionError> {
+    let value: serde_json::Value =
+        serde_json::from_slice(bytes).map_err(|_| CollectionError::InvalidInput)?;
+    let Some(inputs) = value
+        .get("result")
+        .and_then(|result| result.get("agentEconomyProtocolEvidence"))
+    else {
+        return Ok(Vec::new());
+    };
+    let inputs = inputs.as_array().ok_or(CollectionError::InvalidInput)?;
+    if inputs.len() > MAX_INPUTS {
+        return Err(CollectionError::InvalidInput);
+    }
+    inputs
+        .iter()
+        .map(|input| {
+            let parsed: ManifestInput =
+                serde_json::from_value(input.clone()).map_err(|_| CollectionError::InvalidInput)?;
+            if parsed.height != height || parsed.context.trim().is_empty() {
+                return Err(CollectionError::InvalidInput);
+            }
+            Ok(parsed)
+        })
+        .collect()
 }
 
 fn parse_protocol_input(

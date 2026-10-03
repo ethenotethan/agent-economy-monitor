@@ -129,6 +129,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn run_collect_once() -> Result<(), Box<dyn std::error::Error>> {
     let database_url = required_collection_env("COLLECTOR_DATABASE_URL")?;
+    let evidence_verifier_database_url = required_collection_env("EVIDENCE_VERIFIER_DATABASE_URL")?;
     let namespace_id = required_collection_env("NAMESPACE_ID")?;
     let input_root = PathBuf::from(required_collection_env("COLLECTION_INPUT_ROOT")?);
     let lease_owner = env::var("COLLECT_LEASE_OWNER")
@@ -171,13 +172,34 @@ async fn run_collect_once() -> Result<(), Box<dyn std::error::Error>> {
         .into());
     }
 
+    let (evidence_verifier_client, evidence_verifier_connection) =
+        tokio_postgres::connect(&evidence_verifier_database_url, NoTls).await?;
+    tokio::spawn(async move {
+        if evidence_verifier_connection.await.is_err() {
+            tracing::error!("PostgreSQL evidence verifier connection closed unexpectedly");
+        }
+    });
+    let evidence_verifier_user = evidence_verifier_client
+        .query_one("SELECT current_user", &[])
+        .await?
+        .get::<_, String>(0);
+    if evidence_verifier_user != "agent_economy_evidence_verifier_runtime" {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "EVIDENCE_VERIFIER_DATABASE_URL must authenticate as agent_economy_evidence_verifier_runtime",
+        )
+        .into());
+    }
+
     let shared_client = Arc::new(tokio::sync::Mutex::new(collector_client));
+    let shared_evidence_verifier = Arc::new(tokio::sync::Mutex::new(evidence_verifier_client));
     let jobs = Arc::new(PostgresCollectionJobStore::from_shared(
         Arc::clone(&shared_client),
         namespace_id.clone(),
     ));
     let commits = Arc::new(PostgresCollectionCommitStore::from_shared(
         shared_client,
+        shared_evidence_verifier,
         namespace_id,
     ));
     let rpc_transport = collection_rpc_transport()?;

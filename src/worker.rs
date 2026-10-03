@@ -45,6 +45,16 @@ impl fmt::Display for WorkerMode {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CollectionAdmission {
+    pub chain_scope: String,
+    pub source_id: String,
+    pub start_height: u64,
+    pub end_height: u64,
+    pub acquisition_contract: String,
+    pub evidence_contract: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LeasedJob {
     pub job_id: String,
     pub mode: WorkerMode,
@@ -53,6 +63,7 @@ pub struct LeasedJob {
     pub attempt: u16,
     pub lease_owner: String,
     pub lease_token: String,
+    pub collection_admission: Option<CollectionAdmission>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -432,6 +443,7 @@ fn row_to_job(row: tokio_postgres::Row) -> Result<LeasedJob, WorkerStoreError> {
         attempt: u16::try_from(attempt).map_err(|_| WorkerStoreError::Unavailable)?,
         lease_owner: row.get(5),
         lease_token: row.get(6),
+        collection_admission: None,
     })
 }
 

@@ -1,5 +1,57 @@
 BEGIN;
 
+ALTER TABLE agent_economy.worker_jobs
+    ADD COLUMN collection_chain_scope text,
+    ADD COLUMN collection_source_id text,
+    ADD COLUMN collection_start_height bigint,
+    ADD COLUMN collection_end_height bigint,
+    ADD COLUMN collection_acquisition_contract text,
+    ADD COLUMN collection_evidence_contract text,
+    ADD CONSTRAINT worker_jobs_collection_admission CHECK (
+        (mode = 'collect'
+            AND collection_chain_scope IN ('ethereum', 'base', 'solana', 'tempo')
+            AND collection_source_id = 'alchemy-' || collection_chain_scope
+            AND collection_start_height >= 0
+            AND collection_end_height >= collection_start_height
+            AND collection_end_height - collection_start_height + 1 <= 10000
+            AND collection_acquisition_contract = 'alchemy-rpc-block-v1'
+            AND collection_evidence_contract = 'evidence-store-create-read-sha256-v1')
+        OR (mode <> 'collect'
+            AND collection_chain_scope IS NULL
+            AND collection_source_id IS NULL
+            AND collection_start_height IS NULL
+            AND collection_end_height IS NULL
+            AND collection_acquisition_contract IS NULL
+            AND collection_evidence_contract IS NULL)
+    );
+
+CREATE OR REPLACE FUNCTION agent_economy.protect_worker_job_identity()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF ROW(
+        OLD.namespace_id, OLD.job_id, OLD.mode, OLD.job_kind,
+        OLD.idempotency_key, OLD.input_sha256, OLD.max_attempts, OLD.created_at,
+        OLD.collection_chain_scope, OLD.collection_source_id,
+        OLD.collection_start_height, OLD.collection_end_height,
+        OLD.collection_acquisition_contract, OLD.collection_evidence_contract
+    ) IS DISTINCT FROM ROW(
+        NEW.namespace_id, NEW.job_id, NEW.mode, NEW.job_kind,
+        NEW.idempotency_key, NEW.input_sha256, NEW.max_attempts, NEW.created_at,
+        NEW.collection_chain_scope, NEW.collection_source_id,
+        NEW.collection_start_height, NEW.collection_end_height,
+        NEW.collection_acquisition_contract, NEW.collection_evidence_contract
+    ) THEN
+        RAISE EXCEPTION 'worker job identity is immutable';
+    END IF;
+    IF OLD.status IN ('succeeded', 'dead_letter', 'cancelled') AND NEW IS DISTINCT FROM OLD THEN
+        RAISE EXCEPTION 'terminal worker job is immutable';
+    END IF;
+    RETURN NEW;
+END
+$$;
+
 CREATE TABLE agent_economy.collection_cursors (
     namespace_id uuid NOT NULL REFERENCES agent_economy.namespaces (namespace_id),
     chain_scope text NOT NULL CHECK (chain_scope IN ('ethereum', 'base', 'solana', 'tempo')),
@@ -25,6 +77,90 @@ CREATE TABLE agent_economy.collection_range_receipts (
     committed_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (namespace_id, chain_scope, source_id, start_height, end_height)
 );
+
+CREATE TABLE agent_economy.collection_evidence_attestations (
+    namespace_id uuid NOT NULL,
+    job_id uuid NOT NULL,
+    lease_token uuid NOT NULL,
+    evidence_id text NOT NULL CHECK (evidence_id ~ '^evidence:sha256:[0-9a-f]{64}$'),
+    sha256 text NOT NULL CHECK (sha256 ~ '^[0-9a-f]{64}$'),
+    storage_uri text NOT NULL,
+    media_type text NOT NULL,
+    byte_length bigint NOT NULL CHECK (byte_length BETWEEN 1 AND 4194304),
+    height bigint NOT NULL CHECK (height >= 0),
+    evidence_contract text NOT NULL,
+    attested_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    PRIMARY KEY (namespace_id, job_id, lease_token, evidence_id),
+    FOREIGN KEY (namespace_id, job_id)
+        REFERENCES agent_economy.worker_jobs (namespace_id, job_id)
+);
+
+CREATE FUNCTION agent_economy.attest_collection_evidence(
+    p_namespace_id uuid,
+    p_job_id uuid,
+    p_lease_token uuid,
+    p_evidence_id text,
+    p_sha256 text,
+    p_storage_uri text,
+    p_media_type text,
+    p_byte_length bigint,
+    p_height bigint
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    admission agent_economy.worker_jobs%ROWTYPE;
+BEGIN
+    SELECT * INTO admission
+    FROM agent_economy.worker_jobs AS job
+    WHERE job.namespace_id = p_namespace_id
+      AND job.job_id = p_job_id
+      AND job.mode = 'collect'
+      AND job.job_kind = 'chain-protocol-range'
+      AND job.status = 'leased'
+      AND job.lease_token = p_lease_token
+      AND job.lease_expires_at > clock_timestamp()
+    FOR UPDATE;
+    IF NOT FOUND THEN
+        RETURN false;
+    END IF;
+    IF p_evidence_id <> 'evidence:sha256:' || p_sha256
+       OR p_sha256 !~ '^[0-9a-f]{64}$'
+       OR p_storage_uri !~ (
+           '^evidence/' || admission.collection_source_id ||
+           '/[0-9]{4}-[0-9]{2}-[0-9]{2}/sha256/' || left(p_sha256, 2) || '/' || p_sha256 || '$'
+       )
+       OR p_media_type <> 'application/vnd.agent-economy.rpc'
+       OR p_byte_length NOT BETWEEN 1 AND 4194304
+       OR p_height NOT BETWEEN admission.collection_start_height AND admission.collection_end_height
+    THEN
+        RAISE EXCEPTION 'invalid verified collection evidence';
+    END IF;
+    INSERT INTO agent_economy.collection_evidence_attestations
+        (namespace_id, job_id, lease_token, evidence_id, sha256, storage_uri,
+         media_type, byte_length, height, evidence_contract)
+    VALUES
+        (p_namespace_id, p_job_id, p_lease_token, p_evidence_id, p_sha256, p_storage_uri,
+         p_media_type, p_byte_length, p_height, admission.collection_evidence_contract)
+    ON CONFLICT (namespace_id, job_id, lease_token, evidence_id) DO UPDATE
+    SET sha256 = EXCLUDED.sha256,
+        storage_uri = EXCLUDED.storage_uri,
+        media_type = EXCLUDED.media_type,
+        byte_length = EXCLUDED.byte_length,
+        height = EXCLUDED.height,
+        evidence_contract = EXCLUDED.evidence_contract
+    WHERE agent_economy.collection_evidence_attestations.sha256 = EXCLUDED.sha256
+      AND agent_economy.collection_evidence_attestations.storage_uri = EXCLUDED.storage_uri
+      AND agent_economy.collection_evidence_attestations.media_type = EXCLUDED.media_type
+      AND agent_economy.collection_evidence_attestations.byte_length = EXCLUDED.byte_length
+      AND agent_economy.collection_evidence_attestations.height = EXCLUDED.height
+      AND agent_economy.collection_evidence_attestations.evidence_contract = EXCLUDED.evidence_contract;
+    RETURN FOUND;
+END
+$$;
 
 CREATE FUNCTION agent_economy.commit_collection_batch(
     p_namespace_id uuid,
@@ -168,10 +304,37 @@ BEGIN
         AND job.lease_owner = p_lease_owner
         AND job.lease_token = p_lease_token
         AND job.input_sha256 = p_input_sha256
+        AND job.collection_chain_scope = p_chain_scope
+        AND job.collection_source_id = p_source_id
+        AND job.collection_start_height = p_start_height
+        AND job.collection_end_height = p_end_height
+        AND job.collection_acquisition_contract = 'alchemy-rpc-block-v1'
+        AND job.collection_evidence_contract = 'evidence-store-create-read-sha256-v1'
         AND job.lease_expires_at > clock_timestamp()
     FOR UPDATE;
     IF NOT FOUND THEN
         RETURN false;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(p_evidence_json) AS submitted(item)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM agent_economy.collection_evidence_attestations AS attestation
+            WHERE attestation.namespace_id = p_namespace_id
+              AND attestation.job_id = p_job_id
+              AND attestation.lease_token = p_lease_token
+              AND attestation.evidence_id = item ->> 'evidence_id'
+              AND attestation.sha256 = item ->> 'sha256'
+              AND attestation.storage_uri = item ->> 'storage_uri'
+              AND attestation.media_type = item ->> 'media_type'
+              AND attestation.byte_length = (item ->> 'byte_length')::bigint
+              AND attestation.height = (item ->> 'height')::bigint
+              AND attestation.evidence_contract = 'evidence-store-create-read-sha256-v1'
+        )
+    ) THEN
+        RAISE EXCEPTION 'missing verified collection evidence';
     END IF;
 
     INSERT INTO agent_economy.collection_cursors
@@ -252,7 +415,7 @@ BEGIN
            p_source_id,
            to_timestamp(p_observed_at_unix_ms / 1000.0),
            item ->> 'parser_version',
-           'collection-manifest',
+           'alchemy-rpc',
            p_chain_scope,
            item ->> 'height',
            item ->> 'evidence_id'
@@ -274,7 +437,7 @@ BEGIN
         WHERE provenance.source_id <> p_source_id
            OR provenance.observed_at <> to_timestamp(p_observed_at_unix_ms / 1000.0)
            OR provenance.parser_version <> item ->> 'parser_version'
-           OR provenance.provider <> 'collection-manifest'
+           OR provenance.provider <> 'alchemy-rpc'
            OR provenance.chain_scope <> p_chain_scope
            OR provenance.block_reference <> item ->> 'height'
            OR provenance.evidence_id <> item ->> 'evidence_id'
@@ -366,7 +529,13 @@ RETURNS TABLE (
     input_sha256 text,
     attempt_count smallint,
     lease_owner text,
-    lease_token uuid
+    lease_token uuid,
+    collection_chain_scope text,
+    collection_source_id text,
+    collection_start_height bigint,
+    collection_end_height bigint,
+    collection_acquisition_contract text,
+    collection_evidence_contract text
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -418,7 +587,10 @@ BEGIN
     WHERE claimed.namespace_id = candidate.namespace_id
         AND claimed.job_id = candidate.job_id
     RETURNING claimed.job_id, claimed.mode, claimed.job_kind, claimed.input_sha256,
-        claimed.attempt_count, claimed.lease_owner, claimed.lease_token;
+        claimed.attempt_count, claimed.lease_owner, claimed.lease_token,
+        claimed.collection_chain_scope, claimed.collection_source_id,
+        claimed.collection_start_height, claimed.collection_end_height,
+        claimed.collection_acquisition_contract, claimed.collection_evidence_contract;
 END
 $$;
 
@@ -491,9 +663,14 @@ $$;
 DO $$
 DECLARE
     collector_role pg_roles%ROWTYPE;
+    verifier_role pg_roles%ROWTYPE;
 BEGIN
     BEGIN
         CREATE ROLE agent_economy_collector_runtime LOGIN NOINHERIT;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
+    BEGIN
+        CREATE ROLE agent_economy_evidence_verifier_runtime LOGIN NOINHERIT;
     EXCEPTION WHEN duplicate_object THEN NULL;
     END;
 
@@ -533,10 +710,40 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'agent_economy_collector_runtime must not have members';
     END IF;
+
+    SELECT * INTO STRICT verifier_role
+    FROM pg_roles
+    WHERE rolname = 'agent_economy_evidence_verifier_runtime';
+    IF NOT verifier_role.rolcanlogin
+        OR verifier_role.rolinherit
+        OR verifier_role.rolsuper
+        OR verifier_role.rolcreatedb
+        OR verifier_role.rolcreaterole
+        OR verifier_role.rolreplication
+        OR verifier_role.rolbypassrls
+    THEN
+        RAISE EXCEPTION 'agent_economy_evidence_verifier_runtime must be an unprivileged LOGIN role';
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM pg_auth_members AS membership
+        WHERE membership.member = verifier_role.oid OR membership.roleid = verifier_role.oid
+    ) THEN
+        RAISE EXCEPTION 'agent_economy_evidence_verifier_runtime must be isolated';
+    END IF;
 END
 $$;
 
 GRANT USAGE ON SCHEMA agent_economy TO agent_economy_collector_runtime;
+GRANT USAGE ON SCHEMA agent_economy TO agent_economy_evidence_verifier_runtime;
+REVOKE ALL ON agent_economy.collection_evidence_attestations FROM PUBLIC;
+REVOKE ALL ON agent_economy.collection_evidence_attestations FROM agent_economy_worker;
+REVOKE ALL ON agent_economy.collection_evidence_attestations FROM agent_economy_collector_runtime;
+REVOKE ALL ON FUNCTION agent_economy.attest_collection_evidence(
+    uuid, uuid, uuid, text, text, text, text, bigint, bigint
+) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION agent_economy.attest_collection_evidence(
+    uuid, uuid, uuid, text, text, text, text, bigint, bigint
+) TO agent_economy_evidence_verifier_runtime;
 REVOKE ALL ON FUNCTION agent_economy.claim_collection_job(uuid, text, bigint) FROM PUBLIC;
 
 CREATE OR REPLACE FUNCTION agent_economy.renew_collection_job_lease(

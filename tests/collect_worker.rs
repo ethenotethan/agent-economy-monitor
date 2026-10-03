@@ -10,7 +10,7 @@ use agent_economy_evidence_store::{
 };
 use agent_economy_monitor::{
     collect::{CollectionBatch, CollectionCommitStore, CollectionError, CollectionHandler},
-    worker::{LeasedJob, WorkerHandler, WorkerMode},
+    worker::{CollectionAdmission, LeasedJob, WorkerHandler, WorkerMode},
 };
 use agent_economy_rpc_collector::{Chain, CollectorError, RawRpcResponse, RpcTransport};
 use async_trait::async_trait;
@@ -80,6 +80,15 @@ impl CollectionCommitStore for RecordingCommitStore {
 }
 
 fn leased_job(input_sha256: String) -> LeasedJob {
+    leased_job_for(input_sha256, "base", 42, 42)
+}
+
+fn leased_job_for(
+    input_sha256: String,
+    chain: &str,
+    start_height: u64,
+    end_height: u64,
+) -> LeasedJob {
     LeasedJob {
         job_id: "00000000-0000-0000-0000-000000000048".into(),
         mode: WorkerMode::Collect,
@@ -88,6 +97,14 @@ fn leased_job(input_sha256: String) -> LeasedJob {
         attempt: 1,
         lease_owner: "collect-test".into(),
         lease_token: "00000000-0000-0000-0000-000000000148".into(),
+        collection_admission: Some(CollectionAdmission {
+            chain_scope: chain.into(),
+            source_id: format!("alchemy-{chain}"),
+            start_height,
+            end_height,
+            acquisition_contract: "alchemy-rpc-block-v1".into(),
+            evidence_contract: "evidence-store-create-read-sha256-v1".into(),
+        }),
     }
 }
 
@@ -136,17 +153,44 @@ fn manifest(chain: &str, protocol_kind: &str, protocol_payload: &[u8]) -> Vec<u8
 }
 
 fn rpc_transport(chain: &str, reported_height: u64) -> FakeRpcTransport {
+    rpc_transport_with_protocol(chain, reported_height, None)
+}
+
+fn rpc_transport_with_protocol(
+    chain: &str,
+    reported_height: u64,
+    protocol: Option<(&str, &[u8])>,
+) -> FakeRpcTransport {
     let chain = manifest_chain(chain);
-    let body = if chain == Chain::Solana {
-        format!(
-            r#"{{"jsonrpc":"2.0","id":1,"result":{{"blockHeight":{reported_height},"blockhash":"block-{reported_height}","parentSlot":{},"previousBlockhash":"block-parent","transactions":[]}}}}"#,
-            reported_height.saturating_sub(1)
-        )
-        .into_bytes()
+    let mut result = if chain == Chain::Solana {
+        serde_json::json!({
+            "blockHeight": reported_height,
+            "blockhash": format!("block-{reported_height}"),
+            "parentSlot": reported_height.saturating_sub(1),
+            "previousBlockhash": "block-parent",
+            "transactions": []
+        })
     } else {
-        format!(r#"{{"jsonrpc":"2.0","id":1,"result":{{"number":"0x{reported_height:x}"}}}}"#)
-            .into_bytes()
+        serde_json::json!({"number": format!("0x{reported_height:x}")})
     };
+    if let Some((kind, payload)) = protocol {
+        result["agentEconomyProtocolEvidence"] = serde_json::json!([{
+            "height": reported_height,
+            "kind": kind,
+            "context": if kind == "mpp_openapi" {
+                format!("service:{}", chain.as_str())
+            } else {
+                "https://merchant.example/paid".to_owned()
+            },
+            "evidence_base64": STANDARD.encode(payload)
+        }]);
+    }
+    let body = serde_json::to_vec(&serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": result
+    }))
+    .unwrap();
     FakeRpcTransport {
         responses: VecDeque::from([RawRpcResponse::try_new(200, body)]),
         requests: Arc::new(Mutex::new(Vec::new())),
@@ -185,12 +229,12 @@ async fn bounded_launch_chain_fixtures_archive_before_emitting_only_explicit_pro
         let bytes = manifest(chain, kind, &payload);
         let digest = format!("{:x}", Sha256::digest(&bytes));
         fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
-        let rpc = rpc_transport(chain, 42);
+        let rpc = rpc_transport_with_protocol(chain, 42, Some((kind, &payload)));
         let rpc_requests = Arc::clone(&rpc.requests);
         let handler = CollectionHandler::new(input_root, evidence_store, commit_store.clone(), rpc);
 
         let result = handler
-            .process(&leased_job(digest))
+            .process(&leased_job_for(digest, chain, 42, 42))
             .await
             .unwrap_or_else(|error| panic!("{chain} fixture failed: {error:?}"));
 
@@ -200,7 +244,7 @@ async fn bounded_launch_chain_fixtures_archive_before_emitting_only_explicit_pro
         assert_eq!(batches[0].chain(), chain);
         assert_eq!(batches[0].start_height(), 42);
         assert_eq!(batches[0].end_height(), 42);
-        assert_eq!(batches[0].evidence().len(), 3);
+        assert_eq!(batches[0].evidence().len(), 1);
         assert_eq!(batches[0].observations().len(), 1);
         assert_eq!(batches[0].observations()[0].protocol(), expected_protocol);
         assert!(batches[0].evidence().iter().all(|item| item.verified()));
@@ -230,7 +274,11 @@ async fn malformed_explicit_attribution_fails_before_cursor_or_observation_commi
         input_root,
         evidence_store,
         commit_store.clone(),
-        rpc_transport("base", 42),
+        rpc_transport_with_protocol(
+            "base",
+            42,
+            Some(("x402_runtime", b"ordinary transfer, not x402")),
+        ),
     );
 
     let failure = handler.process(&leased_job(digest)).await.unwrap_err();
@@ -238,6 +286,38 @@ async fn malformed_explicit_attribution_fails_before_cursor_or_observation_commi
     assert_eq!(failure.code(), "invalid_protocol_evidence");
     assert!(!failure.is_retryable());
     assert!(commit_store.0.lock().unwrap().is_empty());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn manifest_payload_cannot_create_observation_when_rpc_evidence_has_only_ordinary_transfer() {
+    let root = std::env::temp_dir().join(format!(
+        "aem-collect-manifest-divergence-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let input_root = root.join("inputs");
+    fs::create_dir_all(&input_root).unwrap();
+    let root = fs::canonicalize(&root).unwrap();
+    let input_root = root.join("inputs");
+    let evidence_store = Arc::new(FilesystemEvidenceStore::open(root.join("evidence")).unwrap());
+    let commit_store = Arc::new(RecordingCommitStore::default());
+    let bytes = manifest("base", "x402_runtime", &x402_fixture());
+    let digest = format!("{:x}", Sha256::digest(&bytes));
+    fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
+    let handler = CollectionHandler::new(
+        input_root,
+        evidence_store,
+        commit_store.clone(),
+        rpc_transport("base", 42),
+    );
+
+    handler.process(&leased_job(digest)).await.unwrap();
+
+    let batches = commit_store.0.lock().unwrap();
+    assert!(batches[0].observations().is_empty());
+    assert_eq!(batches[0].evidence().len(), 1);
+    drop(batches);
     fs::remove_dir_all(root).unwrap();
 }
 
@@ -263,13 +343,13 @@ async fn production_gcs_store_receives_bounded_collection_provenance_before_comm
         root.clone(),
         evidence_store,
         commit_store.clone(),
-        rpc_transport("base", 42),
+        rpc_transport_with_protocol("base", 42, Some(("x402_runtime", &x402_fixture()))),
     );
 
     handler.process(&leased_job(digest)).await.unwrap();
 
     let requests = client.requests.lock().unwrap();
-    assert_eq!(requests.len(), 3);
+    assert_eq!(requests.len(), 1);
     assert!(requests.iter().all(|request| {
         request.if_generation_match() == Some(0)
             && request.metadata().get("evidence-source") == Some(&"alchemy-base".to_owned())
@@ -285,7 +365,7 @@ async fn production_gcs_store_receives_bounded_collection_provenance_before_comm
 }
 
 #[tokio::test]
-async fn oversized_evidence_is_rejected_before_archive_or_commit() {
+async fn oversized_protocol_evidence_is_rejected_before_archive_or_commit() {
     let root =
         std::env::temp_dir().join(format!("aem-collect-oversized-test-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
@@ -302,7 +382,11 @@ async fn oversized_evidence_is_rejected_before_archive_or_commit() {
         input_root,
         evidence_store,
         commit_store.clone(),
-        rpc_transport("base", 42),
+        rpc_transport_with_protocol(
+            "base",
+            42,
+            Some(("x402_runtime", &vec![b'x'; 4 * 1024 * 1024 + 1])),
+        ),
     );
 
     let error = handler.process(&leased_job(digest)).await.unwrap_err();
@@ -339,11 +423,14 @@ async fn rpc_acquisition_represents_every_height_when_protocol_inputs_are_sparse
         .push_back(rpc_transport("base", 43).responses.pop_front().unwrap());
     let handler = CollectionHandler::new(input_root, evidence_store, commit_store.clone(), rpc);
 
-    handler.process(&leased_job(digest)).await.unwrap();
+    handler
+        .process(&leased_job_for(digest, "base", 42, 43))
+        .await
+        .unwrap();
 
     let batches = commit_store.0.lock().unwrap();
     assert_eq!(batches.len(), 1);
-    assert_eq!(batches[0].evidence().len(), 4);
+    assert_eq!(batches[0].evidence().len(), 2);
     drop(batches);
     fs::remove_dir_all(root).unwrap();
 }

@@ -26,6 +26,10 @@ fn collect_requires_exactly_one_evidence_backend_before_connecting() {
             "COLLECTOR_DATABASE_URL",
             "postgresql://127.0.0.1:1/unreachable",
         )
+        .env(
+            "EVIDENCE_VERIFIER_DATABASE_URL",
+            "postgresql://127.0.0.1:1/unreachable",
+        )
         .env("NAMESPACE_ID", "00000000-0000-0000-0000-000000000048")
         .env("COLLECTION_INPUT_ROOT", ".")
         .env_remove("EVIDENCE_ROOT")
