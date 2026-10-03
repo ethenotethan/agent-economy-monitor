@@ -63,6 +63,16 @@
       ]
     },
     {
+      "description": "Evidence-first leased collection handler that archives and verifies bounded chain/protocol inputs before atomically committing immutable observations and cursor progress.",
+      "id": "collect-worker",
+      "label": "Immutable observation collection worker",
+      "layer": "evidence",
+      "patterns": [
+        "src/collect.rs",
+        "migrations/0013_collect_worker.*.sql"
+      ]
+    },
+    {
       "description": "Namespace-scoped PostgreSQL session hashes and atomic shared-password login admission state.",
       "id": "cockpit-auth-schema",
       "label": "Cockpit authentication state",
@@ -265,7 +275,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients, production registrations for domain worker handlers, and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, evidence-first leased collect worker, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients, production registrations for reduce, classify, and enrich handlers, and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -400,6 +410,10 @@
     {"class": "boundary", "relation": "discovers", "source": "external:web-discovery", "target": "collector"},
     {"class": "lifecycle", "relation": "archives", "source": "collector", "target": "store:evidence"},
     {"class": "lifecycle", "relation": "enqueues", "source": "collector", "target": "store:postgresql"},
+    {"class": "interplay", "relation": "leases", "source": "store:postgresql", "target": "collect-worker"},
+    {"class": "lifecycle", "relation": "archives-verified", "source": "collect-worker", "target": "store:evidence"},
+    {"class": "interplay", "relation": "invokes", "source": "collect-worker", "target": "protocol-adapters"},
+    {"class": "lifecycle", "relation": "writes-observations", "source": "collect-worker", "target": "store:postgresql"},
     {"class": "interplay", "relation": "leases", "source": "store:postgresql", "target": "protocol-adapters"},
     {"class": "interplay", "relation": "supplies", "source": "store:evidence", "target": "protocol-adapters"},
     {"class": "interplay", "relation": "emits-observations", "source": "protocol-adapters", "target": "reducers"},
@@ -429,6 +443,7 @@
     {"class": "interplay", "relation": "invokes", "source": "cloud-scheduler", "target": "cloud-run-jobs"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-api", "target": "query-api"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "collector"},
+    {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "collect-worker"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "reducers"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "attribution"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "classification"},
@@ -525,6 +540,7 @@
   ],
   "nodes": [
     {"authority": "specified", "component": "rpc-collector", "id": "collector", "kind": "worker", "label": "External RPC collector", "origin": {"path": "crates/rpc-collector/src/lib.rs", "search": "pub struct Collector"}, "page": "evidence"},
+    {"authority": "specified", "component": "collect-worker", "id": "collect-worker", "kind": "worker", "label": "Immutable observation collection worker", "origin": {"path": "src/collect.rs", "search": "pub struct CollectionHandler"}, "page": "evidence"},
     {"authority": "specified", "component": "observation-contracts", "id": "observation-contract", "kind": "contract", "label": "Immutable observation contract", "origin": {"path": "crates/contracts/src/lib.rs", "search": "pub struct Observation {"}, "page": "evidence"},
     {"authority": "specified", "component": "adapter-api", "id": "adapter-boundary", "kind": "boundary", "label": "Observation-only adapter API", "origin": {"path": "crates/adapter-api/src/lib.rs", "search": "pub trait ProtocolAdapter"}, "page": "evidence"},
     {"authority": "specified", "component": "evidence-store", "id": "filesystem-evidence-store", "kind": "adapter", "label": "Content-addressed filesystem evidence store", "origin": {"path": "crates/evidence-store/src/lib.rs", "search": "pub struct FilesystemEvidenceStore"}, "page": "evidence"},

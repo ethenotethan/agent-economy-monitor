@@ -6,6 +6,7 @@ license = "Apache-2.0"
 description = "Backend-neutral immutable evidence storage contract"
 
 [dependencies]
+async-trait = "0.1"
 bytes = "1"
 cap-fs-ext = "=3.4.6"
 cap-primitives = "=3.4.6"

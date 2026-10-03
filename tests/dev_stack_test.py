@@ -271,7 +271,8 @@ class DevStackComposeTest(unittest.TestCase):
 
     def test_canonical_verify_runs_development_stack_tests(self):
         verify = (ROOT / "scripts" / "verify").read_text(encoding="utf-8")
-        self.assertIn("python3 -m unittest discover", verify)
+        self.assertIn('PYTHON="${PYTHON:-/usr/bin/python3}"', verify)
+        self.assertIn('"$PYTHON" -m unittest discover', verify)
 
 
 if __name__ == "__main__":

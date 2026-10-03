@@ -68,6 +68,21 @@ queue, unknown mode, failed handler, or mode without a registered production han
 Expired leases are safely reassigned, while retries, poison jobs, and cancellation remain
 bounded and deterministic.
 
+The `collect` handler consumes a bounded, canonical JSON manifest named
+`<input_sha256>.json` beneath `COLLECTION_INPUT_ROOT`. The manifest identifies one of the
+four launch chains, a source, an inclusive range of at most 10,000 heights, and synthetic
+or externally acquired inputs tagged as `x402_runtime`, `x402_well_known`,
+`x402_openapi`, `mpp_openapi`, or `chain_transfer`. Every input is archived under
+the configured immutable evidence store and read back before an existing protocol adapter
+may emit an observation;
+ordinary chain transfers are archived but never attributed as protocol payments. Run one
+leased collection job with `DATABASE_URL`, `NAMESPACE_ID`, `COLLECTION_INPUT_ROOT`, and
+exactly one evidence backend set, then execute `cargo run -- collect`: use `EVIDENCE_BUCKET`
+for the production GCS adapter with Application Default Credentials, or `EVIDENCE_ROOT` for
+the local filesystem adapter. The PostgreSQL commit function
+atomically persists evidence metadata, provenance, explicit observations, and the
+source-scoped replay cursor under the live lease.
+
 ```bash
 python3 -m pip install --requirement requirements-dev.txt
 python3 -m playwright install firefox

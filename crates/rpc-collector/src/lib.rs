@@ -322,12 +322,12 @@ fn chain_from_code(code: u8) -> Result<Chain, CollectorError> {
 }
 
 #[allow(async_fn_in_trait)]
-pub trait RpcTransport {
-    async fn fetch_block(
+pub trait RpcTransport: Send {
+    fn fetch_block(
         &mut self,
         chain: Chain,
         height: u64,
-    ) -> Result<RawRpcResponse, CollectorError>;
+    ) -> impl std::future::Future<Output = Result<RawRpcResponse, CollectorError>> + Send;
 }
 
 impl RpcTransport for AlchemyTransport {
@@ -964,6 +964,24 @@ fn decode_height(
             .map(Some)
             .map_err(|_| CollectorError::InvalidResponse("number"))
     }
+}
+
+pub fn validate_archived_success(
+    encoded: &[u8],
+    expected_chain: Chain,
+    expected_height: u64,
+) -> Result<(), CollectorError> {
+    let evidence = RpcEvidence::decode(encoded)?;
+    if evidence.chain() != expected_chain
+        || evidence.requested_height() != expected_height
+        || !(200..300).contains(&evidence.http_status())
+        || decode_height(expected_chain, expected_height, evidence.body())? != Some(expected_height)
+    {
+        return Err(CollectorError::InvalidEvidence(
+            "successful response binding",
+        ));
+    }
+    Ok(())
 }
 
 #[derive(Clone, Copy)]

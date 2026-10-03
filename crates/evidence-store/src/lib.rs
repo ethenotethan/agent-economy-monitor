@@ -11,6 +11,7 @@ use std::{
     time::Duration,
 };
 
+use async_trait::async_trait;
 use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt};
 use cap_primitives::fs::open_dir_nofollow;
 use cap_std::{
@@ -78,7 +79,7 @@ impl EvidenceProvenance {
             .into_iter()
             .map(|(key, value)| (key.into(), value.into()))
             .collect::<BTreeMap<_, _>>();
-        if !valid_rpc_replay_inputs(&replay_inputs) {
+        if !valid_replay_inputs(&replay_inputs) {
             return Err(StoreError::InvalidContext("replay_inputs"));
         }
         Ok(Self {
@@ -350,7 +351,7 @@ impl GcsReadObject {
     }
 }
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 pub trait GcsObjectClient: Send + Sync {
     async fn create_object(&self, request: GcsCreateRequest) -> Result<(), GcsClientError>;
 
@@ -372,6 +373,7 @@ impl GoogleCloudStorageClient {
     }
 }
 
+#[async_trait]
 impl GcsObjectClient for GoogleCloudStorageClient {
     async fn create_object(&self, request: GcsCreateRequest) -> Result<(), GcsClientError> {
         self.client
@@ -641,6 +643,10 @@ fn valid_source(source: &str) -> bool {
             .is_some_and(u8::is_ascii_alphanumeric)
 }
 
+fn valid_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
+    valid_rpc_replay_inputs(inputs) || valid_collection_replay_inputs(inputs)
+}
+
 fn valid_rpc_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
     if inputs.len() != 6 {
         return false;
@@ -672,11 +678,37 @@ fn valid_rpc_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
         && valid_provider
 }
 
+fn valid_collection_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
+    inputs.len() == 5
+        && inputs
+            .get("chain")
+            .is_some_and(|value| matches!(value.as_str(), "ethereum" | "base" | "solana" | "tempo"))
+        && inputs
+            .get("height")
+            .is_some_and(|value| value.parse::<u64>().is_ok())
+        && inputs.get("input-kind").is_some_and(|value| {
+            matches!(
+                value.as_str(),
+                "chain_transfer"
+                    | "x402_runtime"
+                    | "x402_well_known"
+                    | "x402_openapi"
+                    | "mpp_openapi"
+            )
+        })
+        && inputs
+            .get("provider")
+            .is_some_and(|value| value == "collection-manifest")
+        && inputs
+            .get("source")
+            .is_some_and(|value| valid_source(value))
+}
+
 fn valid_metadata_value(value: &str, max_length: usize) -> bool {
     !value.is_empty()
         && value.len() <= max_length
         && value.bytes().all(|byte| {
-            byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':' | b'/')
+            byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':' | b'/' | b'@')
         })
 }
 

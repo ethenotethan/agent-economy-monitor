@@ -278,14 +278,18 @@ impl WorkerDispatcher {
 }
 
 pub struct PostgresWorkerJobStore {
-    client: Mutex<Client>,
+    client: Arc<Mutex<Client>>,
     namespace_id: String,
 }
 
 impl PostgresWorkerJobStore {
     pub fn new(client: Client, namespace_id: String) -> Self {
+        Self::from_shared(Arc::new(Mutex::new(client)), namespace_id)
+    }
+
+    pub fn from_shared(client: Arc<Mutex<Client>>, namespace_id: String) -> Self {
         Self {
-            client: Mutex::new(client),
+            client,
             namespace_id,
         }
     }
