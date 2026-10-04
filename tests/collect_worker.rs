@@ -47,13 +47,16 @@ impl RpcTransport for FakeRpcTransport {
 
 #[async_trait]
 impl GcsObjectClient for RecordingGcsClient {
-    async fn create_object(&self, request: GcsCreateRequest) -> Result<(), GcsClientError> {
+    async fn create_object(
+        &self,
+        request: GcsCreateRequest,
+    ) -> Result<agent_economy_evidence_store::GcsCreatedObject, GcsClientError> {
         self.objects.lock().unwrap().insert(
             request.name().to_owned(),
-            GcsReadObject::new(request.bytes().to_vec(), request.metadata().clone()),
+            GcsReadObject::new(request.bytes().to_vec(), request.metadata().clone(), "1"),
         );
         self.requests.lock().unwrap().push(request);
-        Ok(())
+        Ok(agent_economy_evidence_store::GcsCreatedObject::new("1"))
     }
 
     async fn read_object(
@@ -423,7 +426,14 @@ async fn production_gcs_store_receives_bounded_collection_provenance_before_comm
             .get("evidence-replay-inputs")
             .is_some_and(|inputs| inputs.contains("\"provider\":\"alchemy\""))
     }));
-    assert_eq!(commit_store.0.lock().unwrap().len(), 1);
+    let batches = commit_store.0.lock().unwrap();
+    assert_eq!(batches.len(), 1);
+    assert_eq!(
+        batches[0].evidence()[0].storage_generation(),
+        Some("1"),
+        "collector must persist the backend-owned object generation"
+    );
+    drop(batches);
     fs::remove_dir_all(root).unwrap();
 }
 

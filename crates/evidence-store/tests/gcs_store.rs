@@ -5,7 +5,8 @@ use std::{
 
 use agent_economy_evidence_store::{
     CreateDisposition, EvidenceContext, EvidenceProvenance, EvidenceStore, GcsClientError,
-    GcsCreateRequest, GcsEvidenceStore, GcsObjectClient, GcsReadObject, GcsRetryPolicy, StoreError,
+    GcsCreateRequest, GcsCreatedObject, GcsEvidenceStore, GcsObjectClient, GcsReadObject,
+    GcsRetryPolicy, StoreError,
 };
 use async_trait::async_trait;
 
@@ -16,14 +17,16 @@ struct FakeGcsClient {
 
 #[derive(Debug, Default)]
 struct FakeState {
-    create_results: VecDeque<Result<(), GcsClientError>>,
+    create_results: VecDeque<Result<GcsCreatedObject, GcsClientError>>,
     objects: BTreeMap<String, GcsReadObject>,
     requests: Vec<GcsCreateRequest>,
     reads: usize,
 }
 
 impl FakeGcsClient {
-    fn with_create_results(results: impl IntoIterator<Item = Result<(), GcsClientError>>) -> Self {
+    fn with_create_results(
+        results: impl IntoIterator<Item = Result<GcsCreatedObject, GcsClientError>>,
+    ) -> Self {
         let client = Self::default();
         client
             .state
@@ -37,20 +40,30 @@ impl FakeGcsClient {
     fn overwrite(&self, name: &str, bytes: &[u8]) {
         let mut state = self.state.lock().expect("fake state");
         let object = state.objects.get_mut(name).expect("stored fake object");
-        *object = GcsReadObject::new(bytes.to_vec(), object.metadata().clone());
+        *object = GcsReadObject::new(bytes.to_vec(), object.metadata().clone(), "2");
     }
 }
 
 #[async_trait]
 impl GcsObjectClient for FakeGcsClient {
-    async fn create_object(&self, request: GcsCreateRequest) -> Result<(), GcsClientError> {
+    async fn create_object(
+        &self,
+        request: GcsCreateRequest,
+    ) -> Result<GcsCreatedObject, GcsClientError> {
         let mut state = self.state.lock().expect("fake state");
         state.requests.push(request.clone());
-        let result = state.create_results.pop_front().unwrap_or(Ok(()));
-        if result.is_ok() {
+        let result = state
+            .create_results
+            .pop_front()
+            .unwrap_or_else(|| Ok(GcsCreatedObject::new("1")));
+        if let Ok(created) = &result {
             state.objects.insert(
                 request.name().to_owned(),
-                GcsReadObject::new(request.bytes().to_vec(), request.metadata().clone()),
+                GcsReadObject::new(
+                    request.bytes().to_vec(),
+                    request.metadata().clone(),
+                    created.generation(),
+                ),
             );
         }
         result
@@ -139,7 +152,7 @@ async fn writes_create_only_with_deterministic_provenance_metadata() {
 #[tokio::test]
 async fn precondition_failure_is_idempotent_only_when_stored_bytes_match() {
     let client = FakeGcsClient::with_create_results([
-        Ok(()),
+        Ok(GcsCreatedObject::new("1")),
         Err(GcsClientError::PreconditionFailed),
         Err(GcsClientError::PreconditionFailed),
     ]);
@@ -168,8 +181,10 @@ async fn precondition_failure_is_idempotent_only_when_stored_bytes_match() {
 
 #[tokio::test]
 async fn precondition_failure_rejects_different_provenance_metadata() {
-    let client =
-        FakeGcsClient::with_create_results([Ok(()), Err(GcsClientError::PreconditionFailed)]);
+    let client = FakeGcsClient::with_create_results([
+        Ok(GcsCreatedObject::new("1")),
+        Err(GcsClientError::PreconditionFailed),
+    ]);
     let store = gcs_store(client);
     let payload = b"same immutable evidence";
 
@@ -212,11 +227,35 @@ async fn reads_reject_corrupted_truncated_and_substituted_objects() {
 }
 
 #[tokio::test]
+async fn read_identity_is_owned_by_backend_metadata_not_the_caller() {
+    let client = FakeGcsClient::default();
+    let store = gcs_store(client.clone());
+    let receipt = store
+        .create(&context(), b"generation-bound evidence")
+        .await
+        .expect("create evidence");
+    assert_eq!(receipt.generation.as_deref(), Some("1"));
+
+    let first = store
+        .read_with_identity(&receipt.object)
+        .await
+        .expect("read generation one");
+    assert_eq!(first.generation.as_deref(), Some("1"));
+
+    client.overwrite(receipt.object.name(), b"generation-bound evidence");
+    let replaced = store
+        .read_with_identity(&receipt.object)
+        .await
+        .expect("same bytes at replacement generation");
+    assert_eq!(replaced.generation.as_deref(), Some("2"));
+}
+
+#[tokio::test]
 async fn retries_only_retryable_failures_with_a_hard_attempt_limit() {
     let client = FakeGcsClient::with_create_results([
         Err(GcsClientError::Retryable),
         Err(GcsClientError::Retryable),
-        Ok(()),
+        Ok(GcsCreatedObject::new("1")),
     ]);
     let store = gcs_store(client.clone());
 
@@ -230,7 +269,7 @@ async fn retries_only_retryable_failures_with_a_hard_attempt_limit() {
         Err(GcsClientError::Retryable),
         Err(GcsClientError::Retryable),
         Err(GcsClientError::Retryable),
-        Ok(()),
+        Ok(GcsCreatedObject::new("1")),
     ]);
     let store = gcs_store(client.clone());
     let error = store

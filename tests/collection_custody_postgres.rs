@@ -26,14 +26,95 @@ async fn connect_as(database_url: &str, user: &str) -> tokio_postgres::Client {
 }
 
 fn rpc_evidence(height: u64) -> Vec<u8> {
+    rpc_evidence_for(Chain::Base, height)
+}
+
+fn rpc_evidence_for(chain: Chain, height: u64) -> Vec<u8> {
+    let result = if chain == Chain::Solana {
+        json!({
+            "blockHeight": height,
+            "blockhash": format!("block-{height}"),
+            "parentSlot": height.saturating_sub(1),
+            "previousBlockhash": "block-parent",
+            "transactions": []
+        })
+    } else {
+        json!({"number": format!("0x{height:x}"), "transactions": []})
+    };
     let body = serde_json::to_vec(&json!({
         "jsonrpc": "2.0",
         "id": 1,
-        "result": {"number": format!("0x{height:x}"), "transactions": []}
+        "result": result
     }))
     .unwrap();
     let response = RawRpcResponse::try_new(200, body).unwrap();
-    RpcEvidence::from_response(Chain::Base, height, 1, &response).encode()
+    RpcEvidence::from_response(chain, height, 1, &response).encode()
+}
+
+async fn insert_chain_job(
+    admin: &tokio_postgres::Client,
+    job: &str,
+    input: &str,
+    chain: &str,
+    source: &str,
+    height: i64,
+) {
+    admin
+        .execute(
+            "INSERT INTO agent_economy.worker_jobs(\
+             namespace_id,job_id,mode,job_kind,idempotency_key,input_sha256,status,max_attempts,scheduled_for,\
+             collection_chain_scope,collection_source_id,collection_start_height,collection_end_height,\
+             collection_acquisition_contract,collection_evidence_contract) \
+             VALUES ($1::text::uuid,$2::text::uuid,'collect','chain-protocol-range',$2,$3,'pending',3,clock_timestamp(),\
+             $4,$5,$6,$6,'alchemy-rpc-block-v1','evidence-store-create-read-sha256-v1')",
+            &[&NAMESPACE_A, &job, &input, &chain, &source, &height],
+        )
+        .await
+        .unwrap();
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn stage_chain_and_complete(
+    collector: &tokio_postgres::Client,
+    job: &str,
+    input: &str,
+    batch: &str,
+    chain: &str,
+    source: &str,
+    height: i64,
+    evidence: &str,
+) {
+    let claimed = collector
+        .query_one(
+            "SELECT job_id::text, lease_token::text FROM agent_economy.claim_bound_collection_job('collector-test',120)",
+            &[],
+        )
+        .await
+        .unwrap();
+    assert_eq!(claimed.get::<_, String>(0), job);
+    let token = claimed.get::<_, String>(1);
+    collector
+        .query_one(
+            "SELECT agent_economy.stage_collection_batch(\
+             $1::text::uuid,'collector-test',$2::text::uuid,$3,$4,$5,$6,\
+             1700000000000,$7,$7,$8::text::jsonb)",
+            &[
+                &job, &token, &input, &batch, &chain, &source, &height, &evidence,
+            ],
+        )
+        .await
+        .unwrap();
+    assert!(
+        collector
+            .query_one(
+                "SELECT agent_economy.complete_bound_collection_job(\
+             $1::text::uuid,'collector-test',$2::text::uuid,$3)",
+                &[&job, &token, &batch],
+            )
+            .await
+            .unwrap()
+            .get::<_, bool>(0)
+    );
 }
 
 async fn insert_job(
@@ -128,6 +209,120 @@ async fn split_runtimes_reject_fake_readback_and_promote_real_object() {
         .unwrap();
 
     let collector = connect_as(&database_url, "agent_economy_collector_runtime").await;
+    assert!(
+        collector
+            .query_one(
+                "SELECT agent_economy.bound_collection_namespace('collect')",
+                &[],
+            )
+            .await
+            .is_ok(),
+        "clean collector authority must pass before one-fault mutations"
+    );
+    for (mutation, restoration, label) in [
+        (
+            "GRANT INSERT ON agent_economy.evidence_objects TO agent_economy_collector_runtime",
+            "REVOKE INSERT ON agent_economy.evidence_objects FROM agent_economy_collector_runtime",
+            "direct INSERT",
+        ),
+        (
+            "GRANT SELECT ON agent_economy.evidence_objects TO agent_economy_collector_runtime",
+            "REVOKE SELECT ON agent_economy.evidence_objects FROM agent_economy_collector_runtime",
+            "direct SELECT",
+        ),
+        (
+            "GRANT agent_economy_collector_runtime TO agent_economy_evidence_verifier_runtime WITH INHERIT FALSE, SET TRUE",
+            "REVOKE agent_economy_collector_runtime FROM agent_economy_evidence_verifier_runtime",
+            "unexpected membership",
+        ),
+        (
+            "GRANT SELECT ON agent_economy.evidence_objects TO PUBLIC",
+            "REVOKE SELECT ON agent_economy.evidence_objects FROM PUBLIC",
+            "PUBLIC exposure",
+        ),
+    ] {
+        admin.batch_execute(mutation).await.unwrap();
+        let rejected = collector
+            .query_one(
+                "SELECT agent_economy.bound_collection_namespace('collect')",
+                &[],
+            )
+            .await;
+        admin.batch_execute(restoration).await.unwrap();
+        assert!(rejected.is_err(), "startup boundary accepted {label}");
+        assert!(
+            collector
+                .query_one(
+                    "SELECT agent_economy.bound_collection_namespace('collect')",
+                    &[],
+                )
+                .await
+                .is_ok(),
+            "baseline did not recover after {label}"
+        );
+    }
+    admin
+        .batch_execute(
+            "CREATE FUNCTION agent_economy.boundary_attack(integer) RETURNS integer \
+             LANGUAGE sql IMMUTABLE AS 'SELECT $1'; \
+             REVOKE ALL ON FUNCTION agent_economy.boundary_attack(integer) FROM PUBLIC; \
+             GRANT EXECUTE ON FUNCTION agent_economy.boundary_attack(integer) \
+             TO agent_economy_collector_runtime",
+        )
+        .await
+        .unwrap();
+    let routine_rejected = collector
+        .query_one(
+            "SELECT agent_economy.bound_collection_namespace('collect')",
+            &[],
+        )
+        .await;
+    admin
+        .batch_execute("DROP FUNCTION agent_economy.boundary_attack(integer)")
+        .await
+        .unwrap();
+    assert!(
+        routine_rejected.is_err(),
+        "startup boundary accepted a rogue routine grant"
+    );
+
+    let owner: String = admin
+        .query_one(
+            "SELECT r.rolname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace \
+             JOIN pg_roles r ON r.oid=c.relowner \
+             WHERE n.nspname='agent_economy' AND c.relname='evidence_objects'",
+            &[],
+        )
+        .await
+        .unwrap()
+        .get(0);
+    assert!(
+        owner
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+    );
+    admin
+        .batch_execute(
+            "ALTER TABLE agent_economy.evidence_objects OWNER TO agent_economy_collector_runtime",
+        )
+        .await
+        .unwrap();
+    let ownership_rejected = collector
+        .query_one(
+            "SELECT agent_economy.bound_collection_namespace('collect')",
+            &[],
+        )
+        .await;
+    admin
+        .batch_execute(&format!(
+            "ALTER TABLE agent_economy.evidence_objects OWNER TO {owner}"
+        ))
+        .await
+        .unwrap();
+    assert!(
+        ownership_rejected.is_err(),
+        "startup boundary accepted protected ownership"
+    );
     let fake_job = "10000000-0000-0000-0000-000000009836";
     let fake_input = "11".repeat(32);
     let fake_batch = "22".repeat(32);
@@ -216,6 +411,63 @@ async fn split_runtimes_reject_fake_readback_and_promote_real_object() {
     )
     .unwrap()
     .output_sha256();
+    let forged_generation_job = "15000000-0000-0000-0000-000000009836";
+    let forged_generation_input = "43".repeat(32);
+    let forged_generation_evidence = json!([{
+        "evidence_id": format!("evidence:sha256:{sha}"),
+        "sha256": sha,
+        "storage_uri": receipt.object.name(),
+        "storage_generation": "attacker-asserted-generation-999",
+        "media_type": "application/vnd.agent-economy.rpc",
+        "byte_length": EvidenceStore::read(store.as_ref(), &receipt.object).await.unwrap().len(),
+        "height": 42
+    }])
+    .to_string();
+    insert_job(
+        &admin,
+        NAMESPACE_A,
+        forged_generation_job,
+        &forged_generation_input,
+        42,
+    )
+    .await;
+    stage_and_complete(
+        &collector,
+        forged_generation_job,
+        &forged_generation_input,
+        &batch,
+        42,
+        &forged_generation_evidence,
+    )
+    .await;
+
+    let verifier_client =
+        connect_as(&database_url, "agent_economy_evidence_verifier_runtime").await;
+    let verifier = PostgresEvidenceVerifier::new(
+        verifier_client,
+        store.clone(),
+        "verifier-forged-generation".into(),
+    );
+    assert!(
+        verifier.run_once().await.is_err(),
+        "filesystem readback must reject a caller-asserted storage generation"
+    );
+    let state_after_forged_generation = admin
+        .query_one(
+            "SELECT\
+              (SELECT count(*) FROM agent_economy.collection_range_receipts WHERE namespace_id=$1::text::uuid),\
+              (SELECT count(*) FROM agent_economy.evidence_objects WHERE namespace_id=$1::text::uuid),\
+              (SELECT count(*) FROM agent_economy.observations WHERE namespace_id=$1::text::uuid),\
+              (SELECT count(*) FROM agent_economy.collection_cursors WHERE namespace_id=$1::text::uuid)",
+            &[&NAMESPACE_A],
+        )
+        .await
+        .unwrap();
+    assert_eq!(state_after_forged_generation.get::<_, i64>(0), 0);
+    assert_eq!(state_after_forged_generation.get::<_, i64>(1), 0);
+    assert_eq!(state_after_forged_generation.get::<_, i64>(2), 0);
+    assert_eq!(state_after_forged_generation.get::<_, i64>(3), 0);
+
     let real_evidence = json!([{
         "evidence_id": format!("evidence:sha256:{sha}"),
         "sha256": sha,
@@ -253,6 +505,115 @@ async fn split_runtimes_reject_fake_readback_and_promote_real_object() {
         .unwrap();
     assert_eq!(state.get::<_, i64>(0), 1);
     assert_eq!(state.get::<_, i64>(1), 43);
+
+    for (chain, chain_name, source, job, input, height) in [
+        (
+            Chain::Ethereum,
+            "ethereum",
+            "alchemy-ethereum",
+            "21000000-0000-0000-0000-000000009836",
+            "51".repeat(32),
+            43_i64,
+        ),
+        (
+            Chain::Solana,
+            "solana",
+            "alchemy-solana",
+            "22000000-0000-0000-0000-000000009836",
+            "52".repeat(32),
+            44_i64,
+        ),
+        (
+            Chain::Tempo,
+            "tempo",
+            "alchemy-tempo",
+            "23000000-0000-0000-0000-000000009836",
+            "53".repeat(32),
+            45_i64,
+        ),
+    ] {
+        let bytes = rpc_evidence_for(chain, height as u64);
+        let observation_id = format!("custody-test-{chain_name}");
+        let height_text = height.to_string();
+        let context = EvidenceContext::new(source, "2023-11-14")
+            .unwrap()
+            .with_provenance(
+                EvidenceProvenance::new(
+                    "rpc-evidence-v1",
+                    observation_id.as_str(),
+                    [
+                        ("attempt", "1"),
+                        ("chain", chain_name),
+                        ("height", height_text.as_str()),
+                        ("http-status", "200"),
+                        (
+                            "method",
+                            if chain == Chain::Solana {
+                                "getBlock"
+                            } else {
+                                "eth_getBlockByNumber"
+                            },
+                        ),
+                        ("provider", "alchemy"),
+                    ],
+                )
+                .unwrap(),
+            );
+        let receipt = EvidenceStore::create_only(store.as_ref(), &context, &bytes)
+            .await
+            .unwrap();
+        let sha = receipt.object.sha256();
+        let archived = ArchivedEvidence::from_verified_readback(
+            receipt.object.name().to_owned(),
+            sha.clone(),
+            "application/vnd.agent-economy.rpc".into(),
+            height as u64,
+            bytes,
+        )
+        .unwrap();
+        let batch = verify_replayed_evidence(
+            chain_name.into(),
+            source.into(),
+            1700000000000,
+            height as u64,
+            height as u64,
+            vec![archived],
+        )
+        .unwrap()
+        .output_sha256();
+        let evidence = json!([{
+            "evidence_id": format!("evidence:sha256:{sha}"),
+            "sha256": sha,
+            "storage_uri": receipt.object.name(),
+            "storage_generation": null,
+            "media_type": "application/vnd.agent-economy.rpc",
+            "byte_length": EvidenceStore::read(store.as_ref(), &receipt.object).await.unwrap().len(),
+            "height": height
+        }])
+        .to_string();
+        insert_chain_job(&admin, job, &input, chain_name, source, height).await;
+        stage_chain_and_complete(
+            &collector, job, &input, &batch, chain_name, source, height, &evidence,
+        )
+        .await;
+        let verifier_client =
+            connect_as(&database_url, "agent_economy_evidence_verifier_runtime").await;
+        let verifier = PostgresEvidenceVerifier::new(
+            verifier_client,
+            store.clone(),
+            format!("verifier-{chain_name}"),
+        );
+        assert!(verifier.run_once().await.unwrap().is_some());
+    }
+    let four_chain_receipts: i64 = admin
+        .query_one(
+            "SELECT count(*) FROM agent_economy.collection_range_receipts WHERE namespace_id=$1::text::uuid",
+            &[&NAMESPACE_A],
+        )
+        .await
+        .unwrap()
+        .get(0);
+    assert_eq!(four_chain_receipts, 4);
 
     insert_job(
         &admin,

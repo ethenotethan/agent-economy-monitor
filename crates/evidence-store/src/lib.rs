@@ -154,6 +154,13 @@ pub enum CreateDisposition {
 pub struct CreateReceipt {
     pub object: EvidenceObject,
     pub disposition: CreateDisposition,
+    pub generation: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ReadReceipt {
+    pub bytes: Vec<u8>,
+    pub generation: Option<String>,
 }
 
 #[allow(async_fn_in_trait)]
@@ -172,6 +179,8 @@ pub trait EvidenceStore {
     ) -> Result<CreateReceipt, StoreError>;
 
     async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError>;
+
+    async fn read_with_identity(&self, object: &EvidenceObject) -> Result<ReadReceipt, StoreError>;
 }
 
 #[derive(Clone, Debug)]
@@ -291,6 +300,7 @@ impl EvidenceStore for FilesystemEvidenceStore {
         Ok(CreateReceipt {
             object,
             disposition,
+            generation: None,
         })
     }
 
@@ -308,6 +318,13 @@ impl EvidenceStore for FilesystemEvidenceStore {
 
     async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError> {
         self.read_verified(object)
+    }
+
+    async fn read_with_identity(&self, object: &EvidenceObject) -> Result<ReadReceipt, StoreError> {
+        Ok(ReadReceipt {
+            bytes: self.read_verified(object)?,
+            generation: None,
+        })
     }
 }
 
@@ -353,11 +370,20 @@ pub enum GcsClientError {
 pub struct GcsReadObject {
     bytes: Vec<u8>,
     metadata: BTreeMap<String, String>,
+    generation: String,
 }
 
 impl GcsReadObject {
-    pub fn new(bytes: Vec<u8>, metadata: BTreeMap<String, String>) -> Self {
-        Self { bytes, metadata }
+    pub fn new(
+        bytes: Vec<u8>,
+        metadata: BTreeMap<String, String>,
+        generation: impl Into<String>,
+    ) -> Self {
+        Self {
+            bytes,
+            metadata,
+            generation: generation.into(),
+        }
     }
 
     pub fn bytes(&self) -> &[u8] {
@@ -367,11 +393,35 @@ impl GcsReadObject {
     pub fn metadata(&self) -> &BTreeMap<String, String> {
         &self.metadata
     }
+
+    pub fn generation(&self) -> &str {
+        &self.generation
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GcsCreatedObject {
+    generation: String,
+}
+
+impl GcsCreatedObject {
+    pub fn new(generation: impl Into<String>) -> Self {
+        Self {
+            generation: generation.into(),
+        }
+    }
+
+    pub fn generation(&self) -> &str {
+        &self.generation
+    }
 }
 
 #[async_trait]
 pub trait GcsObjectClient: Send + Sync {
-    async fn create_object(&self, request: GcsCreateRequest) -> Result<(), GcsClientError>;
+    async fn create_object(
+        &self,
+        request: GcsCreateRequest,
+    ) -> Result<GcsCreatedObject, GcsClientError>;
 
     async fn read_object(&self, bucket: &str, name: &str) -> Result<GcsReadObject, GcsClientError>;
 }
@@ -393,7 +443,10 @@ impl GoogleCloudStorageClient {
 
 #[async_trait]
 impl GcsObjectClient for GoogleCloudStorageClient {
-    async fn create_object(&self, request: GcsCreateRequest) -> Result<(), GcsClientError> {
+    async fn create_object(
+        &self,
+        request: GcsCreateRequest,
+    ) -> Result<GcsCreatedObject, GcsClientError> {
         self.client
             .write_object(
                 bucket_resource(&request.bucket),
@@ -409,7 +462,7 @@ impl GcsObjectClient for GoogleCloudStorageClient {
             .with_retry_policy(NeverRetry)
             .send_buffered()
             .await
-            .map(|_| ())
+            .map(|object| GcsCreatedObject::new(object.generation.to_string()))
             .map_err(classify_gcs_error)
     }
 
@@ -422,7 +475,8 @@ impl GcsObjectClient for GoogleCloudStorageClient {
             .send()
             .await
             .map_err(classify_gcs_error)?;
-        let metadata = reader.object().metadata.into_iter().collect();
+        let metadata = reader.object().metadata.clone().into_iter().collect();
+        let generation = reader.object().generation.to_string();
         let mut bytes = Vec::new();
         while let Some(chunk) = reader
             .next()
@@ -432,7 +486,11 @@ impl GcsObjectClient for GoogleCloudStorageClient {
         {
             bytes.extend_from_slice(&chunk);
         }
-        Ok(GcsReadObject { bytes, metadata })
+        Ok(GcsReadObject {
+            bytes,
+            metadata,
+            generation,
+        })
     }
 }
 
@@ -523,7 +581,7 @@ impl<C: GcsObjectClient> GcsEvidenceStore<C> {
         &self,
         object: &EvidenceObject,
         expected_metadata: Option<&BTreeMap<String, String>>,
-    ) -> Result<Vec<u8>, StoreError> {
+    ) -> Result<ReadReceipt, StoreError> {
         let mut attempts = 0_u8;
         let response = loop {
             attempts += 1;
@@ -541,7 +599,10 @@ impl<C: GcsObjectClient> GcsEvidenceStore<C> {
                 object: object.name.clone(),
             });
         }
-        Ok(bytes)
+        Ok(ReadReceipt {
+            bytes,
+            generation: Some(response.generation),
+        })
     }
 }
 
@@ -562,11 +623,18 @@ impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
         };
 
         let mut attempts = 0_u8;
-        let disposition = loop {
+        let (disposition, generation) = loop {
             attempts += 1;
             match self.client.create_object(request.clone()).await {
-                Ok(()) => break CreateDisposition::Created,
-                Err(GcsClientError::PreconditionFailed) => break CreateDisposition::AlreadyPresent,
+                Ok(created) => {
+                    break (
+                        CreateDisposition::Created,
+                        Some(created.generation().to_owned()),
+                    );
+                }
+                Err(GcsClientError::PreconditionFailed) => {
+                    break (CreateDisposition::AlreadyPresent, None);
+                }
                 Err(GcsClientError::Retryable) if attempts < self.retry.max_attempts => {
                     self.retry.delay(attempts).await;
                 }
@@ -576,6 +644,7 @@ impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
         Ok(CreateReceipt {
             object,
             disposition,
+            generation,
         })
     }
 
@@ -593,6 +662,10 @@ impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
     }
 
     async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError> {
+        Ok(self.read_verified(object, None).await?.bytes)
+    }
+
+    async fn read_with_identity(&self, object: &EvidenceObject) -> Result<ReadReceipt, StoreError> {
         self.read_verified(object, None).await
     }
 }

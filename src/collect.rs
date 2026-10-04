@@ -60,6 +60,7 @@ pub struct ArchivedEvidence {
     evidence_id: String,
     sha256: String,
     storage_uri: String,
+    storage_generation: Option<String>,
     media_type: String,
     byte_length: u64,
     height: u64,
@@ -86,6 +87,7 @@ impl ArchivedEvidence {
             evidence_id: format!("evidence:sha256:{sha256}"),
             sha256,
             storage_uri,
+            storage_generation: None,
             media_type,
             byte_length: archived_bytes.len() as u64,
             height,
@@ -104,6 +106,10 @@ impl ArchivedEvidence {
 
     pub fn storage_uri(&self) -> &str {
         &self.storage_uri
+    }
+
+    pub fn storage_generation(&self) -> Option<&str> {
+        self.storage_generation.as_deref()
     }
 
     pub fn media_type(&self) -> &str {
@@ -296,7 +302,7 @@ impl CollectionCommitStore for PostgresCollectionCommitStore {
                         "evidence_id": item.evidence_id,
                         "sha256": item.sha256,
                         "storage_uri": item.storage_uri,
-                        "storage_generation": null,
+                        "storage_generation": item.storage_generation,
                         "media_type": item.media_type,
                         "byte_length": item.byte_length,
                         "height": item.height,
@@ -595,6 +601,7 @@ where
             evidence_id: format!("evidence:sha256:{}", receipt.object.sha256()),
             sha256: receipt.object.sha256(),
             storage_uri: object_name.clone(),
+            storage_generation: receipt.generation,
             media_type: "application/vnd.agent-economy.rpc".into(),
             byte_length: encoded.len() as u64,
             height: evidence.requested_height(),

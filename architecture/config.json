@@ -79,7 +79,8 @@
       "layer": "evidence",
       "patterns": [
         "src/verify_evidence.rs",
-        "migrations/0014_collection_custody_split.*.sql"
+        "migrations/0014_collection_custody_split.*.sql",
+        "migrations/0015_collection_runtime_boundary.*.sql"
       ]
     },
     {

@@ -6,6 +6,8 @@ UP = ROOT / "migrations" / "0013_collect_worker.up.sql"
 DOWN = ROOT / "migrations" / "0013_collect_worker.down.sql"
 SPLIT_UP = ROOT / "migrations" / "0014_collection_custody_split.up.sql"
 SPLIT_DOWN = ROOT / "migrations" / "0014_collection_custody_split.down.sql"
+BOUNDARY_UP = ROOT / "migrations" / "0015_collection_runtime_boundary.up.sql"
+BOUNDARY_DOWN = ROOT / "migrations" / "0015_collection_runtime_boundary.down.sql"
 
 
 class CollectWorkerMigrationTest(unittest.TestCase):
@@ -96,6 +98,43 @@ class CollectWorkerMigrationTest(unittest.TestCase):
         down = SPLIT_DOWN.read_text()
         self.assertLess(down.index("RAISE EXCEPTION"), down.index("DROP TABLE"))
         self.assertNotIn("CASCADE", down)
+
+    def test_runtime_boundary_rejects_role_object_acl_and_public_drift(self):
+        up = BOUNDARY_UP.read_text()
+        self.assertIn("rolcanlogin", up)
+        self.assertIn("pg_auth_members", up)
+        self.assertIn("must not own database objects", up)
+        self.assertIn("pg_shdepend", up)
+        self.assertIn("has_table_privilege", up)
+        self.assertIn("has_any_column_privilege", up)
+        self.assertIn("has_sequence_privilege", up)
+        self.assertIn("has_type_privilege", up)
+        self.assertIn("current_database()", up)
+        self.assertIn("actual_routines <> expected_routines", up)
+        self.assertIn("acl.grantee=0", up)
+        self.assertIn("pg_default_acl", up)
+        self.assertIn("dangerous ambient collection authority", up)
+        self.assertIn("REVOKE ALL ON FUNCTION", up)
+        self.assertIn("agent_economy.bound_collection_namespace(text)", up)
+
+    def test_runtime_boundary_down_restores_predecessor_contract(self):
+        down = BOUNDARY_DOWN.read_text()
+        self.assertIn(
+            "CREATE OR REPLACE FUNCTION agent_economy.bound_collection_namespace", down
+        )
+        self.assertIn("REVOKE EXECUTE ON FUNCTION", down)
+        self.assertNotIn("CASCADE", down)
+
+    def test_canonical_verify_requires_and_executes_split_custody(self):
+        verify = (ROOT / "scripts" / "verify").read_text()
+        postgres_test = (ROOT / "tests" / "collect_worker_postgres.rs").read_text()
+        self.assertIn("AEM_COLLECT_TEST_DATABASE_URL:?", verify)
+        self.assertIn("cargo test --test collect_worker_postgres", verify)
+        self.assertNotIn("AEM_LEGACY_COLLECT_TEST_DATABASE_URL", postgres_test)
+        self.assertIn('.arg("collect")', postgres_test)
+        self.assertIn('.arg("verify-evidence")', postgres_test)
+        self.assertIn('"EVIDENCE_WRITE_ROOT"', postgres_test)
+        self.assertIn('"EVIDENCE_READ_ROOT"', postgres_test)
 
 
 if __name__ == "__main__":

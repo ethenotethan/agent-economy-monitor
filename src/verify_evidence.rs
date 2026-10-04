@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use agent_economy_evidence_store::{
     EvidenceObject, EvidenceStore, FilesystemEvidenceStore, GcsEvidenceStore, GcsObjectClient,
+    ReadReceipt,
 };
 use async_trait::async_trait;
 use serde::Deserialize;
@@ -14,13 +15,13 @@ use crate::collect::{ArchivedEvidence, CollectionError, verify_replayed_evidence
 
 #[async_trait]
 pub trait CollectionEvidenceReader: Send + Sync {
-    async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, CollectionError>;
+    async fn read(&self, object: &EvidenceObject) -> Result<ReadReceipt, CollectionError>;
 }
 
 #[async_trait]
 impl CollectionEvidenceReader for FilesystemEvidenceStore {
-    async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, CollectionError> {
-        EvidenceStore::read(self, object)
+    async fn read(&self, object: &EvidenceObject) -> Result<ReadReceipt, CollectionError> {
+        EvidenceStore::read_with_identity(self, object)
             .await
             .map_err(|_| CollectionError::EvidenceUnavailable)
     }
@@ -31,8 +32,8 @@ impl<C> CollectionEvidenceReader for GcsEvidenceStore<C>
 where
     C: GcsObjectClient,
 {
-    async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, CollectionError> {
-        EvidenceStore::read(self, object)
+    async fn read(&self, object: &EvidenceObject) -> Result<ReadReceipt, CollectionError> {
+        EvidenceStore::read_with_identity(self, object)
             .await
             .map_err(|_| CollectionError::EvidenceUnavailable)
     }
@@ -154,8 +155,11 @@ impl PostgresEvidenceVerifier {
             {
                 return Err(CollectionError::InvalidInput);
             }
-            let bytes = self.evidence_store.read(&object).await?;
-            if bytes.len() as u64 != item.byte_length {
+            let readback = self.evidence_store.read(&object).await?;
+            if readback.generation != item.storage_generation {
+                return Err(CollectionError::InvalidInput);
+            }
+            if readback.bytes.len() as u64 != item.byte_length {
                 return Err(CollectionError::InvalidInput);
             }
             verified.push(ArchivedEvidence::from_verified_readback(
@@ -163,7 +167,7 @@ impl PostgresEvidenceVerifier {
                 item.sha256.clone(),
                 item.media_type.clone(),
                 item.height,
-                bytes,
+                readback.bytes,
             )?);
         }
         let batch = verify_replayed_evidence(

@@ -211,6 +211,18 @@ async fn run_verify_evidence_once() -> Result<(), Box<dyn std::error::Error>> {
             "EVIDENCE_VERIFIER_DATABASE_URL must authenticate as agent_economy_evidence_verifier_runtime",
         ).into());
     }
+    client
+        .query_one(
+            "SELECT agent_economy.bound_collection_namespace('verify-evidence')",
+            &[],
+        )
+        .await
+        .map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "unsafe evidence verifier database authority",
+            )
+        })?;
     let verifier = PostgresEvidenceVerifier::new(client, evidence_store, lease_owner);
     match verifier.run_once().await? {
         Some(pending_id) => {
@@ -253,7 +265,7 @@ async fn run_collect_once() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
     let current_user = collector_client
-        .query_one("SELECT current_user", &[])
+        .query_one("SELECT session_user", &[])
         .await?
         .get::<_, String>(0);
     if current_user != "agent_economy_collector_runtime" {
@@ -263,6 +275,18 @@ async fn run_collect_once() -> Result<(), Box<dyn std::error::Error>> {
         )
         .into());
     }
+    collector_client
+        .query_one(
+            "SELECT agent_economy.bound_collection_namespace('collect')",
+            &[],
+        )
+        .await
+        .map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "unsafe collector database authority",
+            )
+        })?;
 
     let shared_client = Arc::new(tokio::sync::Mutex::new(collector_client));
     let jobs = Arc::new(PostgresCollectionJobStore::from_shared(Arc::clone(
