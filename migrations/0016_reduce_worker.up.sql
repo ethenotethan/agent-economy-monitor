@@ -35,6 +35,8 @@ CREATE TABLE agent_economy.reduction_range_receipts (
     output_sha256 text NOT NULL CHECK (output_sha256 ~ '^[0-9a-f]{64}$'),
     reducer_version text NOT NULL,
     events_json jsonb NOT NULL CHECK (jsonb_typeof(events_json) = 'array'),
+    finality_json jsonb NOT NULL CHECK (jsonb_typeof(finality_json) = 'array'),
+    attributions_json jsonb NOT NULL CHECK (jsonb_typeof(attributions_json) = 'array'),
     committed_at timestamptz NOT NULL DEFAULT clock_timestamp(),
     PRIMARY KEY (namespace_id, chain_scope, start_height, end_height)
 );
@@ -331,7 +333,134 @@ BEGIN
         RAISE EXCEPTION 'reduction output does not exactly cover immutable observations';
     END IF;
 
-    INSERT INTO agent_economy.reducer_checkpoints
+    IF jsonb_array_length(p_finality_json) <> (
+        SELECT jsonb_array_length(input_manifest -> 'finality')
+        FROM agent_economy.reducer_job_inputs
+        WHERE namespace_id = bound_namespace AND job_id = p_job_id
+    ) OR jsonb_array_length(p_attributions_json) <> (
+        SELECT jsonb_array_length(input_manifest -> 'settlements')
+        FROM agent_economy.reducer_job_inputs
+        WHERE namespace_id = bound_namespace AND job_id = p_job_id
+    ) THEN
+     RAISE EXCEPTION 'reduction output does not exactly cover immutable finality and settlements';
+ END IF;
+
+ IF EXISTS (
+     SELECT 1
+     FROM jsonb_array_elements(p_finality_json) AS output(item)
+     WHERE jsonb_typeof(item) <> 'object'
+        OR (SELECT count(*) FROM jsonb_object_keys(item)) <> 14
+        OR (item ->> 'status') NOT IN ('observed', 'confirmed', 'finalized', 'orphaned', 'reverted')
+        OR (item ->> 'current_status') NOT IN ('observed', 'confirmed', 'finalized', 'orphaned', 'reverted')
+        OR (item ->> 'timeline_state_hash') !~ '^[0-9a-f]{64}$'
+        OR jsonb_typeof(item -> 'accepted') <> 'boolean'
+        OR jsonb_typeof(item -> 'current') <> 'boolean'
+        OR NOT EXISTS (
+             SELECT 1
+             FROM jsonb_array_elements((
+                 SELECT input_manifest -> 'finality'
+                 FROM agent_economy.reducer_job_inputs
+                 WHERE namespace_id = bound_namespace AND job_id = p_job_id
+             )) AS manifest(source)
+             WHERE source ->> 'canonical_event_id' = item ->> 'canonical_event_id'
+               AND source ->> 'transaction_id' = item ->> 'transaction_id'
+               AND source ->> 'source_id' = item ->> 'source_id'
+               AND source ->> 'provenance_id' = item ->> 'provenance_id'
+               AND source ->> 'evidence_id' = item ->> 'evidence_id'
+               AND source ->> 'asserted_at_unix_ms' = item ->> 'asserted_at_unix_ms'
+               AND source ->> 'block_hash' = item ->> 'block_hash'
+               AND CASE source ->> 'kind'
+                   WHEN 'evm' THEN
+                       item ->> 'position' = source ->> 'block_number'
+                       AND item -> 'basis' = jsonb_build_object(
+                           'kind', 'evm',
+                           'block_number', source -> 'block_number',
+                           'block_hash', source -> 'block_hash',
+                           'canonical_block_hash', source -> 'canonical_block_hash',
+                           'latest_block', source -> 'latest_block',
+                           'finalized_block', source -> 'finalized_block',
+                           'execution', source -> 'execution'
+                       )
+                   WHEN 'solana' THEN
+                       item ->> 'position' = source ->> 'slot'
+                       AND item -> 'basis' = jsonb_build_object(
+                           'kind', 'solana',
+                           'slot', source -> 'slot',
+                           'block_hash', source -> 'block_hash',
+                           'canonical_block_hash', source -> 'canonical_block_hash',
+                           'commitment', source -> 'commitment',
+                           'execution', source -> 'execution'
+                       )
+                   ELSE false
+               END
+        )
+ ) OR (
+     SELECT count(DISTINCT item ->> 'evidence_id')
+     FROM jsonb_array_elements(p_finality_json) AS output(item)
+ ) <> jsonb_array_length(p_finality_json) THEN
+     RAISE EXCEPTION 'reduction finality output is not bound to immutable finality evidence';
+ END IF;
+
+ IF EXISTS (
+     SELECT 1
+     FROM jsonb_array_elements(p_attributions_json) AS output(item)
+     WHERE jsonb_typeof(item) <> 'object'
+        OR (SELECT count(*) FROM jsonb_object_keys(item)) <> 19
+        OR jsonb_typeof(item -> 'evidence_ids') <> 'array'
+        OR jsonb_typeof(item -> 'requirements') <> 'array'
+        OR jsonb_typeof(item -> 'candidates') <> 'array'
+        OR (item ->> 'input_snapshot_hash') !~ '^[0-9a-f]{64}$'
+        OR (item ->> 'state_hash') !~ '^[0-9a-f]{64}$'
+        OR item ->> 'state_hash' <> encode(
+             sha256(decode(item ->> 'result_encoded_base64', 'base64')), 'hex')
+        OR NOT EXISTS (
+             SELECT 1
+             FROM jsonb_array_elements((
+                 SELECT input_manifest -> 'settlements'
+                 FROM agent_economy.reducer_job_inputs
+                 WHERE namespace_id = bound_namespace AND job_id = p_job_id
+             )) AS manifest(source)
+             WHERE source -> 'settlement' ->> 'id' = item ->> 'settlement_id'
+               AND source ->> 'canonical_event_id' = item ->> 'canonical_event_id'
+               AND source ->> 'transaction_id' = item ->> 'transaction_id'
+               AND source ->> 'settled_at_unix_ms' = item ->> 'settled_at_unix_ms'
+               AND source ->> 'source_id' = item ->> 'source_id'
+               AND source ->> 'provenance_id' = item ->> 'provenance_id'
+               AND source -> 'settlement' ->> 'protocol' = item ->> 'protocol'
+               AND source -> 'settlement' ->> 'asset' = item ->> 'asset'
+               AND source -> 'settlement' ->> 'amount_atomic' = item ->> 'amount_atomic'
+               AND source -> 'settlement' -> 'evidence_ids' = item -> 'evidence_ids'
+               AND item ->> 'engine_version' = (
+                   SELECT input.attribution_version
+                   FROM agent_economy.reducer_job_inputs AS input
+                   WHERE input.namespace_id = bound_namespace AND input.job_id = p_job_id
+               )
+               AND jsonb_array_length(source -> 'requirements') =
+                   jsonb_array_length(item -> 'requirements')
+               AND NOT EXISTS (
+                   SELECT 1
+                   FROM jsonb_array_elements(item -> 'requirements') AS output_requirement(requirement)
+                   WHERE jsonb_typeof(requirement) <> 'object'
+                      OR (SELECT count(*) FROM jsonb_object_keys(requirement)) <> 5
+                      OR NOT EXISTS (
+                           SELECT 1
+                           FROM jsonb_array_elements(source -> 'requirements') AS manifest_requirement(expected)
+                           WHERE expected ->> 'id' = requirement ->> 'requirement_id'
+                             AND expected ->> 'payment_option_id' = requirement ->> 'payment_option_id'
+                             AND expected ->> 'endpoint_id' = requirement ->> 'endpoint_id'
+                             AND expected ->> 'service_id' = requirement ->> 'service_id'
+                             AND expected -> 'evidence_ids' = requirement -> 'evidence_ids'
+                      )
+               )
+        )
+ ) OR (
+     SELECT count(DISTINCT item ->> 'settlement_id')
+     FROM jsonb_array_elements(p_attributions_json) AS output(item)
+ ) <> jsonb_array_length(p_attributions_json) THEN
+     RAISE EXCEPTION 'reduction attribution output is not bound to immutable settlement evidence';
+ END IF;
+
+ INSERT INTO agent_economy.reducer_checkpoints
         (namespace_id, chain_scope, next_height)
     VALUES (bound_namespace, p_chain_scope, p_start_height)
     ON CONFLICT (namespace_id, chain_scope) DO NOTHING;
@@ -353,7 +482,9 @@ BEGIN
     IF FOUND AND (existing_receipt.input_sha256 <> p_input_sha256
        OR existing_receipt.output_sha256 <> p_output_sha256
        OR existing_receipt.reducer_version <> p_reducer_version
-       OR existing_receipt.events_json <> p_events_json) THEN
+       OR existing_receipt.events_json <> p_events_json
+       OR existing_receipt.finality_json <> p_finality_json
+       OR existing_receipt.attributions_json <> p_attributions_json) THEN
         RAISE EXCEPTION 'reduction replay differs from immutable receipt';
     END IF;
 
@@ -535,9 +666,10 @@ BEGIN
 
     INSERT INTO agent_economy.reduction_range_receipts
         (namespace_id, chain_scope, start_height, end_height, input_sha256,
-         output_sha256, reducer_version, events_json)
+         output_sha256, reducer_version, events_json, finality_json, attributions_json)
     VALUES (bound_namespace, p_chain_scope, p_start_height, p_end_height,
-            p_input_sha256, p_output_sha256, p_reducer_version, p_events_json)
+            p_input_sha256, p_output_sha256, p_reducer_version, p_events_json,
+            p_finality_json, p_attributions_json)
     ON CONFLICT DO NOTHING;
 
     IF current_height = p_start_height THEN

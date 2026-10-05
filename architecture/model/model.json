@@ -804,7 +804,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 8964
+      "line_count": 9225
     },
     {
       "declaration_count": 136,
@@ -962,7 +962,7 @@
       "id": "deterministic-reducer",
       "label": "Deterministic reducer and finality engine",
       "layer": "canonical",
-      "line_count": 3714
+      "line_count": 3846
     },
     {
       "declaration_count": 0,
@@ -11157,7 +11157,7 @@
         "component": "deterministic-reducer",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 688,
+        "line_count": 820,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -17324,7 +17324,7 @@
             ]
           }
         ],
-        "line_count": 305,
+        "line_count": 561,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -17338,7 +17338,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 38,
+        "line_count": 43,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -19604,7 +19604,7 @@
   "inventory": {
     "declarations": 1590,
     "files": 153,
-    "lines": 46575
+    "lines": 46968
   },
   "layers": [
     {
@@ -19645,7 +19645,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "fb2252379dc19f030f04154c92d4d94c54f6e8ece1e7d098c102d913d8151998",
+  "source_tree_sha256": "1f7645c92bade144c2781d137d6a1a76a6de863e872374dbe93ac94c6f586318",
   "stores": {
     "count": 2,
     "items": [

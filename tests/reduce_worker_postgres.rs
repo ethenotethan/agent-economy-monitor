@@ -88,8 +88,41 @@ async fn leased_reduce_retry_commits_canonical_state_and_provenance_atomically()
             "height": 42,
             "encoded_base64": STANDARD.encode(observation.encode()),
         }],
-        "finality": [],
-        "settlements": []
+        "finality": [{
+            "kind": "evm",
+            "canonical_event_id": observation.event_key().canonical_id(),
+            "transaction_id": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "source_id": observation.provenance().source_id(),
+            "provenance_id": provenance,
+            "evidence_id": format!("sha256:{}", observation.evidence().digest()),
+            "asserted_at_unix_ms": 1_790_426_628_000_i64,
+            "block_number": 42,
+            "block_hash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "canonical_block_hash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "latest_block": 70,
+            "finalized_block": 60,
+            "execution": "succeeded",
+            "confirmations": 12
+        }],
+        "settlements": [{
+            "canonical_event_id": observation.event_key().canonical_id(),
+            "transaction_id": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "settled_at_unix_ms": 1_790_426_628_000_i64,
+            "source_id": observation.provenance().source_id(),
+            "provenance_id": provenance,
+            "settlement": {
+                "id": format!("settlement:x402:base:{run_key}"),
+                "protocol": "x402",
+                "network": "base",
+                "asset": "USDC",
+                "amount_atomic": "1000",
+                "pay_to": "0x1111111111111111111111111111111111111111",
+                "finality": "finalized",
+                "requirement_id": serde_json::Value::Null,
+                "evidence_ids": [format!("sha256:{}", observation.evidence().digest())]
+            },
+            "requirements": []
+        }]
     });
     let manifest_text = manifest.to_string();
     let digest = admin
@@ -221,9 +254,10 @@ async fn leased_reduce_retry_commits_canonical_state_and_provenance_atomically()
         .execute(
             "INSERT INTO agent_economy.provenance_records( \
              namespace_id,provenance_id,source_id,observed_at,parser_version,provider, \
-             chain_scope,block_reference,evidence_id) \
+             chain_scope,block_reference,transaction_reference,evidence_id) \
              VALUES ($1::text::uuid,$2::text::uuid,$3,to_timestamp($4::bigint/1000.0), \
-             $5,'fixture','base','42',$6)",
+             $5,'fixture','base','42', \
+             '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',$6)",
             &[
                 &namespace,
                 &provenance,
@@ -264,6 +298,107 @@ async fn leased_reduce_retry_commits_canonical_state_and_provenance_atomically()
         .await
         .unwrap();
 
+    let initial_forge_claim = restricted
+        .query_one(
+            "SELECT job_id::text, lease_token::text \
+             FROM agent_economy.claim_reducer_job('reduce-initial-forge',60)",
+            &[],
+        )
+        .await
+        .unwrap();
+    assert_eq!(initial_forge_claim.get::<_, String>(0), job);
+    let event_id = observation.event_key().canonical_id();
+    let forged_events = serde_json::json!([{
+        "protocol": "x402",
+        "canonical_event_id": event_id,
+        "event_at_unix_ms": observation.provenance().observed_at_unix_ms(),
+        "observation_links": [{
+            "source_id": observation.provenance().source_id(),
+            "observation_id": observation.id(),
+            "support_role": "supporting"
+        }]
+    }])
+    .to_string();
+    let forged_finality = serde_json::json!([{
+        "canonical_event_id": event_id,
+        "transaction_id": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "source_id": observation.provenance().source_id(),
+        "provenance_id": provenance,
+        "evidence_id": evidence_id,
+        "asserted_at_unix_ms": 1_790_426_628_000_i64,
+        "status": "finalized",
+        "position": 42,
+        "block_hash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "basis": {
+            "kind": "evm",
+            "block_number": 42,
+            "block_hash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "canonical_block_hash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "latest_block": 70,
+            "finalized_block": 60,
+            "execution": "succeeded"
+        },
+        "timeline_state_hash": "c".repeat(64),
+        "accepted": true,
+        "current_status": "finalized",
+        "current": true
+    }])
+    .to_string();
+    let forged_result = b"forged-initial-attribution";
+    let forged_attribution = serde_json::json!([{
+        "settlement_id": format!("settlement:x402:base:{run_key}"),
+        "canonical_event_id": event_id,
+        "transaction_id": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "settled_at_unix_ms": 1_790_426_628_000_i64,
+        "source_id": observation.provenance().source_id(),
+        "provenance_id": provenance,
+        "protocol": "x402",
+        "asset": "USDC",
+        "amount_atomic": "9999",
+        "level": "unknown",
+        "method": "none",
+        "explicit_requirement_id": serde_json::Value::Null,
+        "engine_version": "attribution@1",
+        "evidence_ids": [evidence_id],
+        "input_snapshot_hash": "a".repeat(64),
+        "state_hash": format!("{:x}", Sha256::digest(forged_result)),
+        "result_encoded_base64": STANDARD.encode(forged_result),
+        "requirements": [],
+        "candidates": []
+    }])
+    .to_string();
+    let initial_forge = restricted
+        .query_one(
+            "SELECT agent_economy.commit_reduction_batch( \
+             $1::text::uuid,'reduce-initial-forge',$2::text::uuid,$3,$4,'reducer@1', \
+             'base',42,42,$5::text::jsonb,$6::text::jsonb,$7::text::jsonb)",
+            &[
+                &job,
+                &initial_forge_claim.get::<_, String>(1),
+                &digest,
+                &"d".repeat(64),
+                &forged_events,
+                &forged_finality,
+                &forged_attribution,
+            ],
+        )
+        .await;
+    assert!(
+        initial_forge.is_err(),
+        "restricted runtime must not commit output fields that differ from the immutable manifest"
+    );
+    assert!(
+        restricted
+            .query_one(
+                "SELECT agent_economy.fail_reducer_job( \
+                 $1::text::uuid,'reduce-initial-forge',$2::text::uuid,'invalid_reduce_commit',true,0)",
+                &[&job, &initial_forge_claim.get::<_, String>(1)],
+            )
+            .await
+            .unwrap()
+            .get::<_, bool>(0)
+    );
+
     let second = run_reduce(&reducer_url);
     assert!(
         second.status.success(),
@@ -291,6 +426,127 @@ async fn leased_reduce_retry_commits_canonical_state_and_provenance_atomically()
         1,
         "source observation was mutated"
     );
+
+    let replay_job = format!("00000000-0000-0000-0004-{run_key:012}");
+    admin
+        .execute(
+            "INSERT INTO agent_economy.worker_jobs( \
+             namespace_id,job_id,mode,job_kind,idempotency_key,input_sha256) \
+             VALUES ($1::text::uuid,$2::text::uuid,'reduce','canonical-observation-range-v1', \
+             'reduce-postgres-forged-replay',$3)",
+            &[&namespace, &replay_job, &digest],
+        )
+        .await
+        .unwrap();
+    admin
+        .execute(
+            "INSERT INTO agent_economy.reducer_job_inputs( \
+             namespace_id,job_id,schema_version,reducer_version,attribution_version, \
+             chain_scope,start_height,end_height,input_manifest) \
+             VALUES ($1::text::uuid,$2::text::uuid,1,'reducer@1','attribution@1', \
+             'base',42,42,$3::text::jsonb)",
+            &[&namespace, &replay_job, &manifest_text],
+        )
+        .await
+        .unwrap();
+    let replay_claim = restricted
+        .query_one(
+            "SELECT job_id::text, lease_token::text \
+             FROM agent_economy.claim_reducer_job('reduce-forged-replay',60)",
+            &[],
+        )
+        .await
+        .unwrap();
+    assert_eq!(replay_claim.get::<_, String>(0), replay_job);
+    let receipt = admin
+        .query_one(
+            "SELECT output_sha256, events_json::text, finality_json::text, \
+                    attributions_json::text \
+             FROM agent_economy.reduction_range_receipts \
+             WHERE namespace_id=$1::text::uuid AND chain_scope='base' \
+               AND start_height=42 AND end_height=42",
+            &[&namespace],
+        )
+        .await
+        .unwrap();
+    let receipt_finality = receipt.get::<_, String>(2);
+    let receipt_attribution = receipt.get::<_, String>(3);
+    let mut altered_attribution: serde_json::Value =
+        serde_json::from_str(&receipt_attribution).unwrap();
+    altered_attribution[0]["input_snapshot_hash"] = serde_json::json!("f".repeat(64));
+    let altered_attribution = altered_attribution.to_string();
+    let mut added_attribution: serde_json::Value =
+        serde_json::from_str(&receipt_attribution).unwrap();
+    let extra_attribution = added_attribution[0].clone();
+    added_attribution
+        .as_array_mut()
+        .unwrap()
+        .push(extra_attribution);
+    let added_attribution = added_attribution.to_string();
+    let mut altered_finality: serde_json::Value = serde_json::from_str(&receipt_finality).unwrap();
+    altered_finality[0]["timeline_state_hash"] = serde_json::json!("e".repeat(64));
+    let altered_finality = altered_finality.to_string();
+    let mut added_finality: serde_json::Value = serde_json::from_str(&receipt_finality).unwrap();
+    let extra_finality = added_finality[0].clone();
+    added_finality.as_array_mut().unwrap().push(extra_finality);
+    let added_finality = added_finality.to_string();
+    let replay_attacks = [
+        (
+            "alter attribution",
+            receipt_finality.as_str(),
+            altered_attribution.as_str(),
+        ),
+        ("remove attribution", receipt_finality.as_str(), "[]"),
+        (
+            "add attribution",
+            receipt_finality.as_str(),
+            added_attribution.as_str(),
+        ),
+        (
+            "alter finality",
+            altered_finality.as_str(),
+            receipt_attribution.as_str(),
+        ),
+        ("remove finality", "[]", receipt_attribution.as_str()),
+        (
+            "add finality",
+            added_finality.as_str(),
+            receipt_attribution.as_str(),
+        ),
+    ];
+    for (attack, finality_json, attribution_json) in replay_attacks {
+        let replay_commit = restricted
+            .query_one(
+                "SELECT agent_economy.commit_reduction_batch( \
+            $1::text::uuid,'reduce-forged-replay',$2::text::uuid,$3,$4,'reducer@1', \
+            'base',42,42,$5::text::jsonb,$6::text::jsonb,$7::text::jsonb)",
+                &[
+                    &replay_job,
+                    &replay_claim.get::<_, String>(1),
+                    &digest,
+                    &receipt.get::<_, String>(0),
+                    &receipt.get::<_, String>(1),
+                    &finality_json,
+                    &attribution_json,
+                ],
+            )
+            .await;
+        assert!(
+            replay_commit.is_err(),
+            "restricted replay must reject {attack} even when all digests and events match"
+        );
+    }
+    let altered_settlement_count = admin
+        .query_one(
+            "SELECT count(*) FROM agent_economy.settlements \
+             WHERE namespace_id=$1::text::uuid AND settlement_id=$2 \
+               AND amount_atomic <> 1000",
+            &[&namespace, &format!("settlement:x402:base:{run_key}")],
+        )
+        .await
+        .unwrap()
+        .get::<_, i64>(0);
+    assert_eq!(altered_settlement_count, 0);
 
     assert!(
         !restricted
