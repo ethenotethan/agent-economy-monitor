@@ -21,9 +21,11 @@ resolver = "3"
 
 [dependencies]
 agent-economy-adapter-api = { path = "crates/adapter-api" }
+agent-economy-attribution = { path = "crates/attribution" }
 agent-economy-contracts = { path = "crates/contracts" }
 agent-economy-evidence-store = { path = "crates/evidence-store" }
 agent-economy-mpp-adapter = { path = "crates/mpp-adapter" }
+agent-economy-reducer = { path = "crates/reducer" }
 agent-economy-rpc-collector = { path = "crates/rpc-collector" }
 agent-economy-x402-adapter = { path = "crates/x402-adapter" }
 async-trait = "0.1"

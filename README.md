@@ -94,6 +94,16 @@ verified bytes, recomputes the ordered evidence manifest, and atomically promote
 cursor. Collector and verifier database/evidence authority variables are mutually exclusive in
 each process; a mixed-authority process fails before connecting or opening a backend.
 
+Run one canonical reduction lease with `REDUCER_DATABASE_URL` authenticated as the isolated
+`agent_economy_reducer_runtime` login, then execute `cargo run -- reduce`. The job's immutable
+PostgreSQL manifest binds the observation range, reducer and attribution versions, and input digest.
+The reducer reads observations only through its lease-scoped function and runs deterministic
+reconciliation, finality, and settlement attribution. Before dispatch, the owner-controlled job
+admission boundary seals the complete expected output payload and digest alongside the immutable
+manifest; the restricted reducer can commit only that exact result. Canonical rows, provenance links,
+an immutable range receipt, and the checkpoint land in one transaction. A failed, forged, or stale
+commit advances nothing; replay of the same sealed range is idempotent.
+
 ```bash
 python3 -m pip install --requirement requirements-dev.txt
 python3 -m playwright install firefox

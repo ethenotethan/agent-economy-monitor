@@ -269,7 +269,7 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 405
+      "line_count": 426
     },
     {
       "declaration_count": 0,
@@ -307,7 +307,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5634
+      "line_count": 5636
     },
     {
       "declaration_count": 44,
@@ -562,7 +562,7 @@
       "line_count": 1921
     },
     {
-      "declaration_count": 179,
+      "declaration_count": 191,
       "declarations": [
         "COLLECTOR_PASSWORD",
         "CapturedChangeset",
@@ -585,12 +585,15 @@
         "PAGE_SHA",
         "PASSWORD",
         "PublishedBundles",
+        "REDUCER_PASSWORD",
         "ROLE_TEST_LOCK",
         "ROLE_TEST_PASSWORD",
+        "RecordingCommit",
         "RecordingCommitStore",
         "RecordingGcsClient",
         "RetryHandler",
         "SNAPSHOT_ID",
+        "StaticInput",
         "StoreState",
         "UPDATED",
         "VERIFIER_PASSWORD",
@@ -637,6 +640,8 @@
         "fetch_block",
         "fetch_snapshot",
         "fixture",
+        "fixture_observation",
+        "full_manifest",
         "gateway_routes_require_bearer_auth_and_expose_the_complete_flow",
         "graph",
         "handler_failure_records_only_a_safe_code_and_returns_nonzero_semantics",
@@ -648,8 +653,10 @@
         "lease_next",
         "leased_job",
         "leased_job_for",
+        "leased_reduce_retry_commits_canonical_state_and_provenance_atomically",
         "list_queries_are_bounded_and_cacheable_with_provenance",
         "live_update_stream_is_event_stream_and_emits_refresh_signal",
+        "load",
         "login",
         "login_body_is_bounded_before_password_verification",
         "login_issues_secure_bounded_session_and_logout_requires_csrf",
@@ -699,6 +706,10 @@
         "pulse_is_the_landing_view_with_complete_cockpit_navigation",
         "purpose_built_surface_is_documented_without_graphql_or_sql",
         "read_object",
+        "reduce_handler_fails_closed_on_wrong_mode_kind_or_manifest_digest",
+        "reduce_handler_preserves_rejected_finality_regressions_as_conflicts",
+        "reduce_handler_reconciles_immutable_observations_and_commits_one_batch",
+        "reduce_handler_runs_finality_and_attribution_engines",
         "reducers_can_read_typed_observation_fields",
         "rendered_markdown_links_must_exactly_match_safe_sidecar_links",
         "renew",
@@ -714,6 +725,7 @@
         "rpc_transport",
         "rpc_transport_with_protocol",
         "run_collect",
+        "run_reduce",
         "run_verifier",
         "runtime_config_requires_outbound_https_and_redacts_bearer_tokens",
         "runtime_database_url",
@@ -746,7 +758,7 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 37,
+      "file_count": 40,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -776,6 +788,9 @@
         "tests/projection_runtime.rs",
         "tests/query_api.rs",
         "tests/query_read_models_schema_test.py",
+        "tests/reduce_worker.rs",
+        "tests/reduce_worker_postgres.rs",
+        "tests/reduce_worker_schema_test.py",
         "tests/reducer_finality_schema_test.py",
         "tests/semantic_projection.rs",
         "tests/semantic_projection_schema_test.py",
@@ -789,10 +804,10 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 8386
+      "line_count": 9293
     },
     {
-      "declaration_count": 73,
+      "declaration_count": 137,
       "declarations": [
         "ChainFinalityEvidence",
         "Conflict",
@@ -806,82 +821,149 @@
         "FinalitySubject",
         "FinalityTimeline",
         "FinalityUpdate",
+        "MAX_OBSERVATIONS",
+        "MAX_REDUCTION_INPUT_BYTES",
+        "ManifestCommitment",
+        "ManifestExecution",
+        "ManifestFinality",
+        "ManifestObservation",
+        "ManifestRequirement",
+        "ManifestSettlement",
+        "ManifestSettlementAttribution",
+        "ManifestSettlementFinality",
         "ObservationRole",
+        "PersistedAttribution",
+        "PersistedAttributionCandidate",
+        "PersistedFinalityUpdate",
+        "PersistedReducedEvent",
+        "PersistedRequirement",
+        "PostgresReductionStore",
         "ReducedEvent",
+        "ReducedObservationLink",
         "Reducer",
         "ReducerError",
+        "ReductionBatch",
+        "ReductionCommitStore",
+        "ReductionError",
+        "ReductionHandler",
+        "ReductionInputStore",
+        "ReductionManifest",
         "ReductionSnapshot",
         "SolanaCommitment",
         "SolanaFinalityEvidence",
         "append_field",
+        "append_finality_updates",
         "append_optional",
         "asserted_at",
+        "attribution_level",
+        "attribution_method",
+        "attributions",
+        "attributions_json",
         "basis",
         "basis_order",
         "block_hash",
+        "build_batch",
+        "candidate_count",
         "canonical_event_id",
         "chain_scope",
+        "claim",
+        "commit",
+        "commitment_name",
+        "complete",
+        "conflicting_observation_ids",
         "conflicts",
         "corroborating_finality_assertions_are_preserved",
         "current",
+        "default_attribution_version",
         "derive_evm_status",
+        "derive_reduction_batch",
         "derive_status",
         "encode",
         "encode_finality_timeline",
         "encode_finality_update",
         "encode_snapshot",
         "events",
+        "events_json",
         "evidence_id",
         "evm_delayed_corroboration_for_old_inclusion_preserves_newer_reinclusion",
         "evm_delayed_orphan_for_old_inclusion_preserves_newer_reinclusion",
         "evm_finality_progression_preserves_reorg_history",
         "evm_finality_rejects_positions_that_postgres_cannot_persist",
         "evm_finality_replays_reinclusion_after_orphaning_in_any_input_order",
+        "execution_name",
+        "fail",
+        "finality_basis",
+        "finality_json",
         "finality_reconciliation_rejects_cross_event_evidence",
         "finality_replay_is_identical_when_provider_timestamps_tie",
         "finality_state_hash_commits_to_policy_basis",
+        "finality_status",
         "finality_subject",
+        "finality_updates",
         "fingerprint",
+        "fmt",
         "fn",
+        "from",
+        "from_shared",
         "id",
         "inclusion_key",
         "independent_observations_and_conflicts_remain_inspectable",
+        "load",
         "new",
         "observation",
+        "observation_id",
         "observation_ids",
+        "observation_links",
         "observations",
+        "output_sha256",
         "payload_fingerprint",
+        "poison",
         "position",
+        "process",
+        "protocol",
         "provenance_id",
+        "reconcile_attributions",
         "reconcile_event",
+        "reconcile_finality",
         "reconcile_for",
         "reduce",
+        "reducer_version",
+        "reduction_row_to_job",
+        "renew",
         "replay_is_identical_across_input_order",
+        "retryable",
         "solana_finality_records_reverted_execution_and_conflicting_regression",
         "solana_finality_rejects_slots_that_postgres_cannot_persist",
         "source_id",
         "state_hash",
         "subject",
+        "supporting_observation_ids",
         "transaction_id",
         "update",
         "updates",
+        "valid_error_code",
+        "valid_lease_owner",
+        "valid_sha256",
         "validate",
         "validate_finality_evidence"
       ],
-      "description": "Deterministic canonical-event reconciliation and chain-specific finality engine with replay-stable state hashes, inspectable conflicts, and append-only reverted/orphaned history.",
+      "description": "Deterministic canonical-event reconciliation and chain-specific finality engine with a namespace-bound PostgreSQL reducer worker, replay-stable state hashes, inspectable conflicts, and append-only reverted/orphaned history.",
       "external": false,
-      "file_count": 5,
+      "file_count": 8,
       "files": [
         "crates/reducer/Cargo.toml",
         "crates/reducer/src/lib.rs",
         "crates/reducer/tests/reducer.rs",
         "migrations/0005_reducer_finality.down.sql",
-        "migrations/0005_reducer_finality.up.sql"
+        "migrations/0005_reducer_finality.up.sql",
+        "migrations/0016_reduce_worker.down.sql",
+        "migrations/0016_reduce_worker.up.sql",
+        "src/reduce.rs"
       ],
       "id": "deterministic-reducer",
       "label": "Deterministic reducer and finality engine",
       "layer": "canonical",
-      "line_count": 1759
+      "line_count": 3864
     },
     {
       "declaration_count": 0,
@@ -1440,7 +1522,7 @@
       "line_count": 3675
     },
     {
-      "declaration_count": 126,
+      "declaration_count": 128,
       "declarations": [
         "API_VERSION",
         "AuthConfig",
@@ -1547,6 +1629,7 @@
         "pulse",
         "query",
         "random_token",
+        "reduce",
         "reject_mixed_worker_authority",
         "remove_session",
         "require_session",
@@ -1555,6 +1638,7 @@
         "row_to_fact",
         "row_to_projection_page",
         "run_collect_once",
+        "run_reduce_once",
         "run_verify_evidence_once",
         "search",
         "secret_hash",
@@ -1587,7 +1671,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 7667
+      "line_count": 7730
     },
     {
       "declaration_count": 95,
@@ -1887,7 +1971,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, evidence-first leased collect worker, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients, production registrations for reduce, classify, and enrich handlers, and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, evidence-first leased collect worker, namespace-bound leased reduce worker, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients, production registrations for classify and enrich handlers, and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -2426,7 +2510,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 405,
+            "line": 463,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/healthz\", get(status))"
@@ -2651,7 +2735,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 403,
+            "line": 461,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/status\", get(status))"
@@ -2831,7 +2915,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 408,
+            "line": 466,
             "path": "src/main.rs",
             "rule": "declared.topology",
             "via": "info!(%address, \"agent economy monitor listening\");"
@@ -2999,7 +3083,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 4723,
+        "line_count": 4725,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3013,7 +3097,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 51,
+        "line_count": 53,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3027,7 +3111,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 132,
+        "line_count": 142,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3041,7 +3125,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 639,
+        "line_count": 641,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -10589,7 +10673,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 151,
+        "line_count": 162,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -11057,6 +11141,34 @@
       },
       {
         "citations": 0,
+        "component": "deterministic-reducer",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 40,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0016_reduce_worker.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "deterministic-reducer",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 831,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0016_reduce_worker.up.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
@@ -11158,7 +11270,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 25,
+        "line_count": 26,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -12532,7 +12644,7 @@
       {
         "citations": 0,
         "component": "runtime",
-        "declaration_count": 10,
+        "declaration_count": 11,
         "declarations": [
           {
             "kind": "mod",
@@ -12601,7 +12713,7 @@
           {
             "kind": "mod",
             "line": 9,
-            "name": "verify_evidence",
+            "name": "reduce",
             "passes": [
               "rust.declaration"
             ]
@@ -12609,13 +12721,21 @@
           {
             "kind": "mod",
             "line": 10,
+            "name": "verify_evidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "mod",
+            "line": 11,
             "name": "worker",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 10,
+        "line_count": 11,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -12627,11 +12747,11 @@
       {
         "citations": 3,
         "component": "runtime",
-        "declaration_count": 11,
+        "declaration_count": 12,
         "declarations": [
           {
             "kind": "struct",
-            "line": 33,
+            "line": 34,
             "name": "Status",
             "passes": [
               "rust.declaration"
@@ -12639,7 +12759,7 @@
           },
           {
             "kind": "enum",
-            "line": 38,
+            "line": 39,
             "name": "CollectionRpcTransport",
             "passes": [
               "rust.declaration"
@@ -12647,7 +12767,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 46,
+            "line": 47,
             "name": "fetch_block",
             "passes": [
               "rust.declaration"
@@ -12655,7 +12775,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 63,
+            "line": 64,
             "name": "status",
             "passes": [
               "rust.declaration"
@@ -12663,7 +12783,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 73,
+            "line": 74,
             "name": "main",
             "passes": [
               "rust.declaration"
@@ -12671,7 +12791,7 @@
           },
           {
             "kind": "fn",
-            "line": 137,
+            "line": 142,
             "name": "reject_mixed_worker_authority",
             "passes": [
               "rust.declaration"
@@ -12679,7 +12799,15 @@
           },
           {
             "kind": "async-fn",
-            "line": 178,
+            "line": 187,
+            "name": "run_reduce_once",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 236,
             "name": "run_verify_evidence_once",
             "passes": [
               "rust.declaration"
@@ -12687,7 +12815,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 235,
+            "line": 293,
             "name": "run_collect_once",
             "passes": [
               "rust.declaration"
@@ -12695,7 +12823,7 @@
           },
           {
             "kind": "fn",
-            "line": 314,
+            "line": 372,
             "name": "collection_rpc_transport",
             "passes": [
               "rust.declaration"
@@ -12703,7 +12831,7 @@
           },
           {
             "kind": "fn",
-            "line": 339,
+            "line": 397,
             "name": "required_collection_env",
             "passes": [
               "rust.declaration"
@@ -12711,14 +12839,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 348,
+            "line": 406,
             "name": "serve",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 411,
+        "line_count": 469,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -14386,6 +14514,645 @@
         "path": "src/query.rs",
         "semantic_citations": 0,
         "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "deterministic-reducer",
+        "declaration_count": 78,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 24,
+            "name": "MAX_REDUCTION_INPUT_BYTES",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 26,
+            "name": "MAX_OBSERVATIONS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 29,
+            "name": "ReductionError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 36,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 48,
+            "name": "ReducedObservationLink",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 55,
+            "name": "source_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 58,
+            "name": "observation_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 62,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 69,
+            "name": "PersistedReducedEvent",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 77,
+            "name": "PersistedFinalityUpdate",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 95,
+            "name": "PersistedAttribution",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 118,
+            "name": "candidate_count",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 124,
+            "name": "PersistedAttributionCandidate",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 136,
+            "name": "PersistedRequirement",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 145,
+            "name": "protocol",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 148,
+            "name": "canonical_event_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 152,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 156,
+            "name": "supporting_observation_ids",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 164,
+            "name": "conflicting_observation_ids",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 172,
+            "name": "observation_links",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 179,
+            "name": "ReductionBatch",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 192,
+            "name": "chain_scope",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 195,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 199,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 203,
+            "name": "reducer_version",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 207,
+            "name": "state_hash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 211,
+            "name": "events",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 215,
+            "name": "finality_updates",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 219,
+            "name": "attributions",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 223,
+            "name": "output_sha256",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 227,
+            "name": "events_json",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 250,
+            "name": "finality_json",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 274,
+            "name": "attributions_json",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 321,
+            "name": "ReductionInputStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 322,
+            "name": "load",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 326,
+            "name": "ReductionCommitStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 327,
+            "name": "commit",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 329,
+            "name": "ReductionHandler",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 336,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 343,
+            "name": "ReductionManifest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 355,
+            "name": "default_attribution_version",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 362,
+            "name": "ManifestObservation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 371,
+            "name": "ManifestFinality",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 404,
+            "name": "ManifestExecution",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 411,
+            "name": "ManifestCommitment",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 419,
+            "name": "ManifestSettlementAttribution",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 431,
+            "name": "ManifestSettlement",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 445,
+            "name": "ManifestSettlementFinality",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 452,
+            "name": "ManifestRequirement",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 471,
+            "name": "process",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 495,
+            "name": "PostgresReductionStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 501,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 504,
+            "name": "from_shared",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 512,
+            "name": "claim",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 537,
+            "name": "renew",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 560,
+            "name": "complete",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 582,
+            "name": "fail",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 616,
+            "name": "load",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 636,
+            "name": "commit",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 674,
+            "name": "reduction_row_to_job",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 690,
+            "name": "valid_lease_owner",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 698,
+            "name": "valid_sha256",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 705,
+            "name": "valid_error_code",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 713,
+            "name": "build_batch",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 717,
+            "name": "derive_reduction_batch",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 854,
+            "name": "reconcile_finality",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 966,
+            "name": "append_finality_updates",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 1013,
+            "name": "finality_basis",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 1049,
+            "name": "reconcile_attributions",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 1167,
+            "name": "from",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 1176,
+            "name": "from",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 1184,
+            "name": "finality_status",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 1194,
+            "name": "execution_name",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 1201,
+            "name": "commitment_name",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 1209,
+            "name": "attribution_level",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 1218,
+            "name": "attribution_method",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 1227,
+            "name": "poison",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 1231,
+            "name": "retryable",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 1234,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "src/reduce.rs",
+        "semantic_citations": 0,
+        "touched": false
       },
       {
         "citations": 1,
@@ -16404,6 +17171,194 @@
       {
         "citations": 0,
         "component": "delivery-gates",
+        "declaration_count": 12,
+        "declarations": [
+          {
+            "kind": "struct",
+            "line": 15,
+            "name": "StaticInput",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 20,
+            "name": "load",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 26,
+            "name": "RecordingCommit",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 30,
+            "name": "commit",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 35,
+            "name": "observation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 50,
+            "name": "manifest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 69,
+            "name": "full_manifest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 126,
+            "name": "job",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 141,
+            "name": "reduce_handler_reconciles_immutable_observations_and_commits_one_batch",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 163,
+            "name": "reduce_handler_fails_closed_on_wrong_mode_kind_or_manifest_digest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 185,
+            "name": "reduce_handler_runs_finality_and_attribution_engines",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 200,
+            "name": "reduce_handler_preserves_rejected_finality_regressions_as_conflicts",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 234,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/reduce_worker.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 6,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 11,
+            "name": "REDUCER_PASSWORD",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 13,
+            "name": "runtime_database_url",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 23,
+            "name": "connect",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 29,
+            "name": "run_reduce",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 40,
+            "name": "fixture_observation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 57,
+            "name": "leased_reduce_retry_commits_canonical_state_and_provenance_atomically",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 621,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/reduce_worker_postgres.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 51,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/reduce_worker_schema_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
         "line_count": 230,
@@ -16980,10 +17935,10 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1493,
+        "citations": 1591,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 51,
+        "files": 54,
         "id": "rust.declaration"
       },
       {
@@ -17012,15 +17967,15 @@
         "worker": 8
       },
       "citations": 62,
-      "declarations": 1493,
+      "declarations": 1591,
       "entities": 62,
       "entities_with_origin": 62,
-      "files": 147,
+      "files": 153,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
       "touched_files": 31,
-      "untouched_files": 116
+      "untouched_files": 122
     }
   },
   "interplay": {
@@ -18119,7 +19074,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/healthz\", get(status))",
-            "line": 405,
+            "line": 463,
             "path": "src/main.rs"
           }
         ],
@@ -18329,7 +19284,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/status\", get(status))",
-            "line": 403,
+            "line": 461,
             "path": "src/main.rs"
           }
         ],
@@ -18497,7 +19452,7 @@
         "evidence": [
           {
             "excerpt": "info!(%address, \"agent economy monitor listening\");",
-            "line": 408,
+            "line": 466,
             "path": "src/main.rs"
           }
         ],
@@ -18656,9 +19611,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1493,
-    "files": 147,
-    "lines": 43961
+    "declarations": 1591,
+    "files": 153,
+    "lines": 47059
   },
   "layers": [
     {
@@ -18699,7 +19654,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "2e0b31cdb0c11d42c8396bdf855ab052132e8c1501fad8b548006259d789e2b0",
+  "source_tree_sha256": "e1aa56f29a34c312ad8c1405ea4282cf3f255575bbd7808d736867c475baffb3",
   "stores": {
     "count": 2,
     "items": [

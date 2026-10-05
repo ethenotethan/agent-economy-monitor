@@ -6,5 +6,6 @@ pub mod projection;
 pub mod projection_gateway;
 pub mod projection_runtime;
 pub mod query;
+pub mod reduce;
 pub mod verify_evidence;
 pub mod worker;

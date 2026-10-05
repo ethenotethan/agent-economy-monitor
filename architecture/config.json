@@ -184,13 +184,15 @@
       ]
     },
     {
-      "description": "Deterministic canonical-event reconciliation and chain-specific finality engine with replay-stable state hashes, inspectable conflicts, and append-only reverted/orphaned history.",
+      "description": "Deterministic canonical-event reconciliation and chain-specific finality engine with a namespace-bound PostgreSQL reducer worker, replay-stable state hashes, inspectable conflicts, and append-only reverted/orphaned history.",
       "id": "deterministic-reducer",
       "label": "Deterministic reducer and finality engine",
       "layer": "canonical",
       "patterns": [
         "crates/reducer/**",
-        "migrations/0005_reducer_finality.*.sql"
+        "src/reduce.rs",
+        "migrations/0005_reducer_finality.*.sql",
+        "migrations/0016_reduce_worker.*.sql"
       ]
     },
     {
@@ -286,7 +288,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, evidence-first leased collect worker, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients, production registrations for reduce, classify, and enrich handlers, and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, evidence-first leased collect worker, namespace-bound leased reduce worker, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients, production registrations for classify and enrich handlers, and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
