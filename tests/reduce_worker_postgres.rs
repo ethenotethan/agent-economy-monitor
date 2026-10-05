@@ -7,6 +7,8 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use sha2::{Digest, Sha256};
 use tokio_postgres::{Client, NoTls};
 
+use agent_economy_monitor::reduce::derive_reduction_batch;
+
 const REDUCER_PASSWORD: &str = "reducer_test_password";
 
 fn runtime_database_url(database_url: &str) -> String {
@@ -125,14 +127,22 @@ async fn leased_reduce_retry_commits_canonical_state_and_provenance_atomically()
         }]
     });
     let manifest_text = manifest.to_string();
-    let digest = admin
+    let canonical_manifest = admin
         .query_one(
-            "SELECT encode(sha256(convert_to($1::text::jsonb::text, 'UTF8')), 'hex')",
+            "SELECT $1::text::jsonb::text, \
+             encode(sha256(convert_to($1::text::jsonb::text, 'UTF8')), 'hex')",
             &[&manifest_text],
         )
         .await
-        .unwrap()
-        .get::<_, String>(0);
+        .unwrap();
+    let canonical_manifest_text = canonical_manifest.get::<_, String>(0);
+    let digest = canonical_manifest.get::<_, String>(1);
+    let expected_batch =
+        derive_reduction_batch(&digest, canonical_manifest_text.as_bytes()).unwrap();
+    let expected_output_sha256 = expected_batch.output_sha256().to_owned();
+    let expected_events = expected_batch.events_json().to_string();
+    let expected_finality = expected_batch.finality_json().to_string();
+    let expected_attributions = expected_batch.attributions_json().to_string();
     admin
         .execute(
             "INSERT INTO agent_economy.worker_jobs( \
@@ -147,10 +157,19 @@ async fn leased_reduce_retry_commits_canonical_state_and_provenance_atomically()
         .execute(
             "INSERT INTO agent_economy.reducer_job_inputs( \
              namespace_id,job_id,schema_version,reducer_version,attribution_version, \
-             chain_scope,start_height,end_height,input_manifest) \
+             chain_scope,start_height,end_height,input_manifest,expected_output_sha256, \
+             expected_events_json,expected_finality_json,expected_attributions_json) \
              VALUES ($1::text::uuid,$2::text::uuid,1,'reducer@1','attribution@1', \
-             'base',42,42,$3::text::jsonb)",
-            &[&namespace, &job, &manifest_text],
+             'base',42,42,$3::text::jsonb,$4,$5::text::jsonb,$6::text::jsonb,$7::text::jsonb)",
+            &[
+                &namespace,
+                &job,
+                &manifest_text,
+                &expected_output_sha256,
+                &expected_events,
+                &expected_finality,
+                &expected_attributions,
+            ],
         )
         .await
         .unwrap();
@@ -169,10 +188,19 @@ async fn leased_reduce_retry_commits_canonical_state_and_provenance_atomically()
         .execute(
             "INSERT INTO agent_economy.reducer_job_inputs( \
              namespace_id,job_id,schema_version,reducer_version,attribution_version, \
-             chain_scope,start_height,end_height,input_manifest) \
+             chain_scope,start_height,end_height,input_manifest,expected_output_sha256, \
+             expected_events_json,expected_finality_json,expected_attributions_json) \
              VALUES ($1::text::uuid,$2::text::uuid,1,'reducer@1','attribution@1', \
-             'base',42,42,$3::text::jsonb)",
-            &[&namespace, &attack_job, &manifest_text],
+             'base',42,42,$3::text::jsonb,$4,$5::text::jsonb,$6::text::jsonb,$7::text::jsonb)",
+            &[
+                &namespace,
+                &attack_job,
+                &manifest_text,
+                &expected_output_sha256,
+                &expected_events,
+                &expected_finality,
+                &expected_attributions,
+            ],
         )
         .await
         .unwrap();
@@ -354,7 +382,7 @@ async fn leased_reduce_retry_commits_canonical_state_and_provenance_atomically()
         "provenance_id": provenance,
         "protocol": "x402",
         "asset": "USDC",
-        "amount_atomic": "9999",
+        "amount_atomic": "1000",
         "level": "unknown",
         "method": "none",
         "explicit_requirement_id": serde_json::Value::Null,
@@ -367,7 +395,7 @@ async fn leased_reduce_retry_commits_canonical_state_and_provenance_atomically()
         "candidates": []
     }])
     .to_string();
-    let initial_forge = restricted
+    let initial_forge_accepted = restricted
         .query_one(
             "SELECT agent_economy.commit_reduction_batch( \
              $1::text::uuid,'reduce-initial-forge',$2::text::uuid,$3,$4,'reducer@1', \
@@ -382,11 +410,32 @@ async fn leased_reduce_retry_commits_canonical_state_and_provenance_atomically()
                 &forged_attribution,
             ],
         )
-        .await;
+        .await
+        .unwrap()
+        .get::<_, bool>(0);
     assert!(
-        initial_forge.is_err(),
-        "restricted runtime must not commit output fields that differ from the immutable manifest"
+        !initial_forge_accepted,
+        "restricted runtime must not commit forged derived fields when every source field matches"
     );
+    let initial_forge_residue = admin
+        .query_one(
+            "SELECT \
+             (SELECT count(*) FROM agent_economy.canonical_events WHERE namespace_id=$1::text::uuid), \
+             (SELECT count(*) FROM agent_economy.event_finality_assertions WHERE namespace_id=$1::text::uuid), \
+             (SELECT count(*) FROM agent_economy.settlements WHERE namespace_id=$1::text::uuid), \
+             (SELECT count(*) FROM agent_economy.reduction_range_receipts WHERE namespace_id=$1::text::uuid), \
+             (SELECT count(*) FROM agent_economy.reducer_checkpoints WHERE namespace_id=$1::text::uuid)",
+            &[&namespace],
+        )
+        .await
+        .unwrap();
+    for column in 0..5 {
+        assert_eq!(
+            initial_forge_residue.get::<_, i64>(column),
+            0,
+            "rejected initial forgery left canonical or receipt residue in column {column}"
+        );
+    }
     assert!(
         restricted
             .query_one(
@@ -442,10 +491,19 @@ async fn leased_reduce_retry_commits_canonical_state_and_provenance_atomically()
         .execute(
             "INSERT INTO agent_economy.reducer_job_inputs( \
              namespace_id,job_id,schema_version,reducer_version,attribution_version, \
-             chain_scope,start_height,end_height,input_manifest) \
+             chain_scope,start_height,end_height,input_manifest,expected_output_sha256, \
+             expected_events_json,expected_finality_json,expected_attributions_json) \
              VALUES ($1::text::uuid,$2::text::uuid,1,'reducer@1','attribution@1', \
-             'base',42,42,$3::text::jsonb)",
-            &[&namespace, &replay_job, &manifest_text],
+             'base',42,42,$3::text::jsonb,$4,$5::text::jsonb,$6::text::jsonb,$7::text::jsonb)",
+            &[
+                &namespace,
+                &replay_job,
+                &manifest_text,
+                &expected_output_sha256,
+                &expected_events,
+                &expected_finality,
+                &expected_attributions,
+            ],
         )
         .await
         .unwrap();
@@ -531,10 +589,12 @@ async fn leased_reduce_retry_commits_canonical_state_and_provenance_atomically()
                 ],
             )
             .await;
-        assert!(
-            replay_commit.is_err(),
-            "restricted replay must reject {attack} even when all digests and events match"
-        );
+        if let Ok(row) = replay_commit {
+            assert!(
+                !row.get::<_, bool>(0),
+                "restricted replay must reject {attack} even when all digests and events match"
+            );
+        }
     }
     let altered_settlement_count = admin
         .query_one(

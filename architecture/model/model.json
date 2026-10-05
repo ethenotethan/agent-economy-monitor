@@ -269,7 +269,7 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 421
+      "line_count": 426
     },
     {
       "declaration_count": 0,
@@ -804,10 +804,10 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 9225
+      "line_count": 9293
     },
     {
-      "declaration_count": 136,
+      "declaration_count": 137,
       "declarations": [
         "ChainFinalityEvidence",
         "Conflict",
@@ -876,6 +876,7 @@
         "current",
         "default_attribution_version",
         "derive_evm_status",
+        "derive_reduction_batch",
         "derive_status",
         "encode",
         "encode_finality_timeline",
@@ -962,7 +963,7 @@
       "id": "deterministic-reducer",
       "label": "Deterministic reducer and finality engine",
       "layer": "canonical",
-      "line_count": 3846
+      "line_count": 3864
     },
     {
       "declaration_count": 0,
@@ -3110,7 +3111,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 140,
+        "line_count": 142,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -10672,7 +10673,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 159,
+        "line_count": 162,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -11157,7 +11158,7 @@
         "component": "deterministic-reducer",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 820,
+        "line_count": 831,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -14517,7 +14518,7 @@
       {
         "citations": 0,
         "component": "deterministic-reducer",
-        "declaration_count": 77,
+        "declaration_count": 78,
         "declarations": [
           {
             "kind": "const",
@@ -15033,7 +15034,15 @@
           },
           {
             "kind": "fn",
-            "line": 847,
+            "line": 717,
+            "name": "derive_reduction_batch",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 854,
             "name": "reconcile_finality",
             "passes": [
               "rust.declaration"
@@ -15041,7 +15050,7 @@
           },
           {
             "kind": "fn",
-            "line": 959,
+            "line": 966,
             "name": "append_finality_updates",
             "passes": [
               "rust.declaration"
@@ -15049,7 +15058,7 @@
           },
           {
             "kind": "fn",
-            "line": 1006,
+            "line": 1013,
             "name": "finality_basis",
             "passes": [
               "rust.declaration"
@@ -15057,7 +15066,7 @@
           },
           {
             "kind": "fn",
-            "line": 1042,
+            "line": 1049,
             "name": "reconcile_attributions",
             "passes": [
               "rust.declaration"
@@ -15065,7 +15074,7 @@
           },
           {
             "kind": "fn",
-            "line": 1160,
+            "line": 1167,
             "name": "from",
             "passes": [
               "rust.declaration"
@@ -15073,7 +15082,7 @@
           },
           {
             "kind": "fn",
-            "line": 1169,
+            "line": 1176,
             "name": "from",
             "passes": [
               "rust.declaration"
@@ -15081,7 +15090,7 @@
           },
           {
             "kind": "fn",
-            "line": 1177,
+            "line": 1184,
             "name": "finality_status",
             "passes": [
               "rust.declaration"
@@ -15089,7 +15098,7 @@
           },
           {
             "kind": "fn",
-            "line": 1187,
+            "line": 1194,
             "name": "execution_name",
             "passes": [
               "rust.declaration"
@@ -15097,7 +15106,7 @@
           },
           {
             "kind": "fn",
-            "line": 1194,
+            "line": 1201,
             "name": "commitment_name",
             "passes": [
               "rust.declaration"
@@ -15105,7 +15114,7 @@
           },
           {
             "kind": "fn",
-            "line": 1202,
+            "line": 1209,
             "name": "attribution_level",
             "passes": [
               "rust.declaration"
@@ -15113,7 +15122,7 @@
           },
           {
             "kind": "fn",
-            "line": 1211,
+            "line": 1218,
             "name": "attribution_method",
             "passes": [
               "rust.declaration"
@@ -15121,7 +15130,7 @@
           },
           {
             "kind": "fn",
-            "line": 1220,
+            "line": 1227,
             "name": "poison",
             "passes": [
               "rust.declaration"
@@ -15129,14 +15138,14 @@
           },
           {
             "kind": "fn",
-            "line": 1224,
+            "line": 1231,
             "name": "retryable",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 1227,
+        "line_count": 1234,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -17277,7 +17286,7 @@
         "declarations": [
           {
             "kind": "const",
-            "line": 9,
+            "line": 11,
             "name": "REDUCER_PASSWORD",
             "passes": [
               "rust.declaration"
@@ -17285,7 +17294,7 @@
           },
           {
             "kind": "fn",
-            "line": 11,
+            "line": 13,
             "name": "runtime_database_url",
             "passes": [
               "rust.declaration"
@@ -17293,7 +17302,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 21,
+            "line": 23,
             "name": "connect",
             "passes": [
               "rust.declaration"
@@ -17301,7 +17310,7 @@
           },
           {
             "kind": "fn",
-            "line": 27,
+            "line": 29,
             "name": "run_reduce",
             "passes": [
               "rust.declaration"
@@ -17309,7 +17318,7 @@
           },
           {
             "kind": "fn",
-            "line": 38,
+            "line": 40,
             "name": "fixture_observation",
             "passes": [
               "rust.declaration"
@@ -17317,14 +17326,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 55,
+            "line": 57,
             "name": "leased_reduce_retry_commits_canonical_state_and_provenance_atomically",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 561,
+        "line_count": 621,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -17338,7 +17347,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 43,
+        "line_count": 51,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -17926,7 +17935,7 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1590,
+        "citations": 1591,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
         "files": 54,
@@ -17958,7 +17967,7 @@
         "worker": 8
       },
       "citations": 62,
-      "declarations": 1590,
+      "declarations": 1591,
       "entities": 62,
       "entities_with_origin": 62,
       "files": 153,
@@ -19602,9 +19611,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1590,
+    "declarations": 1591,
     "files": 153,
-    "lines": 46968
+    "lines": 47059
   },
   "layers": [
     {
@@ -19645,7 +19654,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "1f7645c92bade144c2781d137d6a1a76a6de863e872374dbe93ac94c6f586318",
+  "source_tree_sha256": "e1aa56f29a34c312ad8c1405ea4282cf3f255575bbd7808d736867c475baffb3",
   "stores": {
     "count": 2,
     "items": [

@@ -97,10 +97,12 @@ each process; a mixed-authority process fails before connecting or opening a bac
 Run one canonical reduction lease with `REDUCER_DATABASE_URL` authenticated as the isolated
 `agent_economy_reducer_runtime` login, then execute `cargo run -- reduce`. The job's immutable
 PostgreSQL manifest binds the observation range, reducer and attribution versions, and input digest.
-The reducer reads observations only through its lease-scoped function, runs deterministic
-reconciliation, finality, and settlement attribution, and commits canonical rows, provenance links,
-an immutable range receipt, and the checkpoint in one transaction. A failed or stale commit advances
-nothing; replay of the same sealed range is idempotent.
+The reducer reads observations only through its lease-scoped function and runs deterministic
+reconciliation, finality, and settlement attribution. Before dispatch, the owner-controlled job
+admission boundary seals the complete expected output payload and digest alongside the immutable
+manifest; the restricted reducer can commit only that exact result. Canonical rows, provenance links,
+an immutable range receipt, and the checkpoint land in one transaction. A failed, forged, or stale
+commit advances nothing; replay of the same sealed range is idempotent.
 
 ```bash
 python3 -m pip install --requirement requirements-dev.txt

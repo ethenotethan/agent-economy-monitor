@@ -10,6 +10,10 @@ CREATE TABLE agent_economy.reducer_job_inputs (
     start_height bigint NOT NULL CHECK (start_height >= 0),
     end_height bigint NOT NULL CHECK (end_height >= start_height),
     input_manifest jsonb NOT NULL CHECK (jsonb_typeof(input_manifest) = 'object'),
+    expected_output_sha256 text NOT NULL CHECK (expected_output_sha256 ~ '^[0-9a-f]{64}$'),
+    expected_events_json jsonb NOT NULL CHECK (jsonb_typeof(expected_events_json) = 'array'),
+    expected_finality_json jsonb NOT NULL CHECK (jsonb_typeof(expected_finality_json) = 'array'),
+    expected_attributions_json jsonb NOT NULL CHECK (jsonb_typeof(expected_attributions_json) = 'array'),
     created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
     PRIMARY KEY (namespace_id, job_id),
     FOREIGN KEY (namespace_id, job_id)
@@ -78,6 +82,9 @@ BEGIN
        OR jsonb_typeof(NEW.input_manifest -> 'finality') <> 'array'
        OR jsonb_typeof(NEW.input_manifest -> 'settlements') <> 'array'
        OR jsonb_array_length(NEW.input_manifest -> 'observations') NOT BETWEEN 1 AND 50000
+       OR jsonb_array_length(NEW.expected_events_json) NOT BETWEEN 1 AND 50000
+       OR jsonb_array_length(NEW.expected_finality_json) NOT BETWEEN 0 AND 50000
+       OR jsonb_array_length(NEW.expected_attributions_json) NOT BETWEEN 0 AND 50000
     THEN
         RAISE EXCEPTION 'invalid reducer job input';
     END IF;
@@ -262,6 +269,10 @@ BEGIN
       AND input.chain_scope = p_chain_scope
       AND input.start_height = p_start_height
       AND input.end_height = p_end_height
+      AND input.expected_output_sha256 = p_output_sha256
+      AND input.expected_events_json = p_events_json
+      AND input.expected_finality_json = p_finality_json
+      AND input.expected_attributions_json = p_attributions_json
     FOR UPDATE OF job;
     IF NOT FOUND THEN
         RETURN false;

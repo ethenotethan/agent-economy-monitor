@@ -712,9 +712,16 @@ fn valid_error_code(value: &str) -> bool {
 }
 
 fn build_batch(job: &LeasedJob, bytes: &[u8]) -> Result<ReductionBatch, ReductionError> {
+    derive_reduction_batch(&job.input_sha256, bytes)
+}
+
+pub fn derive_reduction_batch(
+    input_sha256: &str,
+    bytes: &[u8],
+) -> Result<ReductionBatch, ReductionError> {
     if bytes.is_empty()
         || bytes.len() > MAX_REDUCTION_INPUT_BYTES
-        || format!("{:x}", Sha256::digest(bytes)) != job.input_sha256
+        || format!("{:x}", Sha256::digest(bytes)) != input_sha256
     {
         return Err(ReductionError::InvalidInput);
     }
