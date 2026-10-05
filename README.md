@@ -46,11 +46,14 @@ identical writes are idempotent, and every replay verifies the digest before ret
 bytes. Production uses the same object names and semantics with Google Cloud Storage.
 
 The production adapter obtains credentials exclusively through Google Application Default
-Credentials. On Cloud Run, bind a dedicated workload identity with
-`roles/storage.objectCreator` and `roles/storage.objectViewer` on the evidence bucket; do
-not mount or embed a service-account key. Configure the bucket name outside the evidence
-payload, construct `GoogleCloudStorageClient::from_application_default_credentials()`, and
-use `GcsEvidenceStore` with a bounded retry policy. Every upload carries
+Credentials. On Cloud Run, bind separate workload identities: the collector gets a custom
+role containing only `storage.objects.create` and `storage.objects.list` so an idempotent
+create-only replay can recover the provider generation without downloading object bytes,
+while the verifier gets `roles/storage.objectViewer`. Do not grant the collector
+`storage.objects.get`, and do not mount or embed a service-account key. Configure the bucket
+name outside the evidence payload, construct
+`GoogleCloudStorageClient::from_application_default_credentials()`, and use
+`GcsEvidenceStore` with a bounded retry policy. Every upload carries
 `ifGenerationMatch=0` plus deterministic source, parser-version, observation-identity,
 replay-input, and SHA-256 metadata; neither payload bytes nor credentials enter metadata
 or error text.

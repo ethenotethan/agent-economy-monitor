@@ -5,8 +5,8 @@ use std::{
 
 use agent_economy_evidence_store::{
     CreateDisposition, EvidenceContext, EvidenceProvenance, EvidenceStore, GcsClientError,
-    GcsCreateRequest, GcsCreatedObject, GcsEvidenceStore, GcsObjectClient, GcsReadObject,
-    GcsRetryPolicy, StoreError,
+    GcsCreateRequest, GcsCreatedObject, GcsEvidenceStore, GcsObjectClient, GcsObjectIdentity,
+    GcsReadObject, GcsRetryPolicy, StoreError,
 };
 use async_trait::async_trait;
 
@@ -67,6 +67,19 @@ impl GcsObjectClient for FakeGcsClient {
             );
         }
         result
+    }
+
+    async fn inspect_object(
+        &self,
+        _bucket: &str,
+        name: &str,
+    ) -> Result<GcsObjectIdentity, GcsClientError> {
+        let state = self.state.lock().expect("fake state");
+        let object = state.objects.get(name).ok_or(GcsClientError::Fatal)?;
+        Ok(GcsObjectIdentity::new(
+            object.metadata().clone(),
+            object.generation(),
+        ))
     }
 
     async fn read_object(
@@ -180,12 +193,39 @@ async fn precondition_failure_is_idempotent_only_when_stored_bytes_match() {
 }
 
 #[tokio::test]
+async fn create_only_replay_preserves_backend_generation() {
+    let client = FakeGcsClient::with_create_results([
+        Ok(GcsCreatedObject::new("backend-generation-1")),
+        Err(GcsClientError::PreconditionFailed),
+    ]);
+    let store = gcs_store(client);
+
+    let first = store
+        .create_only(&context(), b"same immutable evidence")
+        .await
+        .expect("first create");
+    let replay = store
+        .create_only(&context(), b"same immutable evidence")
+        .await
+        .expect("idempotent create-only replay");
+
+    assert_eq!(CreateDisposition::Created, first.disposition);
+    assert_eq!(CreateDisposition::AlreadyPresent, replay.disposition);
+    assert_eq!(first.object, replay.object);
+    assert_eq!(
+        replay.generation,
+        Some("backend-generation-1".to_owned()),
+        "collector replay must stage the real backend generation or verification rejects it"
+    );
+}
+
+#[tokio::test]
 async fn precondition_failure_rejects_different_provenance_metadata() {
     let client = FakeGcsClient::with_create_results([
         Ok(GcsCreatedObject::new("1")),
         Err(GcsClientError::PreconditionFailed),
     ]);
-    let store = gcs_store(client);
+    let store = gcs_store(client.clone());
     let payload = b"same immutable evidence";
 
     store
@@ -193,7 +233,7 @@ async fn precondition_failure_rejects_different_provenance_metadata() {
         .await
         .expect("first create");
     let error = store
-        .create(
+        .create_only(
             &context_with_observation("alchemy:base:block:42:attempt:2"),
             payload,
         )
@@ -201,6 +241,24 @@ async fn precondition_failure_rejects_different_provenance_metadata() {
         .expect_err("different provenance must not be reported as idempotent");
 
     assert!(matches!(error, StoreError::MetadataMismatch { .. }));
+    assert_eq!(
+        0,
+        client.state.lock().expect("fake state").reads,
+        "create-only replay must not download the object body"
+    );
+}
+
+#[tokio::test]
+async fn create_only_replay_fails_when_identity_lookup_finds_no_object() {
+    let client = FakeGcsClient::with_create_results([Err(GcsClientError::PreconditionFailed)]);
+    let store = gcs_store(client);
+
+    let error = store
+        .create_only(&context(), b"missing immutable evidence")
+        .await
+        .expect_err("a precondition error without an existing identity is not idempotent");
+
+    assert!(matches!(error, StoreError::Remote));
 }
 
 #[tokio::test]

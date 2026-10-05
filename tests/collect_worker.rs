@@ -6,7 +6,7 @@ use std::{
 
 use agent_economy_evidence_store::{
     EvidenceObject, EvidenceStore, FilesystemEvidenceStore, GcsClientError, GcsCreateRequest,
-    GcsEvidenceStore, GcsObjectClient, GcsReadObject, GcsRetryPolicy,
+    GcsEvidenceStore, GcsObjectClient, GcsObjectIdentity, GcsReadObject, GcsRetryPolicy,
 };
 use agent_economy_monitor::{
     collect::{
@@ -57,6 +57,19 @@ impl GcsObjectClient for RecordingGcsClient {
         );
         self.requests.lock().unwrap().push(request);
         Ok(agent_economy_evidence_store::GcsCreatedObject::new("1"))
+    }
+
+    async fn inspect_object(
+        &self,
+        _bucket: &str,
+        name: &str,
+    ) -> Result<GcsObjectIdentity, GcsClientError> {
+        let objects = self.objects.lock().unwrap();
+        let object = objects.get(name).ok_or(GcsClientError::Fatal)?;
+        Ok(GcsObjectIdentity::new(
+            object.metadata().clone(),
+            object.generation(),
+        ))
     }
 
     async fn read_object(

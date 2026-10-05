@@ -18,8 +18,13 @@ use cap_std::{
     ambient_authority,
     fs::{Dir, OpenOptions},
 };
-use google_cloud_gax::{error::rpc::Code, retry_policy::NeverRetry};
-use google_cloud_storage::{client::Storage, read_resume_policy::NeverResume};
+use google_cloud_gax::{
+    error::rpc::Code, options::RequestOptionsBuilder, retry_policy::NeverRetry,
+};
+use google_cloud_storage::{
+    client::{Storage, StorageControl},
+    read_resume_policy::NeverResume,
+};
 use sha2::{Digest, Sha256};
 
 static TEMP_FILE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -416,6 +421,29 @@ impl GcsCreatedObject {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GcsObjectIdentity {
+    metadata: BTreeMap<String, String>,
+    generation: String,
+}
+
+impl GcsObjectIdentity {
+    pub fn new(metadata: BTreeMap<String, String>, generation: impl Into<String>) -> Self {
+        Self {
+            metadata,
+            generation: generation.into(),
+        }
+    }
+
+    pub fn metadata(&self) -> &BTreeMap<String, String> {
+        &self.metadata
+    }
+
+    pub fn generation(&self) -> &str {
+        &self.generation
+    }
+}
+
 #[async_trait]
 pub trait GcsObjectClient: Send + Sync {
     async fn create_object(
@@ -423,12 +451,20 @@ pub trait GcsObjectClient: Send + Sync {
         request: GcsCreateRequest,
     ) -> Result<GcsCreatedObject, GcsClientError>;
 
+    /// Look up immutable object identity without downloading its body.
+    async fn inspect_object(
+        &self,
+        bucket: &str,
+        name: &str,
+    ) -> Result<GcsObjectIdentity, GcsClientError>;
+
     async fn read_object(&self, bucket: &str, name: &str) -> Result<GcsReadObject, GcsClientError>;
 }
 
 #[derive(Clone)]
 pub struct GoogleCloudStorageClient {
     client: Storage,
+    control: StorageControl,
 }
 
 impl GoogleCloudStorageClient {
@@ -437,7 +473,11 @@ impl GoogleCloudStorageClient {
             .build()
             .await
             .map_err(|_| StoreError::Authentication)?;
-        Ok(Self { client })
+        let control = StorageControl::builder()
+            .build()
+            .await
+            .map_err(|_| StoreError::Authentication)?;
+        Ok(Self { client, control })
     }
 }
 
@@ -464,6 +504,33 @@ impl GcsObjectClient for GoogleCloudStorageClient {
             .await
             .map(|object| GcsCreatedObject::new(object.generation.to_string()))
             .map_err(classify_gcs_error)
+    }
+
+    async fn inspect_object(
+        &self,
+        bucket: &str,
+        name: &str,
+    ) -> Result<GcsObjectIdentity, GcsClientError> {
+        let response = self
+            .control
+            .list_objects()
+            .set_parent(bucket_resource(bucket))
+            .set_prefix(name)
+            .set_page_size(1)
+            .with_retry_policy(NeverRetry)
+            .send()
+            .await
+            .map_err(classify_gcs_error)?;
+        let object = response
+            .objects
+            .into_iter()
+            .next()
+            .filter(|object| object.name == name)
+            .ok_or(GcsClientError::Fatal)?;
+        Ok(GcsObjectIdentity::new(
+            object.metadata.into_iter().collect(),
+            object.generation.to_string(),
+        ))
     }
 
     async fn read_object(&self, bucket: &str, name: &str) -> Result<GcsReadObject, GcsClientError> {
@@ -633,7 +700,20 @@ impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
                     );
                 }
                 Err(GcsClientError::PreconditionFailed) => {
-                    break (CreateDisposition::AlreadyPresent, None);
+                    let identity = self
+                        .client
+                        .inspect_object(&self.bucket, object.name())
+                        .await
+                        .map_err(|_| StoreError::Remote)?;
+                    if identity.metadata() != request.metadata() {
+                        return Err(StoreError::MetadataMismatch {
+                            object: object.name.clone(),
+                        });
+                    }
+                    break (
+                        CreateDisposition::AlreadyPresent,
+                        Some(identity.generation().to_owned()),
+                    );
                 }
                 Err(GcsClientError::Retryable) if attempts < self.retry.max_attempts => {
                     self.retry.delay(attempts).await;

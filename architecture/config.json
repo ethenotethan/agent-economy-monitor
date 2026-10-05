@@ -63,7 +63,7 @@
       ]
     },
     {
-      "description": "Namespace-bound leased collector that acquires bounded RPC inputs, creates immutable evidence objects, and stages a noncanonical manifest without evidence-read or canonical-promotion authority.",
+      "description": "Namespace-bound leased collector that acquires bounded RPC inputs, creates immutable evidence objects, recovers backend generation through metadata-only exact-name listing, and stages a noncanonical manifest without object-body read or canonical-promotion authority.",
       "id": "collect-worker",
       "label": "Create-only evidence collection worker",
       "layer": "evidence",
