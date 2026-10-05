@@ -17,6 +17,7 @@ done
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --test collect_worker_postgres -- --nocapture
+cargo test --test reduce_worker_postgres -- --nocapture
 cargo test --workspace --all-targets --all-features
 
 if git grep -nE '(ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|/v2/[A-Za-z0-9_-]{24,})' -- ':!Cargo.lock'; then

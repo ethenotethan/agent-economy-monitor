@@ -51,6 +51,14 @@ empty queues, handler failures, and stale result commits all exit non-zero. Unti
 handler is explicitly registered, its process mode is intentionally unavailable rather
 than reporting synthetic success.
 
+The reduce runtime authenticates with a dedicated PostgreSQL login whose namespace is bound
+server-side. It can claim, renew, fail, and complete only reducer leases and can load inputs or
+commit outputs only through lease-token-checked `SECURITY DEFINER` functions. The atomic reduction
+commit proves exact coverage of immutable observations before appending canonical event links,
+finality assertions, settlement attribution state, an immutable range receipt, and the next-height
+checkpoint. The login has no direct table mutation authority, so crash-before-commit and stale-lease
+retries cannot expose partial canonical state.
+
 ## Storage authority
 
 - Google Cloud Storage: content-addressed raw evidence, approved wiki projection bundles, and the durable replay source

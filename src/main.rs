@@ -16,6 +16,7 @@ use agent_economy_monitor::{
     },
     projection_runtime::{ProjectionRuntimeConfig, run_projection_once},
     query::{PostgresQueryStore, api_router},
+    reduce::{PostgresReductionStore, ReductionHandler},
     verify_evidence::{CollectionEvidenceReader, PostgresEvidenceVerifier},
     worker::{WorkerDispatchError, WorkerDispatcher, WorkerMode},
 };
@@ -118,7 +119,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             reject_mixed_worker_authority("verify-evidence")?;
             run_verify_evidence_once().await
         }
-        Some(command @ ("reduce" | "classify" | "enrich")) => {
+        Some("reduce") => {
+            reject_mixed_worker_authority("reduce")?;
+            run_reduce_once().await
+        }
+        Some(command @ ("classify" | "enrich")) => {
             let mode = WorkerMode::parse(command)?;
             Err(io::Error::new(
                 io::ErrorKind::Unsupported,
@@ -165,6 +170,10 @@ fn reject_mixed_worker_authority(mode: &str) -> Result<(), io::Error> {
         "verify-evidence" => collector_authority
             .iter()
             .any(|name| env::var_os(name).is_some()),
+        "reduce" => collector_authority
+            .iter()
+            .chain(verifier_authority.iter())
+            .any(|name| env::var_os(name).is_some()),
         _ => false,
     };
     if mixed {
@@ -173,6 +182,55 @@ fn reject_mixed_worker_authority(mode: &str) -> Result<(), io::Error> {
             "mixed collection and verification authority is forbidden",
         ));
     }
+    Ok(())
+}
+
+async fn run_reduce_once() -> Result<(), Box<dyn std::error::Error>> {
+    let database_url = env::var("REDUCER_DATABASE_URL").map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "missing reducer configuration: REDUCER_DATABASE_URL",
+        )
+    })?;
+    let lease_owner = env::var("REDUCE_LEASE_OWNER")
+        .unwrap_or_else(|_| format!("agent-economy-reducer:{}", std::process::id()));
+    let (client, connection) = tokio_postgres::connect(&database_url, NoTls).await?;
+    tokio::spawn(async move {
+        if connection.await.is_err() {
+            tracing::error!("PostgreSQL reducer connection closed unexpectedly");
+        }
+    });
+    let session_user = client
+        .query_one("SELECT session_user", &[])
+        .await?
+        .get::<_, String>(0);
+    if session_user != "agent_economy_reducer_runtime" {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "REDUCER_DATABASE_URL must authenticate as agent_economy_reducer_runtime",
+        )
+        .into());
+    }
+    client
+        .query_one("SELECT agent_economy.bound_reducer_namespace()", &[])
+        .await
+        .map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "unsafe reducer database authority",
+            )
+        })?;
+    let store = Arc::new(PostgresReductionStore::new(client));
+    let handler = Arc::new(ReductionHandler::new(store.clone(), store.clone()));
+    let completed = WorkerDispatcher::new(store)
+        .register(WorkerMode::Reduce, handler)
+        .run_once(WorkerMode::Reduce, &lease_owner)
+        .await?;
+    info!(
+        job_id = %completed.job_id,
+        output_sha256 = %completed.output_sha256,
+        "reduction job completed"
+    );
     Ok(())
 }
 
