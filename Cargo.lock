@@ -43,6 +43,7 @@ dependencies = [
 name = "agent-economy-evidence-store"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "bytes",
  "cap-fs-ext",
  "cap-primitives",
@@ -62,6 +63,10 @@ version = "0.1.0"
 dependencies = [
  "agent-economy-adapter-api",
  "agent-economy-contracts",
+ "agent-economy-evidence-store",
+ "agent-economy-mpp-adapter",
+ "agent-economy-rpc-collector",
+ "agent-economy-x402-adapter",
  "argon2",
  "async-trait",
  "axum",

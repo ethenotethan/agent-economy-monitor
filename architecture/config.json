@@ -63,6 +63,27 @@
       ]
     },
     {
+      "description": "Namespace-bound leased collector that acquires bounded RPC inputs, creates immutable evidence objects, recovers backend generation through metadata-only exact-name listing, and stages a noncanonical manifest without object-body read or canonical-promotion authority.",
+      "id": "collect-worker",
+      "label": "Create-only evidence collection worker",
+      "layer": "evidence",
+      "patterns": [
+        "src/collect.rs",
+        "migrations/0013_collect_worker.*.sql"
+      ]
+    },
+    {
+      "description": "Separately authenticated read-only evidence verifier and collection-custody schema that re-reads immutable objects before atomically promoting complete batches, observations, receipts, and cursors.",
+      "id": "evidence-verifier",
+      "label": "Independent evidence verifier",
+      "layer": "evidence",
+      "patterns": [
+        "src/verify_evidence.rs",
+        "migrations/0014_collection_custody_split.*.sql",
+        "migrations/0015_collection_runtime_boundary.*.sql"
+      ]
+    },
+    {
       "description": "Namespace-scoped PostgreSQL session hashes and atomic shared-password login admission state.",
       "id": "cockpit-auth-schema",
       "label": "Cockpit authentication state",
@@ -265,7 +286,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients, production registrations for domain worker handlers, and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, evidence-first leased collect worker, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients, production registrations for reduce, classify, and enrich handlers, and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -314,10 +335,12 @@
       "page": "evidence",
       "steps": [
         {"from": "external:rpc-provider", "relation": "observes", "to": "collector"},
-        {"from": "collector", "relation": "archives", "to": "store:evidence"},
-        {"from": "collector", "relation": "enqueues", "to": "store:postgresql"},
-        {"from": "store:postgresql", "relation": "leases", "to": "protocol-adapters"},
-        {"from": "store:evidence", "relation": "supplies", "to": "protocol-adapters"},
+        {"from": "collector", "relation": "archives-create-only", "to": "store:evidence"},
+        {"from": "collector", "relation": "stages-pending", "to": "store:postgresql"},
+        {"from": "store:postgresql", "relation": "leases-pending", "to": "evidence-verifier"},
+        {"from": "store:evidence", "relation": "supplies-read-only", "to": "evidence-verifier"},
+        {"from": "evidence-verifier", "relation": "invokes", "to": "protocol-adapters"},
+        {"from": "evidence-verifier", "relation": "promotes-complete-batch", "to": "store:postgresql"},
         {"from": "protocol-adapters", "relation": "emits-observations", "to": "reducers"},
         {"from": "reducers", "relation": "writes-events", "to": "store:postgresql"},
         {"from": "reducers", "relation": "feeds", "to": "attribution"},
@@ -398,10 +421,15 @@
     {"class": "boundary", "relation": "seeds", "source": "external:x402scan", "target": "collector"},
     {"class": "boundary", "relation": "seeds", "source": "external:agentcash", "target": "collector"},
     {"class": "boundary", "relation": "discovers", "source": "external:web-discovery", "target": "collector"},
-    {"class": "lifecycle", "relation": "archives", "source": "collector", "target": "store:evidence"},
-    {"class": "lifecycle", "relation": "enqueues", "source": "collector", "target": "store:postgresql"},
-    {"class": "interplay", "relation": "leases", "source": "store:postgresql", "target": "protocol-adapters"},
-    {"class": "interplay", "relation": "supplies", "source": "store:evidence", "target": "protocol-adapters"},
+    {"class": "lifecycle", "relation": "archives-create-only", "source": "collector", "target": "store:evidence"},
+    {"class": "lifecycle", "relation": "stages-pending", "source": "collector", "target": "store:postgresql"},
+    {"class": "interplay", "relation": "leases", "source": "store:postgresql", "target": "collect-worker"},
+    {"class": "lifecycle", "relation": "archives-create-only", "source": "collect-worker", "target": "store:evidence"},
+    {"class": "lifecycle", "relation": "stages-pending", "source": "collect-worker", "target": "store:postgresql"},
+    {"class": "interplay", "relation": "leases-pending", "source": "store:postgresql", "target": "evidence-verifier"},
+    {"class": "interplay", "relation": "supplies-read-only", "source": "store:evidence", "target": "evidence-verifier"},
+    {"class": "interplay", "relation": "invokes", "source": "evidence-verifier", "target": "protocol-adapters"},
+    {"class": "lifecycle", "relation": "promotes-complete-batch", "source": "evidence-verifier", "target": "store:postgresql"},
     {"class": "interplay", "relation": "emits-observations", "source": "protocol-adapters", "target": "reducers"},
     {"class": "lifecycle", "relation": "writes-events", "source": "reducers", "target": "store:postgresql"},
     {"class": "interplay", "relation": "feeds", "source": "reducers", "target": "attribution"},
@@ -429,6 +457,8 @@
     {"class": "interplay", "relation": "invokes", "source": "cloud-scheduler", "target": "cloud-run-jobs"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-api", "target": "query-api"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "collector"},
+    {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "collect-worker"},
+    {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "evidence-verifier"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "reducers"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "attribution"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "classification"},
@@ -525,6 +555,8 @@
   ],
   "nodes": [
     {"authority": "specified", "component": "rpc-collector", "id": "collector", "kind": "worker", "label": "External RPC collector", "origin": {"path": "crates/rpc-collector/src/lib.rs", "search": "pub struct Collector"}, "page": "evidence"},
+    {"authority": "specified", "component": "collect-worker", "id": "collect-worker", "kind": "worker", "label": "Create-only evidence collection worker", "origin": {"path": "src/collect.rs", "search": "pub struct CollectionHandler"}, "page": "evidence"},
+    {"authority": "specified", "component": "evidence-verifier", "id": "evidence-verifier", "kind": "worker", "label": "Independent read-only evidence verifier", "origin": {"path": "src/verify_evidence.rs", "search": "pub struct PostgresEvidenceVerifier"}, "page": "evidence"},
     {"authority": "specified", "component": "observation-contracts", "id": "observation-contract", "kind": "contract", "label": "Immutable observation contract", "origin": {"path": "crates/contracts/src/lib.rs", "search": "pub struct Observation {"}, "page": "evidence"},
     {"authority": "specified", "component": "adapter-api", "id": "adapter-boundary", "kind": "boundary", "label": "Observation-only adapter API", "origin": {"path": "crates/adapter-api/src/lib.rs", "search": "pub trait ProtocolAdapter"}, "page": "evidence"},
     {"authority": "specified", "component": "evidence-store", "id": "filesystem-evidence-store", "kind": "adapter", "label": "Content-addressed filesystem evidence store", "origin": {"path": "crates/evidence-store/src/lib.rs", "search": "pub struct FilesystemEvidenceStore"}, "page": "evidence"},
@@ -587,7 +619,7 @@
   ],
   "pages": [
     {"components": ["runtime"], "id": "experience", "label": "Private cockpit", "roots": ["cockpit"]},
-    {"components": ["architecture-policy", "observation-contracts", "adapter-api", "evidence-store", "mpp-adapter", "rpc-collector", "x402-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "observation-contract", "adapter-boundary", "filesystem-evidence-store", "gcs-evidence-store", "mpp-discovery-adapter", "protocol-adapters"]},
+    {"components": ["architecture-policy", "collect-worker", "evidence-verifier", "observation-contracts", "adapter-api", "evidence-store", "mpp-adapter", "rpc-collector", "x402-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "collect-worker", "evidence-verifier", "observation-contract", "adapter-boundary", "filesystem-evidence-store", "gcs-evidence-store", "mpp-discovery-adapter", "protocol-adapters"]},
     {"components": ["architecture-policy", "attribution-engine", "buyer-classification", "buyer-enrichment-schema", "cockpit-auth-schema", "deterministic-reducer", "knowledge-graph-schema", "operational-analytics-schema", "query-read-models", "shadow-catalog-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "attribution", "classification", "buyer-classification-schema", "buyer-enrichment-schema", "canonical-knowledge-schema", "cockpit-auth-state", "dashboard-read-models", "operational-analytics-schema", "shadow-catalog"]},
     {"components": ["architecture-policy", "semantic-projection"], "id": "projection", "label": "Semantic projection", "roots": ["evidence-snapshot"]},
     {"components": ["runtime", "development-stack"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service", "query-api", "local-development-stack"]}

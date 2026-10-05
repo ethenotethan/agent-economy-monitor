@@ -92,6 +92,7 @@ fn leased_job(mode: WorkerMode) -> LeasedJob {
         attempt: 1,
         lease_owner: String::new(),
         lease_token: "00000000-0000-0000-0000-000000000147".into(),
+        collection_admission: None,
     }
 }
 

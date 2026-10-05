@@ -46,11 +46,14 @@ identical writes are idempotent, and every replay verifies the digest before ret
 bytes. Production uses the same object names and semantics with Google Cloud Storage.
 
 The production adapter obtains credentials exclusively through Google Application Default
-Credentials. On Cloud Run, bind a dedicated workload identity with
-`roles/storage.objectCreator` and `roles/storage.objectViewer` on the evidence bucket; do
-not mount or embed a service-account key. Configure the bucket name outside the evidence
-payload, construct `GoogleCloudStorageClient::from_application_default_credentials()`, and
-use `GcsEvidenceStore` with a bounded retry policy. Every upload carries
+Credentials. On Cloud Run, bind separate workload identities: the collector gets a custom
+role containing only `storage.objects.create` and `storage.objects.list` so an idempotent
+create-only replay can recover the provider generation without downloading object bytes,
+while the verifier gets `roles/storage.objectViewer`. Do not grant the collector
+`storage.objects.get`, and do not mount or embed a service-account key. Configure the bucket
+name outside the evidence payload, construct
+`GoogleCloudStorageClient::from_application_default_credentials()`, and use
+`GcsEvidenceStore` with a bounded retry policy. Every upload carries
 `ifGenerationMatch=0` plus deterministic source, parser-version, observation-identity,
 replay-input, and SHA-256 metadata; neither payload bytes nor credentials enter metadata
 or error text.
@@ -67,6 +70,29 @@ commits an exact output digest under its live lease token, and exits non-zero fo
 queue, unknown mode, failed handler, or mode without a registered production handler.
 Expired leases are safely reassigned, while retries, poison jobs, and cancellation remain
 bounded and deterministic.
+
+The `collect` handler consumes a bounded JSON request named `<input_sha256>.json` beneath
+`COLLECTION_INPUT_ROOT`, but the leased job row is the immutable authority for chain, source,
+inclusive height range, RPC acquisition contract, and evidence-verification contract. The
+handler rejects any request that diverges from those admitted coordinates. It acquires every
+height through the configured Alchemy RPC transport and writes each exact encoded RPC response
+through the create-only evidence adapter. The collector then stages only immutable object
+identity, digest, size, media type, and height; it has no evidence-read authority and cannot
+advance canonical cursors or write observations.
+
+Run one leased collection job with `COLLECTOR_DATABASE_URL`, `COLLECTION_INPUT_ROOT`, and exactly
+one create-only evidence backend set, then execute `cargo run -- collect`: use
+`EVIDENCE_CREATE_GCS_BUCKET` for the production GCS writer with Application Default Credentials,
+or `EVIDENCE_CREATE_ROOT` for the local filesystem writer. Namespace scope is bound server-side
+to the authenticated collector login; no caller-supplied namespace environment variable is used.
+
+Run the separate verifier with `EVIDENCE_VERIFIER_DATABASE_URL` and exactly one read-only backend
+(`EVIDENCE_READ_GCS_BUCKET` or `EVIDENCE_READ_ROOT`), then execute
+`cargo run -- verify-evidence`. That runtime re-reads every staged object, verifies path, digest,
+size, and (where supplied by the backend) generation, parses protocol observations from those
+verified bytes, recomputes the ordered evidence manifest, and atomically promotes the batch plus
+cursor. Collector and verifier database/evidence authority variables are mutually exclusive in
+each process; a mixed-authority process fails before connecting or opening a backend.
 
 ```bash
 python3 -m pip install --requirement requirements-dev.txt

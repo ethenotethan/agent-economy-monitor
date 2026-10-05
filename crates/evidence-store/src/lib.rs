@@ -11,14 +11,20 @@ use std::{
     time::Duration,
 };
 
+use async_trait::async_trait;
 use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt};
 use cap_primitives::fs::open_dir_nofollow;
 use cap_std::{
     ambient_authority,
     fs::{Dir, OpenOptions},
 };
-use google_cloud_gax::{error::rpc::Code, retry_policy::NeverRetry};
-use google_cloud_storage::{client::Storage, read_resume_policy::NeverResume};
+use google_cloud_gax::{
+    error::rpc::Code, options::RequestOptionsBuilder, retry_policy::NeverRetry,
+};
+use google_cloud_storage::{
+    client::{Storage, StorageControl},
+    read_resume_policy::NeverResume,
+};
 use sha2::{Digest, Sha256};
 
 static TEMP_FILE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -78,7 +84,7 @@ impl EvidenceProvenance {
             .into_iter()
             .map(|(key, value)| (key.into(), value.into()))
             .collect::<BTreeMap<_, _>>();
-        if !valid_rpc_replay_inputs(&replay_inputs) {
+        if !valid_replay_inputs(&replay_inputs) {
             return Err(StoreError::InvalidContext("replay_inputs"));
         }
         Ok(Self {
@@ -153,10 +159,24 @@ pub enum CreateDisposition {
 pub struct CreateReceipt {
     pub object: EvidenceObject,
     pub disposition: CreateDisposition,
+    pub generation: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ReadReceipt {
+    pub bytes: Vec<u8>,
+    pub generation: Option<String>,
 }
 
 #[allow(async_fn_in_trait)]
 pub trait EvidenceStore {
+    /// Publish by content address without exercising read authority.
+    async fn create_only(
+        &self,
+        context: &EvidenceContext,
+        evidence: &[u8],
+    ) -> Result<CreateReceipt, StoreError>;
+
     async fn create(
         &self,
         context: &EvidenceContext,
@@ -164,6 +184,8 @@ pub trait EvidenceStore {
     ) -> Result<CreateReceipt, StoreError>;
 
     async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError>;
+
+    async fn read_with_identity(&self, object: &EvidenceObject) -> Result<ReadReceipt, StoreError>;
 }
 
 #[derive(Clone, Debug)]
@@ -244,7 +266,7 @@ impl FilesystemEvidenceStore {
 }
 
 impl EvidenceStore for FilesystemEvidenceStore {
-    async fn create(
+    async fn create_only(
         &self,
         context: &EvidenceContext,
         evidence: &[u8],
@@ -270,7 +292,6 @@ impl EvidenceStore for FilesystemEvidenceStore {
                 CreateDisposition::Created
             }
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-                self.read_verified(&object)?;
                 CreateDisposition::AlreadyPresent
             }
             Err(error) => {
@@ -284,11 +305,31 @@ impl EvidenceStore for FilesystemEvidenceStore {
         Ok(CreateReceipt {
             object,
             disposition,
+            generation: None,
         })
+    }
+
+    async fn create(
+        &self,
+        context: &EvidenceContext,
+        evidence: &[u8],
+    ) -> Result<CreateReceipt, StoreError> {
+        let receipt = self.create_only(context, evidence).await?;
+        if receipt.disposition == CreateDisposition::AlreadyPresent {
+            self.read_verified(&receipt.object)?;
+        }
+        Ok(receipt)
     }
 
     async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError> {
         self.read_verified(object)
+    }
+
+    async fn read_with_identity(&self, object: &EvidenceObject) -> Result<ReadReceipt, StoreError> {
+        Ok(ReadReceipt {
+            bytes: self.read_verified(object)?,
+            generation: None,
+        })
     }
 }
 
@@ -334,11 +375,20 @@ pub enum GcsClientError {
 pub struct GcsReadObject {
     bytes: Vec<u8>,
     metadata: BTreeMap<String, String>,
+    generation: String,
 }
 
 impl GcsReadObject {
-    pub fn new(bytes: Vec<u8>, metadata: BTreeMap<String, String>) -> Self {
-        Self { bytes, metadata }
+    pub fn new(
+        bytes: Vec<u8>,
+        metadata: BTreeMap<String, String>,
+        generation: impl Into<String>,
+    ) -> Self {
+        Self {
+            bytes,
+            metadata,
+            generation: generation.into(),
+        }
     }
 
     pub fn bytes(&self) -> &[u8] {
@@ -348,11 +398,65 @@ impl GcsReadObject {
     pub fn metadata(&self) -> &BTreeMap<String, String> {
         &self.metadata
     }
+
+    pub fn generation(&self) -> &str {
+        &self.generation
+    }
 }
 
-#[allow(async_fn_in_trait)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GcsCreatedObject {
+    generation: String,
+}
+
+impl GcsCreatedObject {
+    pub fn new(generation: impl Into<String>) -> Self {
+        Self {
+            generation: generation.into(),
+        }
+    }
+
+    pub fn generation(&self) -> &str {
+        &self.generation
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GcsObjectIdentity {
+    metadata: BTreeMap<String, String>,
+    generation: String,
+}
+
+impl GcsObjectIdentity {
+    pub fn new(metadata: BTreeMap<String, String>, generation: impl Into<String>) -> Self {
+        Self {
+            metadata,
+            generation: generation.into(),
+        }
+    }
+
+    pub fn metadata(&self) -> &BTreeMap<String, String> {
+        &self.metadata
+    }
+
+    pub fn generation(&self) -> &str {
+        &self.generation
+    }
+}
+
+#[async_trait]
 pub trait GcsObjectClient: Send + Sync {
-    async fn create_object(&self, request: GcsCreateRequest) -> Result<(), GcsClientError>;
+    async fn create_object(
+        &self,
+        request: GcsCreateRequest,
+    ) -> Result<GcsCreatedObject, GcsClientError>;
+
+    /// Look up immutable object identity without downloading its body.
+    async fn inspect_object(
+        &self,
+        bucket: &str,
+        name: &str,
+    ) -> Result<GcsObjectIdentity, GcsClientError>;
 
     async fn read_object(&self, bucket: &str, name: &str) -> Result<GcsReadObject, GcsClientError>;
 }
@@ -360,6 +464,7 @@ pub trait GcsObjectClient: Send + Sync {
 #[derive(Clone)]
 pub struct GoogleCloudStorageClient {
     client: Storage,
+    control: StorageControl,
 }
 
 impl GoogleCloudStorageClient {
@@ -368,12 +473,20 @@ impl GoogleCloudStorageClient {
             .build()
             .await
             .map_err(|_| StoreError::Authentication)?;
-        Ok(Self { client })
+        let control = StorageControl::builder()
+            .build()
+            .await
+            .map_err(|_| StoreError::Authentication)?;
+        Ok(Self { client, control })
     }
 }
 
+#[async_trait]
 impl GcsObjectClient for GoogleCloudStorageClient {
-    async fn create_object(&self, request: GcsCreateRequest) -> Result<(), GcsClientError> {
+    async fn create_object(
+        &self,
+        request: GcsCreateRequest,
+    ) -> Result<GcsCreatedObject, GcsClientError> {
         self.client
             .write_object(
                 bucket_resource(&request.bucket),
@@ -389,8 +502,35 @@ impl GcsObjectClient for GoogleCloudStorageClient {
             .with_retry_policy(NeverRetry)
             .send_buffered()
             .await
-            .map(|_| ())
+            .map(|object| GcsCreatedObject::new(object.generation.to_string()))
             .map_err(classify_gcs_error)
+    }
+
+    async fn inspect_object(
+        &self,
+        bucket: &str,
+        name: &str,
+    ) -> Result<GcsObjectIdentity, GcsClientError> {
+        let response = self
+            .control
+            .list_objects()
+            .set_parent(bucket_resource(bucket))
+            .set_prefix(name)
+            .set_page_size(1)
+            .with_retry_policy(NeverRetry)
+            .send()
+            .await
+            .map_err(classify_gcs_error)?;
+        let object = response
+            .objects
+            .into_iter()
+            .next()
+            .filter(|object| object.name == name)
+            .ok_or(GcsClientError::Fatal)?;
+        Ok(GcsObjectIdentity::new(
+            object.metadata.into_iter().collect(),
+            object.generation.to_string(),
+        ))
     }
 
     async fn read_object(&self, bucket: &str, name: &str) -> Result<GcsReadObject, GcsClientError> {
@@ -402,7 +542,8 @@ impl GcsObjectClient for GoogleCloudStorageClient {
             .send()
             .await
             .map_err(classify_gcs_error)?;
-        let metadata = reader.object().metadata.into_iter().collect();
+        let metadata = reader.object().metadata.clone().into_iter().collect();
+        let generation = reader.object().generation.to_string();
         let mut bytes = Vec::new();
         while let Some(chunk) = reader
             .next()
@@ -412,7 +553,11 @@ impl GcsObjectClient for GoogleCloudStorageClient {
         {
             bytes.extend_from_slice(&chunk);
         }
-        Ok(GcsReadObject { bytes, metadata })
+        Ok(GcsReadObject {
+            bytes,
+            metadata,
+            generation,
+        })
     }
 }
 
@@ -470,11 +615,40 @@ impl<C> GcsEvidenceStore<C> {
 }
 
 impl<C: GcsObjectClient> GcsEvidenceStore<C> {
+    fn metadata_for(
+        context: &EvidenceContext,
+        object: &EvidenceObject,
+    ) -> Result<BTreeMap<String, String>, StoreError> {
+        let provenance = context
+            .provenance
+            .as_ref()
+            .ok_or(StoreError::MissingProvenance)?;
+        let replay_inputs = serde_json::to_string(&provenance.replay_inputs)
+            .map_err(|_| StoreError::InvalidContext("replay_inputs"))?;
+        Ok(BTreeMap::from([
+            (
+                "evidence-observation-id".to_owned(),
+                provenance.observation_id.clone(),
+            ),
+            (
+                "evidence-observed-date".to_owned(),
+                context.observed_date.clone(),
+            ),
+            (
+                "evidence-parser-version".to_owned(),
+                provenance.parser_version.clone(),
+            ),
+            ("evidence-replay-inputs".to_owned(), replay_inputs),
+            ("evidence-sha256".to_owned(), object.sha256()),
+            ("evidence-source".to_owned(), context.source.clone()),
+        ]))
+    }
+
     async fn read_verified(
         &self,
         object: &EvidenceObject,
         expected_metadata: Option<&BTreeMap<String, String>>,
-    ) -> Result<Vec<u8>, StoreError> {
+    ) -> Result<ReadReceipt, StoreError> {
         let mut attempts = 0_u8;
         let response = loop {
             attempts += 1;
@@ -492,40 +666,21 @@ impl<C: GcsObjectClient> GcsEvidenceStore<C> {
                 object: object.name.clone(),
             });
         }
-        Ok(bytes)
+        Ok(ReadReceipt {
+            bytes,
+            generation: Some(response.generation),
+        })
     }
 }
 
 impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
-    async fn create(
+    async fn create_only(
         &self,
         context: &EvidenceContext,
         evidence: &[u8],
     ) -> Result<CreateReceipt, StoreError> {
-        let provenance = context
-            .provenance
-            .as_ref()
-            .ok_or(StoreError::MissingProvenance)?;
         let object = EvidenceObject::for_bytes(context, evidence);
-        let replay_inputs = serde_json::to_string(&provenance.replay_inputs)
-            .map_err(|_| StoreError::InvalidContext("replay_inputs"))?;
-        let metadata = BTreeMap::from([
-            (
-                "evidence-observation-id".to_owned(),
-                provenance.observation_id.clone(),
-            ),
-            (
-                "evidence-observed-date".to_owned(),
-                context.observed_date.clone(),
-            ),
-            (
-                "evidence-parser-version".to_owned(),
-                provenance.parser_version.clone(),
-            ),
-            ("evidence-replay-inputs".to_owned(), replay_inputs),
-            ("evidence-sha256".to_owned(), object.sha256()),
-            ("evidence-source".to_owned(), context.source.clone()),
-        ]);
+        let metadata = Self::metadata_for(context, &object)?;
         let request = GcsCreateRequest {
             bucket: self.bucket.clone(),
             name: object.name().to_owned(),
@@ -535,14 +690,30 @@ impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
         };
 
         let mut attempts = 0_u8;
-        let disposition = loop {
+        let (disposition, generation) = loop {
             attempts += 1;
             match self.client.create_object(request.clone()).await {
-                Ok(()) => break CreateDisposition::Created,
+                Ok(created) => {
+                    break (
+                        CreateDisposition::Created,
+                        Some(created.generation().to_owned()),
+                    );
+                }
                 Err(GcsClientError::PreconditionFailed) => {
-                    self.read_verified(&object, Some(request.metadata()))
-                        .await?;
-                    break CreateDisposition::AlreadyPresent;
+                    let identity = self
+                        .client
+                        .inspect_object(&self.bucket, object.name())
+                        .await
+                        .map_err(|_| StoreError::Remote)?;
+                    if identity.metadata() != request.metadata() {
+                        return Err(StoreError::MetadataMismatch {
+                            object: object.name.clone(),
+                        });
+                    }
+                    break (
+                        CreateDisposition::AlreadyPresent,
+                        Some(identity.generation().to_owned()),
+                    );
                 }
                 Err(GcsClientError::Retryable) if attempts < self.retry.max_attempts => {
                     self.retry.delay(attempts).await;
@@ -553,10 +724,28 @@ impl<C: GcsObjectClient> EvidenceStore for GcsEvidenceStore<C> {
         Ok(CreateReceipt {
             object,
             disposition,
+            generation,
         })
     }
 
+    async fn create(
+        &self,
+        context: &EvidenceContext,
+        evidence: &[u8],
+    ) -> Result<CreateReceipt, StoreError> {
+        let receipt = self.create_only(context, evidence).await?;
+        if receipt.disposition == CreateDisposition::AlreadyPresent {
+            let metadata = Self::metadata_for(context, &receipt.object)?;
+            self.read_verified(&receipt.object, Some(&metadata)).await?;
+        }
+        Ok(receipt)
+    }
+
     async fn read(&self, object: &EvidenceObject) -> Result<Vec<u8>, StoreError> {
+        Ok(self.read_verified(object, None).await?.bytes)
+    }
+
+    async fn read_with_identity(&self, object: &EvidenceObject) -> Result<ReadReceipt, StoreError> {
         self.read_verified(object, None).await
     }
 }
@@ -641,6 +830,10 @@ fn valid_source(source: &str) -> bool {
             .is_some_and(u8::is_ascii_alphanumeric)
 }
 
+fn valid_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
+    valid_rpc_replay_inputs(inputs) || valid_collection_replay_inputs(inputs)
+}
+
 fn valid_rpc_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
     if inputs.len() != 6 {
         return false;
@@ -672,11 +865,37 @@ fn valid_rpc_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
         && valid_provider
 }
 
+fn valid_collection_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
+    inputs.len() == 5
+        && inputs
+            .get("chain")
+            .is_some_and(|value| matches!(value.as_str(), "ethereum" | "base" | "solana" | "tempo"))
+        && inputs
+            .get("height")
+            .is_some_and(|value| value.parse::<u64>().is_ok())
+        && inputs.get("input-kind").is_some_and(|value| {
+            matches!(
+                value.as_str(),
+                "chain_transfer"
+                    | "x402_runtime"
+                    | "x402_well_known"
+                    | "x402_openapi"
+                    | "mpp_openapi"
+            )
+        })
+        && inputs
+            .get("provider")
+            .is_some_and(|value| value == "collection-manifest")
+        && inputs
+            .get("source")
+            .is_some_and(|value| valid_source(value))
+}
+
 fn valid_metadata_value(value: &str, max_length: usize) -> bool {
     !value.is_empty()
         && value.len() <= max_length
         && value.bytes().all(|byte| {
-            byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':' | b'/')
+            byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':' | b'/' | b'@')
         })
 }
 

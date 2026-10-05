@@ -78,12 +78,17 @@ workload identity and no service-account key is embedded. The adapter disables t
 library's implicit retries and applies its own hard attempt limit to retryable failures.
 Uploads are create-only and carry deterministic custom metadata for source, observation
 date and identity, parser version, replay inputs, and content digest; metadata fields admit
-only bounded identifier-shaped values and never raw payloads.
+only bounded identifier-shaped values and never raw payloads. After an expected generation-zero
+precondition failure, the collector uses an exact-name object-list metadata lookup to recover
+the backend generation and verify the deterministic metadata; its custom role permits
+`storage.objects.create` and `storage.objects.list`, but not `storage.objects.get`, so this
+idempotency path cannot download evidence bytes.
 
 The evidence bucket has Object Versioning enabled for operator recovery, but replay safety
-does not depend on versioning: runtime identities have only object create and read access,
-every write uses generation zero, and a locked retention policy of at least 365 days blocks
-premature deletion. No lifecycle rule may delete evidence before the retention period.
+does not depend on versioning: collector and verifier identities have disjoint create/list
+versus read access, every write uses generation zero, and a locked retention policy of at
+least 365 days blocks premature deletion. No lifecycle rule may delete evidence before the
+retention period.
 
 ## Partitioning
 
@@ -134,7 +139,7 @@ The local Hermes projection worker makes an outbound authenticated pull for boun
 
 - RPC and password secrets come from Google Secret Manager and Cloud Run secret bindings.
 - Shared-password sessions and the login-attempt window are namespace-scoped in PostgreSQL; only SHA-256 session and CSRF token digests are retained, so authentication remains consistent across Cloud Run instances and cold starts.
-- The evidence bucket has locked retention of at least 365 days and Object Versioning enabled, with no lifecycle deletion before retention expiry. Runtime identities combine `roles/storage.objectCreator` and `roles/storage.objectViewer` but have no overwrite, delete, retention, or versioning administration; those controls belong to a separate owner identity.
+- The evidence bucket has locked retention of at least 365 days and Object Versioning enabled, with no lifecycle deletion before retention expiry. The collector's custom role has only `storage.objects.create` and `storage.objects.list`; the separate verifier has `roles/storage.objectViewer`. Neither runtime can overwrite, delete, administer retention/versioning, or combine create and object-body read authority; those controls belong to a separate owner identity.
 - Every content-addressed write uses `ifGenerationMatch=0`; an existing key is accepted only after its stored digest matches. Replay performs read-time SHA-256 verification before parsing.
 - Raw protocol text is untrusted data, never instruction.
 - LLMs receive bounded structured snapshots and cited excerpts.
