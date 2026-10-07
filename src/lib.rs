@@ -1,7 +1,9 @@
 pub mod auth;
 pub mod classification_promotion;
+pub mod classify;
 pub mod cockpit;
 pub mod collect;
+pub mod enrich;
 pub mod projection;
 pub mod projection_gateway;
 pub mod projection_runtime;

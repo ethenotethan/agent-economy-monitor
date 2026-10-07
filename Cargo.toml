@@ -22,6 +22,7 @@ resolver = "3"
 [dependencies]
 agent-economy-adapter-api = { path = "crates/adapter-api" }
 agent-economy-attribution = { path = "crates/attribution" }
+agent-economy-classification = { path = "crates/classification" }
 agent-economy-contracts = { path = "crates/contracts" }
 agent-economy-evidence-store = { path = "crates/evidence-store" }
 agent-economy-mpp-adapter = { path = "crates/mpp-adapter" }

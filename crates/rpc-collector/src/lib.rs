@@ -190,6 +190,14 @@ impl RawRpcResponse {
         self
     }
 
+    pub const fn status(&self) -> u16 {
+        self.status
+    }
+
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+
     fn with_optional_retry_after(mut self, milliseconds: Option<u64>) -> Self {
         self.retry_after_milliseconds = milliseconds;
         self
