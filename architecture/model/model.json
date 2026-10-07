@@ -20960,7 +20960,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "f09ffad1e4462906cab8e633f1692aa3d8d7221fc003011dfe6064843b97eaf3",
+  "source_tree_sha256": "f45c7ea0c5bdb17401f1d65a1f63892eb3addd00d2ff552644fa25a0c20cce55",
   "stores": {
     "count": 2,
     "items": [

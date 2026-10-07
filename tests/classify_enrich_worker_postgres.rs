@@ -545,10 +545,10 @@ async fn leased_enricher_persists_evidence_first_history_without_inventing_proto
         VERIFIER_PASSWORD,
     ))
     .await;
-    let evidence_root =
-        std::path::PathBuf::from(format!("/private/tmp/aem-enrichment-evidence-{run_key}"));
+    let evidence_root = std::env::temp_dir().join(format!("aem-enrichment-evidence-{run_key}"));
     let _ = std::fs::remove_dir_all(&evidence_root);
     std::fs::create_dir_all(&evidence_root).unwrap();
+    let evidence_root = std::fs::canonicalize(evidence_root).unwrap();
     let evidence_store = Arc::new(FilesystemEvidenceStore::open(&evidence_root).unwrap());
     let store = Arc::new(PostgresEnrichmentStore::new(runtime));
     let completed = WorkerDispatcher::new(store.clone())
