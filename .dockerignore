@@ -1,0 +1,16 @@
+.git
+.github
+.hermes
+.local
+target
+**/__pycache__
+*.pyc
+.env
+.env.*
+.dev-stack.env
+**/.terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.pem
+*.key

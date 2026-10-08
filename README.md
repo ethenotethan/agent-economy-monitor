@@ -40,6 +40,16 @@ evidence survive ordinary `./scripts/dev-stack down` / `./scripts/dev-stack` res
 Use `status` or `logs` to inspect the stack; `reset` removes only the derived PostgreSQL
 volume and deliberately retains immutable evidence.
 
+Production deployment is defined in [`deploy/google-cloud`](deploy/google-cloud/README.md).
+It runs one digest-pinned image as a scale-to-zero Cloud Run cockpit plus bounded worker
+jobs, with zonal Cloud SQL, locked/versioned Google Cloud Storage evidence, least-privilege
+mode-specific service accounts and secrets, scheduled execution, alerts, and a USD 75
+monthly budget guard. Collection requests are owner-admitted into a private, versioned
+input bucket mounted read-only only by the collect job. The
+documented recovery drill verifies storage controls and deterministically rebuilds one
+buyer dossier across all four launch chains and both protocols from content-addressed
+evidence without printing raw payloads.
+
 The filesystem evidence adapter implements the production create-only storage contract:
 objects are addressed by SHA-256 beneath source and observation-date prefixes, repeated
 identical writes are idempotent, and every replay verifies the digest before returning
@@ -82,8 +92,8 @@ advance canonical cursors or write observations.
 
 Run one leased collection job with `COLLECTOR_DATABASE_URL`, `COLLECTION_INPUT_ROOT`, and exactly
 one create-only evidence backend set, then execute `cargo run -- collect`: use
-`EVIDENCE_CREATE_GCS_BUCKET` for the production GCS writer with Application Default Credentials,
-or `EVIDENCE_CREATE_ROOT` for the local filesystem writer. Namespace scope is bound server-side
+`EVIDENCE_WRITE_BUCKET` for the production GCS writer with Application Default Credentials,
+or `EVIDENCE_WRITE_ROOT` for the local filesystem writer. Namespace scope is bound server-side
 to the authenticated collector login; no caller-supplied namespace environment variable is used.
 
 Run the separate verifier with `EVIDENCE_VERIFIER_DATABASE_URL` and exactly one read-only backend

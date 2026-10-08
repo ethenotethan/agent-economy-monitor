@@ -258,18 +258,19 @@
       "declarations": [],
       "description": "Human-authored product, trust, and runtime architecture authority.",
       "external": false,
-      "file_count": 5,
+      "file_count": 6,
       "files": [
         "AGENTS.md",
         "CONTEXT.md",
         "README.md",
+        "deploy/google-cloud/README.md",
         "docs/ARCHITECTURE.md",
         "docs/PRODUCT.md"
       ],
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 426
+      "line_count": 519
     },
     {
       "declaration_count": 0,
@@ -307,7 +308,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5647
+      "line_count": 5671
     },
     {
       "declaration_count": 44,
@@ -546,6 +547,56 @@
       "line_count": 2848
     },
     {
+      "declaration_count": 24,
+      "declarations": [
+        "MAX_AMOUNT_DIGITS",
+        "MAX_EVIDENCE_BYTES",
+        "MAX_EVIDENCE_OBJECTS",
+        "MAX_MANIFEST_BYTES",
+        "REQUIRED_COVERAGE",
+        "RecoveredBuyerDossier",
+        "RecoveryDrill",
+        "RecoveryError",
+        "ReplayedObservation",
+        "StoredRecoveryEvidence",
+        "StoredRecoveryManifest",
+        "add_decimal",
+        "buyer_handle_id",
+        "coverage",
+        "digest",
+        "evidence_objects",
+        "fmt",
+        "fn",
+        "manifest_object",
+        "provenance_ids",
+        "rebuild_manifest",
+        "replay",
+        "total_amount_atomic",
+        "valid_manifest_object"
+      ],
+      "description": "Digest-pinned scale-to-zero Cloud Run service and bounded jobs with durable Cloud SQL/GCS controls, observability, budget enforcement, and deterministic recovery qualification.",
+      "external": false,
+      "file_count": 12,
+      "files": [
+        ".dockerignore",
+        "Dockerfile",
+        "deploy/google-cloud/.terraform.lock.hcl",
+        "deploy/google-cloud/main.tf",
+        "deploy/google-cloud/operations.tf",
+        "deploy/google-cloud/outputs.tf",
+        "deploy/google-cloud/runtime.tf",
+        "deploy/google-cloud/storage.tf",
+        "deploy/google-cloud/variables.tf",
+        "deploy/google-cloud/versions.tf",
+        "scripts/recovery-drill",
+        "src/recovery.rs"
+      ],
+      "id": "cloud-runtime",
+      "label": "Lean Google Cloud runtime",
+      "layer": "delivery",
+      "line_count": 1248
+    },
+    {
       "declaration_count": 0,
       "declarations": [],
       "description": "Namespace-scoped PostgreSQL session hashes and atomic shared-password login admission state.",
@@ -644,7 +695,7 @@
       "line_count": 1921
     },
     {
-      "declaration_count": 211,
+      "declaration_count": 222,
       "declarations": [
         "CLASSIFIER_PASSWORD",
         "COLLECTOR_PASSWORD",
@@ -667,6 +718,7 @@
         "NAMESPACE",
         "NAMESPACE_A",
         "NAMESPACE_B",
+        "OBSERVED_AT_UNIX_MS",
         "OnePageHistoryTransport",
         "OnePageTransport",
         "PAGE_SHA",
@@ -709,6 +761,7 @@
         "canonical_event_keys_are_protocol_defined",
         "canonical_event_rejects_mismatched_support",
         "capture_changeset",
+        "chain",
         "claim",
         "classification_batch_runs_existing_engine_and_preserves_threshold_confidence_and_lineage",
         "classifier_commit_is_lease_gated_and_persists_complete_lineage",
@@ -722,12 +775,14 @@
         "commit",
         "commit_batch",
         "complete",
+        "complete_manifest",
         "concurrent_bad_passwords_cannot_bypass_the_attempt_budget",
         "configuration_requires_argon2id_and_bounded_session_lifetime",
         "connect",
         "connect_as",
         "connect_worker",
         "create_object",
+        "digest_is_permutation_invariant_and_binds_object_generation",
         "documented_projection_environment_child",
         "documented_projection_environment_loads_through_runtime_config",
         "enrich_requires_create_only_evidence_backend_before_connecting",
@@ -768,6 +823,9 @@
         "manifest_chain",
         "manifest_for_chain",
         "manifest_payload_cannot_create_observation_when_rpc_evidence_has_only_ordinary_transfer",
+        "manifest_rejects_duplicate_json_members",
+        "manifest_requires_nonzero_generation_and_bounded_input",
+        "materialized_manifest",
         "migration_rejects_unauthorized_direct_and_transitive_worker_members",
         "migration_rejects_worker_role_with_inherited_table_authority",
         "migration_revokes_worker_table_privileges_inherited_from_owner_defaults",
@@ -789,6 +847,7 @@
         "postgres_store_is_the_runtime_query_backend",
         "process",
         "process_modes_are_explicit_and_unknown_modes_fail_closed",
+        "production_entry",
         "production_gcs_store_receives_bounded_collection_provenance_before_commit",
         "project",
         "project_wiki_uses_authenticated_postgres_gateway_end_to_end",
@@ -798,6 +857,7 @@
         "protected_api_rejects_before_extractors_and_store_access",
         "protobuf_replay_preserves_the_canonical_event",
         "protobuf_replay_preserves_the_observation",
+        "protocol_fixture",
         "protocol_observation_construction_rejects_invalid_amount",
         "provenance",
         "publication_rejects_private_snapshot_canaries_and_unauthorized_citations",
@@ -808,11 +868,13 @@
         "pulse_is_the_landing_view_with_complete_cockpit_navigation",
         "purpose_built_surface_is_documented_without_graphql_or_sql",
         "read_object",
+        "rebuilds_a_buyer_dossier_from_production_rpc_evidence",
         "reduce_handler_fails_closed_on_wrong_mode_kind_or_manifest_digest",
         "reduce_handler_preserves_rejected_finality_regressions_as_conflicts",
         "reduce_handler_reconciles_immutable_observations_and_commits_one_batch",
         "reduce_handler_runs_finality_and_attribution_engines",
         "reducers_can_read_typed_observation_fields",
+        "rejects_non_production_payloads_and_supports_the_production_numeric_domain",
         "rendered_markdown_links_must_exactly_match_safe_sidecar_links",
         "renew",
         "repeated_bad_passwords_are_rate_limited",
@@ -860,7 +922,7 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 44,
+      "file_count": 46,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -876,6 +938,7 @@
         "tests/classify_enrich_worker_postgres.rs",
         "tests/classify_worker.rs",
         "tests/classify_worker_postgres.rs",
+        "tests/cloud_runtime_test.py",
         "tests/cockpit.rs",
         "tests/cockpit_auth_schema_test.py",
         "tests/cockpit_browser_test.py",
@@ -894,6 +957,7 @@
         "tests/projection_runtime.rs",
         "tests/query_api.rs",
         "tests/query_read_models_schema_test.py",
+        "tests/recovery.rs",
         "tests/reduce_worker.rs",
         "tests/reduce_worker_postgres.rs",
         "tests/reduce_worker_schema_test.py",
@@ -910,7 +974,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 10534
+      "line_count": 11019
     },
     {
       "declaration_count": 137,
@@ -1633,7 +1697,7 @@
       "line_count": 3683
     },
     {
-      "declaration_count": 132,
+      "declaration_count": 133,
       "declarations": [
         "API_VERSION",
         "AuthConfig",
@@ -1742,6 +1806,7 @@
         "pulse",
         "query",
         "random_token",
+        "recovery",
         "reduce",
         "reject_mixed_worker_authority",
         "remove_session",
@@ -1786,7 +1851,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 7882
+      "line_count": 7919
     },
     {
       "declaration_count": 95,
@@ -2086,7 +2151,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, evidence-first leased collect worker, namespace-bound leased reduce worker, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients, production registrations for classify and enrich handlers, and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, evidence-first leased collect worker, namespace-bound leased reduce worker, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, lean Google Cloud deployment manifests and recovery drill, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -2158,10 +2223,6 @@
         {
           "id": "rust.runtime-mpp-adapter",
           "reason": "MPP OpenAPI and x402 discovery adapters exist, but no runtime MPP challenge parser exists yet."
-        },
-        {
-          "id": "rust.workers",
-          "reason": "Transactional leases and fail-closed collect/reduce/classify/enrich dispatch are implemented, but the domain engines remain intentionally unregistered until production job handlers bind leased inputs to their real repositories."
         }
       ]
     },
@@ -2625,7 +2686,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 611,
+            "line": 645,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/healthz\", get(status))"
@@ -2850,7 +2911,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 609,
+            "line": 643,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/status\", get(status))"
@@ -3030,7 +3091,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 614,
+            "line": 648,
             "path": "src/main.rs",
             "rule": "declared.topology",
             "via": "info!(%address, \"agent economy monitor listening\");"
@@ -3111,6 +3172,20 @@
     "files": [
       {
         "citations": 0,
+        "component": "cloud-runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 16,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": ".dockerignore",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
@@ -3156,7 +3231,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 10,
+        "line_count": 14,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3198,7 +3273,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 4726,
+        "line_count": 4727,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3212,7 +3287,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 54,
+        "line_count": 55,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3222,11 +3297,25 @@
         "touched": false
       },
       {
+        "citations": 0,
+        "component": "cloud-runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 12,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "Dockerfile",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
         "citations": 1,
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 142,
+        "line_count": 152,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3240,7 +3329,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 652,
+        "line_count": 675,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -10800,11 +10889,137 @@
         "touched": false
       },
       {
+        "citations": 0,
+        "component": "cloud-runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 22,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "deploy/google-cloud/.terraform.lock.hcl",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "architecture-policy",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 60,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "deploy/google-cloud/README.md",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "cloud-runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 28,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "deploy/google-cloud/main.tf",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "cloud-runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 134,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "deploy/google-cloud/operations.tf",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "cloud-runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 16,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "deploy/google-cloud/outputs.tf",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "cloud-runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 196,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "deploy/google-cloud/runtime.tf",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "cloud-runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 180,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "deploy/google-cloud/storage.tf",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "cloud-runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 118,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "deploy/google-cloud/variables.tf",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "cloud-runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 15,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "deploy/google-cloud/versions.tf",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
         "citations": 5,
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 162,
+        "line_count": 185,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -11398,10 +11613,24 @@
       },
       {
         "citations": 0,
+        "component": "cloud-runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 165,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "scripts/recovery-drill",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 1533,
+        "line_count": 1534,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -13561,7 +13790,7 @@
       {
         "citations": 0,
         "component": "runtime",
-        "declaration_count": 13,
+        "declaration_count": 14,
         "declarations": [
           {
             "kind": "mod",
@@ -13646,7 +13875,7 @@
           {
             "kind": "mod",
             "line": 11,
-            "name": "reduce",
+            "name": "recovery",
             "passes": [
               "rust.declaration"
             ]
@@ -13654,7 +13883,7 @@
           {
             "kind": "mod",
             "line": 12,
-            "name": "verify_evidence",
+            "name": "reduce",
             "passes": [
               "rust.declaration"
             ]
@@ -13662,13 +13891,21 @@
           {
             "kind": "mod",
             "line": 13,
+            "name": "verify_evidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "mod",
+            "line": 14,
             "name": "worker",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 13,
+        "line_count": 14,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -13684,7 +13921,7 @@
         "declarations": [
           {
             "kind": "struct",
-            "line": 36,
+            "line": 37,
             "name": "Status",
             "passes": [
               "rust.declaration"
@@ -13692,7 +13929,7 @@
           },
           {
             "kind": "enum",
-            "line": 41,
+            "line": 42,
             "name": "CollectionRpcTransport",
             "passes": [
               "rust.declaration"
@@ -13700,7 +13937,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 49,
+            "line": 50,
             "name": "fetch_block",
             "passes": [
               "rust.declaration"
@@ -13708,7 +13945,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 66,
+            "line": 67,
             "name": "status",
             "passes": [
               "rust.declaration"
@@ -13716,7 +13953,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 76,
+            "line": 77,
             "name": "main",
             "passes": [
               "rust.declaration"
@@ -13724,7 +13961,7 @@
           },
           {
             "kind": "fn",
-            "line": 144,
+            "line": 178,
             "name": "reject_mixed_worker_authority",
             "passes": [
               "rust.declaration"
@@ -13732,7 +13969,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 206,
+            "line": 240,
             "name": "run_classify_once",
             "passes": [
               "rust.declaration"
@@ -13740,7 +13977,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 250,
+            "line": 284,
             "name": "run_enrich_once",
             "passes": [
               "rust.declaration"
@@ -13748,7 +13985,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 335,
+            "line": 369,
             "name": "run_reduce_once",
             "passes": [
               "rust.declaration"
@@ -13756,7 +13993,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 384,
+            "line": 418,
             "name": "run_verify_evidence_once",
             "passes": [
               "rust.declaration"
@@ -13764,7 +14001,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 441,
+            "line": 475,
             "name": "run_collect_once",
             "passes": [
               "rust.declaration"
@@ -13772,7 +14009,7 @@
           },
           {
             "kind": "fn",
-            "line": 520,
+            "line": 554,
             "name": "collection_rpc_transport",
             "passes": [
               "rust.declaration"
@@ -13780,7 +14017,7 @@
           },
           {
             "kind": "fn",
-            "line": 545,
+            "line": 579,
             "name": "required_collection_env",
             "passes": [
               "rust.declaration"
@@ -13788,14 +14025,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 554,
+            "line": 588,
             "name": "serve",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 617,
+        "line_count": 651,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -15463,6 +15700,229 @@
         "path": "src/query.rs",
         "semantic_citations": 0,
         "touched": true
+      },
+      {
+        "citations": 0,
+        "component": "cloud-runtime",
+        "declaration_count": 26,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 11,
+            "name": "MAX_MANIFEST_BYTES",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 13,
+            "name": "MAX_EVIDENCE_OBJECTS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 14,
+            "name": "MAX_EVIDENCE_BYTES",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 15,
+            "name": "MAX_AMOUNT_DIGITS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 16,
+            "name": "REQUIRED_COVERAGE",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 28,
+            "name": "RecoveredBuyerDossier",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 41,
+            "name": "buyer_handle_id",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 44,
+            "name": "manifest_object",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 48,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 52,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 56,
+            "name": "total_amount_atomic",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 60,
+            "name": "coverage",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 64,
+            "name": "evidence_objects",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 68,
+            "name": "provenance_ids",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 72,
+            "name": "digest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 77,
+            "name": "RecoveryDrill",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 81,
+            "name": "rebuild_manifest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 156,
+            "name": "valid_manifest_object",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 165,
+            "name": "add_decimal",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 190,
+            "name": "StoredRecoveryManifest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 198,
+            "name": "StoredRecoveryEvidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 209,
+            "name": "ReplayedObservation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 218,
+            "name": "replay",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 302,
+            "name": "coverage",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "enum",
+            "line": 318,
+            "name": "RecoveryError",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 330,
+            "name": "fmt",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 346,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "src/recovery.rs",
+        "semantic_citations": 0,
+        "touched": false
       },
       {
         "citations": 0,
@@ -17230,6 +17690,20 @@
       {
         "citations": 0,
         "component": "delivery-gates",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 184,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "tests/cloud_runtime_test.py",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
         "declaration_count": 2,
         "declarations": [
           {
@@ -18460,6 +18934,109 @@
       {
         "citations": 0,
         "component": "delivery-gates",
+        "declaration_count": 11,
+        "declarations": [
+          {
+            "kind": "const",
+            "line": 8,
+            "name": "OBSERVED_AT_UNIX_MS",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 10,
+            "name": "chain",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 20,
+            "name": "protocol_fixture",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 68,
+            "name": "production_entry",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 140,
+            "name": "complete_manifest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 158,
+            "name": "materialized_manifest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 169,
+            "name": "rebuilds_a_buyer_dossier_from_production_rpc_evidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 203,
+            "name": "digest_is_permutation_invariant_and_binds_object_generation",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 232,
+            "name": "rejects_non_production_payloads_and_supports_the_production_numeric_domain",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 259,
+            "name": "manifest_requires_nonzero_generation_and_bounded_input",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 284,
+            "name": "manifest_rejects_duplicate_json_members",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 297,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/recovery.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
         "declaration_count": 12,
         "declarations": [
           {
@@ -19240,10 +19817,10 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1725,
+        "citations": 1763,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 60,
+        "files": 62,
         "id": "rust.declaration"
       },
       {
@@ -19272,15 +19849,15 @@
         "worker": 8
       },
       "citations": 62,
-      "declarations": 1725,
+      "declarations": 1763,
       "entities": 62,
       "entities_with_origin": 62,
-      "files": 161,
+      "files": 176,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
       "touched_files": 31,
-      "untouched_files": 130
+      "untouched_files": 145
     }
   },
   "interplay": {
@@ -19367,6 +19944,12 @@
         "relation": "hosts",
         "source": "cloud-run-jobs",
         "target": "collector"
+      },
+      {
+        "class": "structure",
+        "relation": "hosts",
+        "source": "cloud-run-jobs",
+        "target": "enrichment"
       },
       {
         "class": "structure",
@@ -19806,12 +20389,27 @@
           {
             "from": "cloud-run-jobs",
             "relation": "hosts",
+            "to": "evidence-verifier"
+          },
+          {
+            "from": "cloud-run-jobs",
+            "relation": "hosts",
             "to": "reducers"
           },
           {
             "from": "cloud-run-jobs",
             "relation": "hosts",
             "to": "attribution"
+          },
+          {
+            "from": "cloud-run-jobs",
+            "relation": "hosts",
+            "to": "classification"
+          },
+          {
+            "from": "cloud-run-jobs",
+            "relation": "hosts",
+            "to": "enrichment"
           }
         ],
         "summary": "One Rust image serves the scale-to-zero dashboard and bounded scheduled workers without creating another product authority.",
@@ -20379,7 +20977,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/healthz\", get(status))",
-            "line": 611,
+            "line": 645,
             "path": "src/main.rs"
           }
         ],
@@ -20589,7 +21187,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/status\", get(status))",
-            "line": 609,
+            "line": 643,
             "path": "src/main.rs"
           }
         ],
@@ -20757,7 +21355,7 @@
         "evidence": [
           {
             "excerpt": "info!(%address, \"agent economy monitor listening\");",
-            "line": 614,
+            "line": 648,
             "path": "src/main.rs"
           }
         ],
@@ -20903,7 +21501,8 @@
       {
         "components": [
           "runtime",
-          "development-stack"
+          "development-stack",
+          "cloud-runtime"
         ],
         "id": "delivery",
         "label": "Runtime delivery",
@@ -20917,9 +21516,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1725,
-    "files": 161,
-    "lines": 51453
+    "declarations": 1763,
+    "files": 176,
+    "lines": 53340
   },
   "layers": [
     {
@@ -20960,7 +21559,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "f45c7ea0c5bdb17401f1d65a1f63892eb3addd00d2ff552644fa25a0c20cce55",
+  "source_tree_sha256": "bcc16af5cd945a70af79c8744ede1d2b698ebfc83021c92f3c079cd4bdd6a806",
   "stores": {
     "count": 2,
     "items": [

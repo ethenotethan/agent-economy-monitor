@@ -272,6 +272,7 @@ class ArchitectureCompilerTests(unittest.TestCase):
         limitations = " ".join(model["evidence_metadata"]["limitations"])
 
         self.assertIn("local PostgreSQL development stack", limitations)
+        self.assertIn("lean Google Cloud deployment manifests and recovery drill", limitations)
         self.assertIn(
             "filesystem and Google Cloud Storage evidence adapters are implemented",
             limitations,

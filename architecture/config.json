@@ -150,6 +150,20 @@
       ]
     },
     {
+      "description": "Digest-pinned scale-to-zero Cloud Run service and bounded jobs with durable Cloud SQL/GCS controls, observability, budget enforcement, and deterministic recovery qualification.",
+      "id": "cloud-runtime",
+      "label": "Lean Google Cloud runtime",
+      "layer": "delivery",
+      "patterns": [
+        ".dockerignore",
+        "Dockerfile",
+        "deploy/google-cloud/*.hcl",
+        "deploy/google-cloud/*.tf",
+        "scripts/recovery-drill",
+        "src/recovery.rs"
+      ]
+    },
+    {
       "description": "Namespace-scoped PostgreSQL schema for canonical services, commerce offers, buyer handles, reversible clusters, claims, evidence, and provenance.",
       "id": "knowledge-graph-schema",
       "label": "Canonical knowledge schema",
@@ -299,7 +313,7 @@
   "evidence_metadata": {
     "class": "repository-source-and-specified-policy",
     "limitations": [
-      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, evidence-first leased collect worker, namespace-bound leased reduce worker, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients, production registrations for classify and enrich handlers, and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
+      "The versioned Axum query API, PostgreSQL dashboard read models, observation contracts, deterministic MPP and x402 discovery adapters, external RPC collector, evidence-first leased collect worker, namespace-bound leased reduce worker, targeted buyer-history enrichment library, deterministic reducer and chain-specific finality engine, deterministic settlement attribution engine, deterministic buyer feature and classification engine, transactional PostgreSQL worker lease store and fail-closed bounded process-mode dispatcher, PostgreSQL query, cursor, and enrichment clients, local PostgreSQL development stack, lean Google Cloud deployment manifests and recovery drill, canonical PostgreSQL knowledge schema, operational and analytical PostgreSQL schema, shadow catalog promotion schema, versioned attribution and classification schemas, and content-addressed filesystem and Google Cloud Storage evidence adapters are implemented at this revision; remaining production PostgreSQL clients and the remaining product pipeline are specified and explicitly reported as unresolved implementation coverage.",
       "MPP OpenAPI and x402 discovery are implemented; runtime MPP challenge parsing remains unresolved."
     ],
     "rules": {
@@ -422,8 +436,11 @@
         {"from": "cloud-scheduler", "relation": "invokes", "to": "cloud-run-jobs"},
         {"from": "cloud-run-api", "relation": "hosts", "to": "query-api"},
         {"from": "cloud-run-jobs", "relation": "hosts", "to": "collector"},
+        {"from": "cloud-run-jobs", "relation": "hosts", "to": "evidence-verifier"},
         {"from": "cloud-run-jobs", "relation": "hosts", "to": "reducers"},
-        {"from": "cloud-run-jobs", "relation": "hosts", "to": "attribution"}
+        {"from": "cloud-run-jobs", "relation": "hosts", "to": "attribution"},
+        {"from": "cloud-run-jobs", "relation": "hosts", "to": "classification"},
+        {"from": "cloud-run-jobs", "relation": "hosts", "to": "enrichment"}
       ],
       "summary": "One Rust image serves the scale-to-zero dashboard and bounded scheduled workers without creating another product authority.",
       "title": "Cloud runtime to dashboard"
@@ -475,6 +492,7 @@
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "reducers"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "attribution"},
     {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "classification"},
+    {"class": "structure", "relation": "hosts", "source": "cloud-run-jobs", "target": "enrichment"},
     {"class": "structure", "relation": "provisions", "source": "local-development-stack", "target": "store:postgresql"},
     {"class": "structure", "relation": "initializes", "source": "local-development-stack", "target": "filesystem-evidence-store"},
     {"class": "structure", "relation": "implements-contract-of", "source": "filesystem-evidence-store", "target": "store:evidence"},
@@ -523,9 +541,11 @@
     }
   ],
   "inventory_globs": [
+    ".dockerignore",
     ".env.example",
     ".github/workflows/*.yml",
     ".gitignore",
+    "Dockerfile",
     "*.md",
     "Cargo.lock",
     "Cargo.toml",
@@ -539,6 +559,9 @@
     "crates/**/*.proto",
     "crates/**/*.rs",
     "crates/**/*.sql",
+    "deploy/**/*.hcl",
+    "deploy/**/*.md",
+    "deploy/**/*.tf",
     "docs/*.md",
     "examples/**/*.rs",
     "migrations/*.sql",
@@ -547,6 +570,7 @@
     "scripts/build_architecture_site.py",
     "scripts/check_architecture_contract.py",
     "scripts/dev-stack",
+    "scripts/recovery-drill",
     "scripts/test_architecture.py",
     "scripts/test_architecture_site.py",
     "scripts/verify",
@@ -635,7 +659,7 @@
     {"components": ["architecture-policy", "collect-worker", "evidence-verifier", "observation-contracts", "adapter-api", "evidence-store", "mpp-adapter", "rpc-collector", "x402-adapter"], "id": "evidence", "label": "Deterministic evidence", "roots": ["collector", "collect-worker", "evidence-verifier", "observation-contract", "adapter-boundary", "filesystem-evidence-store", "gcs-evidence-store", "mpp-discovery-adapter", "protocol-adapters"]},
     {"components": ["architecture-policy", "attribution-engine", "buyer-classification", "buyer-enrichment-schema", "buyer-processing-workers", "cockpit-auth-schema", "deterministic-reducer", "knowledge-graph-schema", "operational-analytics-schema", "query-read-models", "shadow-catalog-schema"], "id": "canonical", "label": "Canonical knowledge", "roots": ["reducers", "attribution", "classification", "buyer-classification-schema", "buyer-enrichment-schema", "canonical-knowledge-schema", "cockpit-auth-state", "dashboard-read-models", "operational-analytics-schema", "shadow-catalog"]},
     {"components": ["architecture-policy", "semantic-projection"], "id": "projection", "label": "Semantic projection", "roots": ["evidence-snapshot"]},
-    {"components": ["runtime", "development-stack"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service", "query-api", "local-development-stack"]}
+    {"components": ["runtime", "development-stack", "cloud-runtime"], "id": "delivery", "label": "Runtime delivery", "roots": ["runtime-service", "query-api", "local-development-stack"]}
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
@@ -646,7 +670,6 @@
   "title": "Agent Economy Monitor Architecture",
   "unresolved": [
     {"id": "rust.runtime-mpp-adapter", "reason": "MPP OpenAPI and x402 discovery adapters exist, but no runtime MPP challenge parser exists yet."},
-    {"id": "rust.workers", "reason": "Transactional leases and fail-closed collect/reduce/classify/enrich dispatch are implemented, but the domain engines remain intentionally unregistered until production job handlers bind leased inputs to their real repositories."},
     {"id": "runtime.storage-clients", "reason": "The filesystem and Google Cloud Storage evidence adapters and PostgreSQL RPC cursor and buyer-enrichment clients are implemented; remaining production PostgreSQL repositories do not exist yet."}
   ]
 }

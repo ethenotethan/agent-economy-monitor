@@ -39,7 +39,17 @@ flowchart LR
 
 ## Runtime
 
-The product has one canonical runtime identity: `agent-economy-monitor`. One Rust image exposes bounded modes such as `serve`, `collect`, `reduce`, `classify`, and `enrich`. A scale-to-zero Cloud Run service hosts the API and cockpit; Cloud Scheduler invokes bounded Cloud Run jobs for worker modes. These are deployment forms of the same image, not separate product authorities.
+The product has one canonical runtime identity: `agent-economy-monitor`. One Rust image exposes bounded modes such as `serve`, `collect`, `verify-evidence`, `reduce`, `classify`, and `enrich`. A scale-to-zero Cloud Run service hosts the API and cockpit; Cloud Scheduler invokes bounded Cloud Run jobs for worker and evidence-verification modes. These are deployment forms of the same image, not separate product authorities.
+
+The repository-owned Terraform under `deploy/google-cloud` pins the application image by
+digest, holds the API at zero minimum and two maximum instances, and runs each worker as
+one task with a fifteen-minute deadline and bounded retries. Scheduler has job-invoker
+authority only. Runtime authority is split deliberately across the cockpit and four
+mode-specific worker identities plus a separate evidence verifier. Collect and enrich can
+create and list evidence metadata without reading object bodies, and the verifier can read it;
+reduce and classify receive no object or RPC authority, and no worker receives cockpit
+secrets. No runtime identity can delete objects or administer retention. Pub/Sub and
+BigQuery are not provisioned.
 
 PostgreSQL transactional job leases own distributed record assignment. Workers claim bounded batches with `FOR UPDATE SKIP LOCKED`, idempotency keys, lease expiry, retry state, and dead-letter status. Cloud SQL and Google Cloud Storage remain honest dependency nodes rather than application runtimes.
 
@@ -160,3 +170,16 @@ The local Hermes projection worker makes an outbound authenticated pull for boun
 ## Recovery
 
 Raw evidence is protected by the locked Google Cloud Storage retention policy, create-only writes, separated deletion authority, and digest verification. PostgreSQL uses Cloud SQL backups and point-in-time recovery, but its derived observations, canonical events, features, and read models remain rebuildable from retained evidence. Local wiki pages are Git-backed and every native write captures a changeset; the dashboard mirror is rebuildable from approved local pages. Parser/classifier upgrades replay into separate projections and promote atomically after comparison.
+
+The operational recovery drill first verifies bucket versioning, a locked retention policy,
+and at least 365 days of retention. It then downloads a generation-pinned bounded manifest
+and every referenced binary RPC-evidence generation, re-verifies each SHA-256, and replays
+the exact bytes through the production RPC envelope and protocol adapters. The selected
+production observation IDs supply protocol event identity and amount; the immutable manifest
+supplies the buyer binding and chain/source coordinates. The manifest object/generation and
+every evidence object generation are bound into the deterministic receipt, and chain-scoped
+duplicate settlements are rejected. Qualification
+fails unless the rebuilt evidence covers Ethereum, Base, Solana, and Tempo for both x402 and
+MPP. Cloud SQL recovery is qualified separately
+by restoring the newest automated backup to a disposable instance and checking the
+seven-day point-in-time recovery window; retained evidence remains the replay authority.
