@@ -5,6 +5,10 @@
 !.env.example
 /.dev-stack.env
 /.local/
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
 .DS_Store
 *.pem
 *.key

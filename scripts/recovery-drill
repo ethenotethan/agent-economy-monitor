@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 4 ]]; then
+  echo "usage: $0 <evidence-bucket> <manifest-object> <manifest-generation> <buyer-handle-id>" >&2
+  exit 64
+fi
+
+bucket=$1
+manifest_object=$2
+manifest_generation=$3
+buyer_handle_id=$4
+binary=${AEM_BINARY:-./target/release/agent-economy-monitor}
+workdir=$(mktemp -d "${TMPDIR:-/tmp}/agent-economy-recovery.XXXXXX")
+manifest_index="$workdir/manifest-index.json"
+manifest="$workdir/manifest.json"
+bucket_metadata="$workdir/bucket.json"
+dossier="$workdir/dossier.json"
+
+cleanup() {
+  rm -rf "$workdir"
+}
+trap cleanup EXIT
+
+if [[ ! $manifest_generation =~ ^[1-9][0-9]*$ ]]; then
+  echo "manifest generation must be a positive integer" >&2
+  exit 64
+fi
+if [[ ! $manifest_object =~ ^recovery/manifests/[A-Za-z0-9._/-]+\.json$ || $manifest_object == *".."* ]]; then
+  echo "manifest object must be a canonical recovery manifest path" >&2
+  exit 64
+fi
+
+gcloud storage buckets describe "gs://$bucket" --format=json >"$bucket_metadata"
+python3 - "$bucket_metadata" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    metadata = json.load(source)
+if metadata.get("retentionPolicy", {}).get("isLocked") is not True:
+    raise SystemExit("evidence bucket retention policy is not locked")
+if metadata.get("versioning", {}).get("enabled") is not True:
+    raise SystemExit("evidence bucket versioning is not enabled")
+if int(metadata.get("retentionPolicy", {}).get("retentionPeriod", 0)) < 31536000:
+    raise SystemExit("evidence bucket retention is shorter than 365 days")
+PY
+
+gcloud storage cp \
+  "gs://$bucket/$manifest_object#$manifest_generation" \
+  "$manifest_index" >/dev/null
+chmod 600 "$manifest_index"
+python3 - "$bucket" "$manifest_index" "$manifest" "$workdir" "$manifest_object" "$manifest_generation" <<'PY'
+import json
+import base64
+import os
+import pathlib
+import re
+import subprocess
+import sys
+
+def reject_duplicate_members(pairs):
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError("duplicate JSON object member")
+        value[key] = item
+    return value
+
+bucket, index_path, output_path, workdir, manifest_object, manifest_generation = sys.argv[1:]
+if os.path.getsize(index_path) > 1024 * 1024:
+    raise SystemExit("recovery manifest index exceeds the bounded size limit")
+try:
+    with open(index_path, encoding="utf-8") as source:
+        entries = json.load(source, object_pairs_hook=reject_duplicate_members)
+except (json.JSONDecodeError, ValueError) as error:
+    raise SystemExit("recovery manifest index is ambiguous or invalid") from error
+if not isinstance(entries, list) or not 1 <= len(entries) <= 10_000:
+    raise SystemExit("recovery manifest index has an invalid entry count")
+
+materialized = []
+required_fields = {
+    "object_name", "generation", "buyer_handle_id", "chain", "source_id",
+    "observed_at_unix_ms", "height", "observation_id",
+}
+for position, entry in enumerate(entries):
+    if not isinstance(entry, dict) or set(entry) != required_fields:
+        raise SystemExit("recovery manifest entry is malformed")
+    object_name = entry["object_name"]
+    generation = entry["generation"]
+    if (
+        not isinstance(object_name, str)
+        or re.fullmatch(
+            r"evidence/[a-z0-9][a-z0-9._-]{0,127}/[0-9]{4}-[0-9]{2}-[0-9]{2}/sha256/[0-9a-f]{2}/[0-9a-f]{64}",
+            object_name,
+        ) is None
+        or not isinstance(generation, int)
+        or generation <= 0
+        or not isinstance(entry["buyer_handle_id"], str)
+        or not entry["buyer_handle_id"]
+        or entry["chain"] not in {"ethereum", "base", "solana", "tempo"}
+        or entry["source_id"] != f"alchemy-{entry['chain']}"
+        or object_name.split("/")[1] != entry["source_id"]
+        or not isinstance(entry["observed_at_unix_ms"], int)
+        or entry["observed_at_unix_ms"] <= 0
+        or not isinstance(entry["height"], int)
+        or entry["height"] < 0
+        or not isinstance(entry["observation_id"], str)
+        or not entry["observation_id"].startswith("observation:sha256:")
+    ):
+        raise SystemExit("recovery manifest entry is invalid")
+    destination = pathlib.Path(workdir) / f"evidence-{position}.bin"
+    uri = f"gs://{bucket}/{object_name}#{generation}"
+    subprocess.run(
+        ["gcloud", "storage", "cp", uri, str(destination)],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        timeout=300,
+    )
+    if destination.stat().st_size > 4 * 1024 * 1024:
+        raise SystemExit("recovery evidence object exceeds the bounded size limit")
+    materialized_entry = dict(entry)
+    materialized_entry["payload_base64"] = base64.b64encode(destination.read_bytes()).decode("ascii")
+    materialized.append(materialized_entry)
+with open(output_path, "w", encoding="utf-8") as destination:
+    json.dump(
+        {
+            "manifest_object": manifest_object,
+            "manifest_generation": int(manifest_generation),
+            "entries": materialized,
+        },
+        destination,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+os.chmod(output_path, 0o600)
+PY
+
+"$binary" recovery-drill "$buyer_handle_id" "$manifest" >"$dossier"
+python3 - "$dossier" "$manifest_object" "$manifest_generation" <<'PY'
+import json
+import sys
+
+dossier_path, manifest_object, manifest_generation = sys.argv[1:]
+with open(dossier_path, encoding="utf-8") as source:
+    result = json.load(source)
+required = {
+    "base:mpp", "base:x402", "ethereum:mpp", "ethereum:x402",
+    "solana:mpp", "solana:x402", "tempo:mpp", "tempo:x402",
+}
+if result.get("event_count") < 8 or set(result.get("coverage", [])) != required:
+    raise SystemExit("recovery dossier does not cover all four chains and both protocols")
+if (
+    result.get("manifest_object") != manifest_object
+    or result.get("manifest_generation") != int(manifest_generation)
+):
+    raise SystemExit("recovery dossier is not bound to the requested manifest generation")
+if len(result.get("digest", "")) != 64:
+    raise SystemExit("recovery dossier digest is missing")
+print(
+    "recovery drill passed: "
+    f"buyer={result['buyer_handle_id']} events={result['event_count']} "
+    f"digest={result['digest']}"
+)
+PY

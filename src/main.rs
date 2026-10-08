@@ -1,4 +1,4 @@
-use std::{env, io, net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{env, io, io::Read, net::SocketAddr, path::PathBuf, sync::Arc};
 
 use agent_economy_evidence_store::{
     FilesystemEvidenceStore, GcsEvidenceStore, GcsRetryPolicy, GoogleCloudStorageClient,
@@ -18,6 +18,7 @@ use agent_economy_monitor::{
     },
     projection_runtime::{ProjectionRuntimeConfig, run_projection_once},
     query::{PostgresQueryStore, api_router},
+    recovery::{MAX_MANIFEST_BYTES, RecoveryDrill},
     reduce::{PostgresReductionStore, ReductionHandler},
     verify_evidence::{CollectionEvidenceReader, PostgresEvidenceVerifier},
     worker::{WorkerDispatcher, WorkerMode},
@@ -132,6 +133,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some("enrich") => {
             reject_mixed_worker_authority("enrich")?;
             run_enrich_once().await
+        }
+        Some("recovery-drill") => {
+            let buyer_handle_id = arguments.next().ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidInput, "missing buyer handle")
+            })?;
+            let manifest_path = arguments.next().ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "missing recovery manifest path",
+                )
+            })?;
+            if arguments.next().is_some() {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "unexpected recovery-drill argument",
+                )
+                .into());
+            }
+            let manifest_file = std::fs::File::open(manifest_path)?;
+            if manifest_file.metadata()?.len() > MAX_MANIFEST_BYTES as u64 {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "recovery manifest exceeds the bounded size limit",
+                )
+                .into());
+            }
+            let mut manifest = Vec::new();
+            manifest_file
+                .take((MAX_MANIFEST_BYTES + 1) as u64)
+                .read_to_end(&mut manifest)?;
+            let dossier = RecoveryDrill::rebuild_manifest(&buyer_handle_id, &manifest)?;
+            println!("{}", serde_json::to_string(&dossier)?);
+            Ok(())
         }
         None | Some("serve") => serve().await,
         Some(command) => Err(io::Error::new(
