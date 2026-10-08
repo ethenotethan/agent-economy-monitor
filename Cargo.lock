@@ -63,6 +63,7 @@ version = "0.1.0"
 dependencies = [
  "agent-economy-adapter-api",
  "agent-economy-attribution",
+ "agent-economy-classification",
  "agent-economy-contracts",
  "agent-economy-evidence-store",
  "agent-economy-mpp-adapter",

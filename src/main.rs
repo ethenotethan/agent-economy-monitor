@@ -6,11 +6,13 @@ use agent_economy_evidence_store::{
 use agent_economy_monitor::{
     auth::{AuthState, PostgresAuthStore, protect_router},
     classification_promotion::{PostgresClassificationPromotionStore, PromotionRequest},
+    classify::{ClassificationHandler, PostgresClassificationStore},
     cockpit::mount_cockpit,
     collect::{
         CollectionEvidenceStore, CollectionHandler, PostgresCollectionCommitStore,
         PostgresCollectionJobStore,
     },
+    enrich::{EnrichmentHandler, EvidenceStoreHistoryArchive, PostgresEnrichmentStore},
     projection_gateway::{
         PostgresProjectionGatewayStore, ProjectionGatewayState, mount_projection_gateway,
     },
@@ -18,7 +20,7 @@ use agent_economy_monitor::{
     query::{PostgresQueryStore, api_router},
     reduce::{PostgresReductionStore, ReductionHandler},
     verify_evidence::{CollectionEvidenceReader, PostgresEvidenceVerifier},
-    worker::{WorkerDispatchError, WorkerDispatcher, WorkerMode},
+    worker::{WorkerDispatcher, WorkerMode},
 };
 use agent_economy_rpc_collector::{
     AlchemyTransport, Chain, CollectorError, RawRpcResponse, RpcEndpoint, RpcTransport,
@@ -123,13 +125,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             reject_mixed_worker_authority("reduce")?;
             run_reduce_once().await
         }
-        Some(command @ ("classify" | "enrich")) => {
-            let mode = WorkerMode::parse(command)?;
-            Err(io::Error::new(
-                io::ErrorKind::Unsupported,
-                WorkerDispatchError::MissingHandler(mode),
-            )
-            .into())
+        Some("classify") => {
+            reject_mixed_worker_authority("classify")?;
+            run_classify_once().await
+        }
+        Some("enrich") => {
+            reject_mixed_worker_authority("enrich")?;
+            run_enrich_once().await
         }
         None | Some("serve") => serve().await,
         Some(command) => Err(io::Error::new(
@@ -174,6 +176,23 @@ fn reject_mixed_worker_authority(mode: &str) -> Result<(), io::Error> {
             .iter()
             .chain(verifier_authority.iter())
             .any(|name| env::var_os(name).is_some()),
+        "classify" => collector_authority
+            .iter()
+            .chain(verifier_authority.iter())
+            .chain(["REDUCER_DATABASE_URL", "ENRICHER_DATABASE_URL"].iter())
+            .any(|name| env::var_os(name).is_some()),
+        "enrich" => [
+            "COLLECTOR_DATABASE_URL",
+            "COLLECTION_INPUT_ROOT",
+            "COLLECTION_RPC_REPLAY_ROOT",
+            "EVIDENCE_VERIFIER_DATABASE_URL",
+            "EVIDENCE_READ_ROOT",
+            "EVIDENCE_READ_BUCKET",
+            "REDUCER_DATABASE_URL",
+            "CLASSIFIER_DATABASE_URL",
+        ]
+        .iter()
+        .any(|name| env::var_os(name).is_some()),
         _ => false,
     };
     if mixed {
@@ -182,6 +201,135 @@ fn reject_mixed_worker_authority(mode: &str) -> Result<(), io::Error> {
             "mixed collection and verification authority is forbidden",
         ));
     }
+    Ok(())
+}
+
+async fn run_classify_once() -> Result<(), Box<dyn std::error::Error>> {
+    let database_url = required_collection_env("CLASSIFIER_DATABASE_URL")?;
+    let lease_owner = env::var("CLASSIFY_LEASE_OWNER")
+        .unwrap_or_else(|_| format!("agent-economy-classifier:{}", std::process::id()));
+    let (client, connection) = tokio_postgres::connect(&database_url, NoTls).await?;
+    tokio::spawn(async move {
+        if connection.await.is_err() {
+            tracing::error!("PostgreSQL classifier connection closed unexpectedly");
+        }
+    });
+    let session_user = client
+        .query_one("SELECT session_user", &[])
+        .await?
+        .get::<_, String>(0);
+    if session_user != "agent_economy_classifier_runtime" {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "CLASSIFIER_DATABASE_URL must authenticate as agent_economy_classifier_runtime",
+        )
+        .into());
+    }
+    client
+        .query_one("SELECT agent_economy.bound_classifier_namespace()", &[])
+        .await
+        .map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "unsafe classifier database authority",
+            )
+        })?;
+    let store = Arc::new(PostgresClassificationStore::new(client));
+    let handler = Arc::new(ClassificationHandler::new(Arc::clone(&store)));
+    let completed = WorkerDispatcher::new(store)
+        .register(WorkerMode::Classify, handler)
+        .run_once(WorkerMode::Classify, &lease_owner)
+        .await?;
+    info!(
+        job_id = %completed.job_id,
+        output_sha256 = %completed.output_sha256,
+        "classification job completed"
+    );
+    Ok(())
+}
+
+async fn run_enrich_once() -> Result<(), Box<dyn std::error::Error>> {
+    let database_url = required_collection_env("ENRICHER_DATABASE_URL")?;
+    let evidence_store: Arc<dyn CollectionEvidenceStore> = match (
+        env::var("EVIDENCE_WRITE_ROOT").ok(),
+        env::var("EVIDENCE_WRITE_BUCKET").ok(),
+    ) {
+        (Some(root), None) => Arc::new(FilesystemEvidenceStore::open(PathBuf::from(root))?),
+        (None, Some(bucket)) => Arc::new(GcsEvidenceStore::new(
+            GoogleCloudStorageClient::from_application_default_credentials().await?,
+            &bucket,
+            GcsRetryPolicy::new(3)?,
+        )?),
+        _ => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "configure exactly one create-only evidence backend: EVIDENCE_WRITE_ROOT or EVIDENCE_WRITE_BUCKET",
+            )
+            .into());
+        }
+    };
+    let transport = AlchemyTransport::new([
+        (
+            Chain::Ethereum,
+            RpcEndpoint::parse(&required_collection_env("ALCHEMY_ETHEREUM_RPC_URL")?)?,
+        ),
+        (
+            Chain::Base,
+            RpcEndpoint::parse(&required_collection_env("ALCHEMY_BASE_RPC_URL")?)?,
+        ),
+        (
+            Chain::Solana,
+            RpcEndpoint::parse(&required_collection_env("ALCHEMY_SOLANA_RPC_URL")?)?,
+        ),
+        (
+            Chain::Tempo,
+            RpcEndpoint::parse(&required_collection_env("ALCHEMY_TEMPO_RPC_URL")?)?,
+        ),
+    ])?;
+    let lease_owner = env::var("ENRICH_LEASE_OWNER")
+        .unwrap_or_else(|_| format!("agent-economy-enricher:{}", std::process::id()));
+    let (client, connection) = tokio_postgres::connect(&database_url, NoTls).await?;
+    tokio::spawn(async move {
+        if connection.await.is_err() {
+            tracing::error!("PostgreSQL enricher connection closed unexpectedly");
+        }
+    });
+    let session_user = client
+        .query_one("SELECT session_user", &[])
+        .await?
+        .get::<_, String>(0);
+    if session_user != "agent_economy_enricher_runtime" {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "ENRICHER_DATABASE_URL must authenticate as agent_economy_enricher_runtime",
+        )
+        .into());
+    }
+    client
+        .query_one("SELECT agent_economy.bound_enricher_namespace()", &[])
+        .await
+        .map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "unsafe enricher database authority",
+            )
+        })?;
+    let store = Arc::new(PostgresEnrichmentStore::new(client));
+    let archive = Arc::new(EvidenceStoreHistoryArchive::new(evidence_store));
+    let handler = Arc::new(EnrichmentHandler::new(
+        transport,
+        archive,
+        Arc::clone(&store),
+    ));
+    let completed = WorkerDispatcher::new(store)
+        .register(WorkerMode::Enrich, handler)
+        .run_once(WorkerMode::Enrich, &lease_owner)
+        .await?;
+    info!(
+        job_id = %completed.job_id,
+        output_sha256 = %completed.output_sha256,
+        "buyer enrichment job completed"
+    );
     Ok(())
 }
 

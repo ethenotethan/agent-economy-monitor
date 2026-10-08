@@ -63,6 +63,36 @@ struct PendingBatch {
     evidence: Vec<PendingEvidence>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PendingEnrichmentEvidence {
+    object_name: String,
+    sha256: String,
+    storage_generation: Option<String>,
+    byte_length: u64,
+}
+
+struct PendingEnrichmentBatch {
+    job_id: String,
+    verifier_token: String,
+    input_sha256: String,
+    output_sha256: String,
+    namespace_id: String,
+    buyer_handle_id: String,
+    chain_scope: String,
+    handle_value: String,
+    observed_date: String,
+    cursor_version: i64,
+    start_cursor: Option<String>,
+    next_cursor: Option<String>,
+    requests_used: i64,
+    complete: bool,
+    evidence_json: String,
+    evidence: Vec<PendingEnrichmentEvidence>,
+    records_json: String,
+    classification_labels: String,
+}
+
 pub struct PostgresEvidenceVerifier {
     client: Arc<Mutex<Client>>,
     evidence_store: Arc<dyn CollectionEvidenceReader>,
@@ -84,25 +114,129 @@ impl PostgresEvidenceVerifier {
 
     pub async fn run_once(&self) -> Result<Option<String>, CollectionError> {
         let pending = self.claim().await?;
+        if let Some(pending) = pending {
+            return match self.verify_and_promote(&pending).await {
+                Ok(()) => Ok(Some(pending.pending_id)),
+                Err(error) => {
+                    let retryable = matches!(
+                        error,
+                        CollectionError::EvidenceUnavailable | CollectionError::CommitUnavailable
+                    );
+                    let code = match error {
+                        CollectionError::InvalidInput => "invalid_evidence_readback",
+                        CollectionError::EvidenceUnavailable => "evidence_read_unavailable",
+                        CollectionError::CommitUnavailable => "promotion_unavailable",
+                    };
+                    let _ = self.fail(&pending, code, retryable).await;
+                    Err(error)
+                }
+            };
+        }
+        let pending = self.claim_enrichment().await?;
         let Some(pending) = pending else {
             return Ok(None);
         };
-        match self.verify_and_promote(&pending).await {
-            Ok(()) => Ok(Some(pending.pending_id)),
-            Err(error) => {
-                let retryable = matches!(
-                    error,
-                    CollectionError::EvidenceUnavailable | CollectionError::CommitUnavailable
-                );
-                let code = match error {
-                    CollectionError::InvalidInput => "invalid_evidence_readback",
-                    CollectionError::EvidenceUnavailable => "evidence_read_unavailable",
-                    CollectionError::CommitUnavailable => "promotion_unavailable",
-                };
-                let _ = self.fail(&pending, code, retryable).await;
-                Err(error)
+        self.verify_and_promote_enrichment(&pending).await?;
+        Ok(Some(pending.job_id.clone()))
+    }
+
+    async fn claim_enrichment(&self) -> Result<Option<PendingEnrichmentBatch>, CollectionError> {
+        let client = self.client.lock().await;
+        let row = client
+            .query_opt(
+                "SELECT job_id::text, verifier_token::text, input_sha256, output_sha256, \
+                 namespace_id::text, buyer_handle_id, chain_scope, handle_value, \
+                 observed_date::text, cursor_version, start_cursor, next_cursor, \
+                 requests_used, complete, evidence_json::text, records_json::text, \
+                 classification_labels::text \
+                 FROM agent_economy.claim_pending_enrichment_batch($1, 120::bigint)",
+                &[&self.lease_owner],
+            )
+            .await
+            .map_err(|_| CollectionError::CommitUnavailable)?;
+        row.map(|row| {
+            let evidence_json: String = row.get(14);
+            let evidence =
+                serde_json::from_str(&evidence_json).map_err(|_| CollectionError::InvalidInput)?;
+            Ok(PendingEnrichmentBatch {
+                job_id: row.get(0),
+                verifier_token: row.get(1),
+                input_sha256: row.get(2),
+                output_sha256: row.get(3),
+                namespace_id: row.get(4),
+                buyer_handle_id: row.get(5),
+                chain_scope: row.get(6),
+                handle_value: row.get(7),
+                observed_date: row.get(8),
+                cursor_version: row.get(9),
+                start_cursor: row.get(10),
+                next_cursor: row.get(11),
+                requests_used: row.get(12),
+                complete: row.get(13),
+                evidence_json,
+                evidence,
+                records_json: row.get(15),
+                classification_labels: row.get(16),
+            })
+        })
+        .transpose()
+    }
+
+    async fn verify_and_promote_enrichment(
+        &self,
+        pending: &PendingEnrichmentBatch,
+    ) -> Result<(), CollectionError> {
+        let mut bodies = Vec::with_capacity(pending.evidence.len());
+        for item in &pending.evidence {
+            let object = EvidenceObject::parse(&item.object_name)
+                .map_err(|_| CollectionError::InvalidInput)?;
+            if object.sha256() != item.sha256 {
+                return Err(CollectionError::InvalidInput);
             }
+            let readback = self.evidence_store.read(&object).await?;
+            if readback.generation != item.storage_generation
+                || readback.bytes.len() as u64 != item.byte_length
+                || format!("{:x}", Sha256::digest(&readback.bytes)) != item.sha256
+            {
+                return Err(CollectionError::InvalidInput);
+            }
+            bodies.push(readback.bytes);
         }
+        let client = self.client.lock().await;
+        let promoted = client
+            .query_one(
+                "SELECT agent_economy.commit_enrichment_batch(\
+                 $1::text::uuid,$2,$3::text::uuid,$4,$5,$6::text::uuid,$7,$8,$9,\
+                 $10::text::date,$11::bigint,$12,$13,$14::bigint,$15,\
+                 $16::text::jsonb,$17::bytea[],$18::text::jsonb,$19::text::jsonb)",
+                &[
+                    &pending.job_id,
+                    &self.lease_owner,
+                    &pending.verifier_token,
+                    &pending.input_sha256,
+                    &pending.output_sha256,
+                    &pending.namespace_id,
+                    &pending.buyer_handle_id,
+                    &pending.chain_scope,
+                    &pending.handle_value,
+                    &pending.observed_date,
+                    &pending.cursor_version,
+                    &pending.start_cursor,
+                    &pending.next_cursor,
+                    &pending.requests_used,
+                    &pending.complete,
+                    &pending.evidence_json,
+                    &bodies,
+                    &pending.records_json,
+                    &pending.classification_labels,
+                ],
+            )
+            .await
+            .map_err(|_| CollectionError::CommitUnavailable)?
+            .get::<_, bool>(0);
+        promoted
+            .then_some(())
+            .ok_or(CollectionError::CommitUnavailable)
     }
 
     async fn claim(&self) -> Result<Option<PendingBatch>, CollectionError> {

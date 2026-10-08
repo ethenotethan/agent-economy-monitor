@@ -94,6 +94,44 @@ fn verify_evidence_rejects_collector_and_rpc_authority_before_connecting() {
 }
 
 #[test]
+fn classify_without_dedicated_database_authority_fails_closed() {
+    let output = Command::new(env!("CARGO_BIN_EXE_agent-economy-monitor"))
+        .arg("classify")
+        .env_remove("CLASSIFIER_DATABASE_URL")
+        .env_remove("NAMESPACE_ID")
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("CLASSIFIER_DATABASE_URL"), "{stderr}");
+    assert!(!stderr.contains("handler unavailable"), "{stderr}");
+}
+
+#[test]
+fn enrich_requires_create_only_evidence_backend_before_connecting() {
+    let output = Command::new(env!("CARGO_BIN_EXE_agent-economy-monitor"))
+        .arg("enrich")
+        .env(
+            "ENRICHER_DATABASE_URL",
+            "postgresql://127.0.0.1:1/unreachable",
+        )
+        .env_remove("EVIDENCE_WRITE_ROOT")
+        .env_remove("EVIDENCE_WRITE_BUCKET")
+        .env_remove("NAMESPACE_ID")
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("exactly one create-only evidence backend"),
+        "{stderr}"
+    );
+    assert!(!stderr.contains("Connection refused"), "{stderr}");
+}
+
+#[test]
 fn unknown_process_mode_fails_nonzero() {
     let output = Command::new(env!("CARGO_BIN_EXE_agent-economy-monitor"))
         .arg("sweep-everything")
