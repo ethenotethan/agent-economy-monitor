@@ -66,7 +66,7 @@
         "name": "verify",
         "needs": [],
         "role": "gate",
-        "runs_on": "ubuntu-latest",
+        "runs_on": "ubuntu-24.04",
         "scripts": [
           "./scripts/verify",
           "python3 -m pip install --requirement requirements-dev.txt",
@@ -21701,7 +21701,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "c44f1122596fa0ddfe5db6c0bc146ff37a1aae0176b4a51c85a5ff8a6f7cdd9f",
+  "source_tree_sha256": "306ff844da56f07242c89d0187fb8fb1b1b51b2436493bd6e156a685f1085813",
   "stores": {
     "count": 2,
     "items": [
