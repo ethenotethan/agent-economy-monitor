@@ -845,7 +845,7 @@
         "observe",
         "output_sha",
         "oversized_protocol_evidence_is_rejected_before_archive_or_commit",
-        "postgres_auth_namespace_parameters_accept_the_stored_string",
+        "postgres_auth_parameters_accept_their_rust_types",
         "postgres_leases_are_exclusive_reclaimable_bounded_and_cancellable",
         "postgres_store_is_the_runtime_query_backend",
         "process",
@@ -977,7 +977,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 11121
+      "line_count": 11123
     },
     {
       "declaration_count": 137,
@@ -17452,13 +17452,13 @@
           {
             "kind": "fn",
             "line": 455,
-            "name": "postgres_auth_namespace_parameters_accept_the_stored_string",
+            "name": "postgres_auth_parameters_accept_their_rust_types",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 459,
+        "line_count": 461,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -21669,7 +21669,7 @@
   "inventory": {
     "declarations": 1770,
     "files": 178,
-    "lines": 53580
+    "lines": 53582
   },
   "layers": [
     {
@@ -21710,7 +21710,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "a9ab527915aa66fb6a5cad21dbfb7793a4e452070270b4f1abcc5be338522895",
+  "source_tree_sha256": "538d034c5e6008defe3b74bc9485b4f955ace2e6351445f60d41a8d2d31fcb94",
   "stores": {
     "count": 2,
     "items": [

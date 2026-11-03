@@ -452,8 +452,10 @@ fn configuration_requires_argon2id_and_bounded_session_lifetime() {
 }
 
 #[test]
-fn postgres_auth_namespace_parameters_accept_the_stored_string() {
+fn postgres_auth_parameters_accept_their_rust_types() {
     let auth = include_str!("../src/auth.rs");
     assert!(!auth.contains("$1::uuid"));
     assert!(auth.matches("$1::text::uuid").count() >= 7);
+    assert!(!auth.contains("$4::double precision"));
+    assert!(auth.contains("$4::bigint::double precision"));
 }

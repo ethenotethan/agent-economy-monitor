@@ -350,7 +350,7 @@ impl AuthStore for PostgresAuthStore {
                  INSERT INTO agent_economy.auth_sessions \
                    (namespace_id, token_hash, csrf_hash, created_at, expires_at) \
                  VALUES ($1::text::uuid, $2, $3, clock_timestamp(), \
-                         clock_timestamp() + make_interval(secs => $4::double precision))",
+                         clock_timestamp() + make_interval(secs => $4::bigint::double precision))",
                 &[&self.namespace_id, &token_hash, &csrf_hash, &ttl_seconds],
             )
             .await
