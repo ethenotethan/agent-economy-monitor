@@ -976,7 +976,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 11090
+      "line_count": 11091
     },
     {
       "declaration_count": 137,
@@ -17806,7 +17806,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 188,
+        "line_count": 189,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -21660,7 +21660,7 @@
   "inventory": {
     "declarations": 1769,
     "files": 178,
-    "lines": 53545
+    "lines": 53546
   },
   "layers": [
     {
@@ -21701,7 +21701,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "306ff844da56f07242c89d0187fb8fb1b1b51b2436493bd6e156a685f1085813",
+  "source_tree_sha256": "d5100808bd21e37fa5f41777a52a9ec991405daf5a1860860e77b4bcc9f7b546",
   "stores": {
     "count": 2,
     "items": [

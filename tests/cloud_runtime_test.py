@@ -43,6 +43,7 @@ class LeanGoogleCloudRuntimeTest(unittest.TestCase):
         self.assertGreaterEqual(runtime.count("var.image"), 2)
         self.assertNotIn("google_pubsub", runtime)
         self.assertNotIn("bigquery", runtime.lower())
+        self.assertIn("FROM rust:1.91-bookworm AS builder", dockerfile)
         self.assertIn("FROM gcr.io/distroless/cc-debian12:nonroot", dockerfile)
         self.assertIn('ENTRYPOINT ["/agent-economy-monitor"]', dockerfile)
 
