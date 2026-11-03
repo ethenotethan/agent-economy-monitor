@@ -450,3 +450,10 @@ fn configuration_requires_argon2id_and_bounded_session_lifetime() {
     assert!(AuthConfig::new(hash.clone(), Duration::ZERO).is_err());
     assert!(AuthConfig::new(hash, Duration::from_secs(24 * 60 * 60 + 1)).is_err());
 }
+
+#[test]
+fn postgres_auth_namespace_parameters_accept_the_stored_string() {
+    let auth = include_str!("../src/auth.rs");
+    assert!(!auth.contains("$1::uuid"));
+    assert!(auth.matches("$1::text::uuid").count() >= 7);
+}
