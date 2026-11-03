@@ -154,6 +154,73 @@ async fn login(app: &axum::Router, password: &str) -> axum::response::Response {
 }
 
 #[tokio::test]
+async fn browser_login_page_is_public_and_password_safe() {
+    let response = app(Arc::new(AtomicUsize::new(0)))
+        .oneshot(
+            Request::builder()
+                .uri("/auth/login")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+    assert_eq!(
+        response.headers()[header::CONTENT_TYPE],
+        "text/html; charset=utf-8"
+    );
+    let body = String::from_utf8(
+        response
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .unwrap();
+    assert!(body.contains("Agent Economy Monitor"));
+    assert!(body.contains("type=\"password\""));
+    assert!(body.contains("autocomplete=\"current-password\""));
+    assert!(body.contains("src=\"/auth/login.js\""));
+    assert!(!body.contains(PASSWORD));
+}
+
+#[tokio::test]
+async fn browser_navigation_redirects_to_login_but_api_clients_receive_json_401() {
+    let app = app(Arc::new(AtomicUsize::new(0)));
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/pulse")
+                .header(header::ACCEPT, "text/html")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    assert_eq!(response.headers()[header::LOCATION], "/auth/login");
+    assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/pulse")
+                .header(header::ACCEPT, "application/json")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response.headers()[header::CONTENT_TYPE], "application/json");
+}
+
+#[tokio::test]
 async fn protected_api_rejects_before_extractors_and_store_access() {
     let calls = Arc::new(AtomicUsize::new(0));
     let response = app(calls.clone())

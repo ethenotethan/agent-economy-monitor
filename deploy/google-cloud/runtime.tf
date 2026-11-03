@@ -11,11 +11,13 @@ locals {
 }
 
 resource "google_cloud_run_v2_service" "cockpit" {
-  name                = "agent-economy-monitor"
-  location            = var.region
-  deletion_protection = true
-  ingress             = "INGRESS_TRAFFIC_ALL"
-  depends_on          = [google_project_service.required]
+  name                 = "agent-economy-monitor"
+  location             = var.region
+  deletion_protection  = true
+  ingress              = "INGRESS_TRAFFIC_ALL"
+  iap_enabled          = false
+  invoker_iam_disabled = true
+  depends_on           = [google_project_service.required]
 
   template {
     service_account = google_service_account.runtime.email
@@ -97,13 +99,6 @@ resource "google_cloud_run_v2_service" "cockpit" {
   lifecycle {
     prevent_destroy = true
   }
-}
-
-resource "google_cloud_run_v2_service_iam_member" "cockpit_invoker" {
-  name     = google_cloud_run_v2_service.cockpit.name
-  location = google_cloud_run_v2_service.cockpit.location
-  role     = "roles/run.invoker"
-  member   = "allUsers"
 }
 
 resource "google_cloud_run_v2_job" "worker" {
