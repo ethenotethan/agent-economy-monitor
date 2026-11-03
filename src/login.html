@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Sign in · Agent Economy Monitor</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #070b10; color: #edf4ff; }
+    main { width: min(92vw, 28rem); padding: 2rem; border: 1px solid #253244; border-radius: 1rem; background: #0d141d; box-shadow: 0 1.5rem 5rem #0008; }
+    .mark { color: #76e4b4; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { margin: .65rem 0 .5rem; font-size: 1.55rem; }
+    p { margin: 0 0 1.5rem; color: #9fb0c5; line-height: 1.5; }
+    label { display: block; margin-bottom: .55rem; font-size: .85rem; }
+    input, button { width: 100%; border-radius: .55rem; font: inherit; }
+    input { border: 1px solid #33445b; background: #070b10; color: #fff; padding: .85rem 1rem; }
+    input:focus { outline: 2px solid #76e4b4; outline-offset: 2px; }
+    button { margin-top: .9rem; border: 0; padding: .85rem 1rem; background: #76e4b4; color: #07100c; font-weight: 700; cursor: pointer; }
+    button:disabled { cursor: wait; opacity: .65; }
+    #login-error { min-height: 1.4rem; margin: .85rem 0 0; color: #ff9f9f; font-size: .82rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="mark">Private cockpit</div>
+    <h1>Agent Economy Monitor</h1>
+    <p>Enter the shared cockpit password. Access is rate-limited and sessions expire automatically.</p>
+    <form id="login-form">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+      <button id="submit" type="submit">Sign in</button>
+      <div id="login-error" role="alert" aria-live="polite"></div>
+    </form>
+    <noscript>JavaScript is required to establish the secure cockpit session.</noscript>
+  </main>
+  <script src="/auth/login.js" defer></script>
+</body>
+</html>

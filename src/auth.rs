@@ -14,8 +14,8 @@ use axum::{
     extract::{Request, State},
     http::{HeaderMap, HeaderValue, Method, StatusCode, header},
     middleware::{self, Next},
-    response::{IntoResponse, Response},
-    routing::post,
+    response::{Html, IntoResponse, Redirect, Response},
+    routing::{get, post},
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use rand_core::{OsRng, RngCore};
@@ -32,6 +32,8 @@ const DEFAULT_SESSION_TTL: Duration = Duration::from_secs(15 * 60);
 const MAX_SESSIONS: usize = 1_024;
 const LOGIN_WINDOW: Duration = Duration::from_secs(60);
 const MAX_LOGIN_FAILURES: usize = 5;
+const LOGIN_PAGE: &str = include_str!("login.html");
+const LOGIN_SCRIPT: &str = include_str!("login.js");
 
 #[derive(Debug)]
 pub struct AuthConfigError(&'static str);
@@ -446,9 +448,43 @@ pub fn protect_router(protected: Router, state: AuthState) -> Router {
         require_session,
     ));
     let app: Router<AuthState> = protected.with_state(());
-    app.route("/auth/login", post(login))
+    app.route("/auth/login", get(login_page))
+        .route("/auth/login", post(login))
+        .route("/auth/login.js", get(login_script))
         .route("/auth/logout", post(logout))
         .with_state(state)
+}
+
+async fn login_page() -> Response {
+    let mut response = Html(LOGIN_PAGE).into_response();
+    response.headers_mut().insert(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static(
+            "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+        ),
+    );
+    response.headers_mut().insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    response.headers_mut().insert(
+        header::REFERRER_POLICY,
+        HeaderValue::from_static("no-referrer"),
+    );
+    no_store(response)
+}
+
+async fn login_script() -> Response {
+    let mut response = LOGIN_SCRIPT.into_response();
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/javascript; charset=utf-8"),
+    );
+    response.headers_mut().insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    no_store(response)
 }
 
 async fn login(State(state): State<AuthState>, request: Request) -> Response {
@@ -579,6 +615,20 @@ async fn require_session(State(state): State<AuthState>, request: Request, next:
     );
     match state.authorize(request.headers(), require_csrf).await {
         Ok(_) => next.run(request).await,
+        Err(StatusCode::UNAUTHORIZED)
+            if request.method() == Method::GET
+                && request
+                    .headers()
+                    .get(header::ACCEPT)
+                    .and_then(|value| value.to_str().ok())
+                    .is_some_and(|value| {
+                        value
+                            .split(',')
+                            .any(|item| item.trim().starts_with("text/html"))
+                    }) =>
+        {
+            no_store(Redirect::to("/auth/login").into_response())
+        }
         Err(status) => auth_error(status, None),
     }
 }

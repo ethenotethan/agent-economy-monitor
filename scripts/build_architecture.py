@@ -332,7 +332,7 @@ jobs:
 
   verify:
     name: verify
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:17.6-alpine

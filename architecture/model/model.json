@@ -66,7 +66,7 @@
         "name": "verify",
         "needs": [],
         "role": "gate",
-        "runs_on": "ubuntu-latest",
+        "runs_on": "ubuntu-24.04",
         "scripts": [
           "./scripts/verify",
           "python3 -m pip install --requirement requirements-dev.txt",
@@ -308,7 +308,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5671
+      "line_count": 5676
     },
     {
       "declaration_count": 44,
@@ -594,7 +594,7 @@
       "id": "cloud-runtime",
       "label": "Lean Google Cloud runtime",
       "layer": "delivery",
-      "line_count": 1248
+      "line_count": 1243
     },
     {
       "declaration_count": 0,
@@ -695,7 +695,7 @@
       "line_count": 1921
     },
     {
-      "declaration_count": 222,
+      "declaration_count": 224,
       "declarations": [
         "CLASSIFIER_PASSWORD",
         "COLLECTOR_PASSWORD",
@@ -751,6 +751,8 @@
         "auth_state",
         "binary_wires_a_bounded_outbound_projection_mode",
         "bounded_launch_chain_fixtures_archive_before_emitting_only_explicit_protocol_observations",
+        "browser_login_page_is_public_and_password_safe",
+        "browser_navigation_redirects_to_login_but_api_clients_receive_json_401",
         "buyer",
         "buyer_dossier",
         "buyer_dossier_keeps_classification_and_relationship_evidence_explicit",
@@ -974,7 +976,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 11019
+      "line_count": 11090
     },
     {
       "declaration_count": 137,
@@ -1697,7 +1699,7 @@
       "line_count": 3683
     },
     {
-      "declaration_count": 133,
+      "declaration_count": 137,
       "declarations": [
         "API_VERSION",
         "AuthConfig",
@@ -1722,6 +1724,8 @@
         "Fact",
         "GraphReadModel",
         "InMemoryAuthStore",
+        "LOGIN_PAGE",
+        "LOGIN_SCRIPT",
         "LOGIN_WINDOW",
         "LoginAttempt",
         "LoginAttempts",
@@ -1789,6 +1793,8 @@
         "investigations",
         "live_updates",
         "login",
+        "login_page",
+        "login_script",
         "logout",
         "main",
         "malformed_composite_cursor_is_rejected",
@@ -1835,7 +1841,7 @@
       ],
       "description": "Axum process entry point and versioned, bounded, provenance-bearing query API.",
       "external": false,
-      "file_count": 10,
+      "file_count": 12,
       "files": [
         ".env.example",
         "Cargo.lock",
@@ -1845,13 +1851,15 @@
         "src/cockpit.js",
         "src/cockpit.rs",
         "src/lib.rs",
+        "src/login.html",
+        "src/login.js",
         "src/main.rs",
         "src/query.rs"
       ],
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 7919
+      "line_count": 8053
     },
     {
       "declaration_count": 95,
@@ -2386,7 +2394,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 106,
+            "line": 108,
             "path": "src/auth.rs",
             "rule": "declared.topology",
             "via": "pub struct AuthState {"
@@ -2731,10 +2739,40 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 449,
+            "line": 452,
             "path": "src/auth.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/auth/login\", post(login))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:login-page",
+        "kind": "endpoint",
+        "label": "GET /auth/login",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 451,
+            "path": "src/auth.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/auth/login\", get(login_page))"
+          }
+        ]
+      },
+      {
+        "component": "runtime",
+        "id": "http:login-script",
+        "kind": "endpoint",
+        "label": "GET /auth/login.js",
+        "origins": [
+          {
+            "family": "mechanical",
+            "line": 453,
+            "path": "src/auth.rs",
+            "rule": "rust.http-route",
+            "via": ".route(\"/auth/login.js\", get(login_script))"
           }
         ]
       },
@@ -2746,7 +2784,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 450,
+            "line": 454,
             "path": "src/auth.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/auth/logout\", post(logout))"
@@ -3329,7 +3367,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 675,
+        "line_count": 680,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -10963,7 +11001,7 @@
         "component": "cloud-runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 196,
+        "line_count": 191,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -11710,9 +11748,9 @@
         "touched": false
       },
       {
-        "citations": 3,
+        "citations": 5,
         "component": "runtime",
-        "declaration_count": 54,
+        "declaration_count": 58,
         "declarations": [
           {
             "kind": "const",
@@ -11771,8 +11809,24 @@
             ]
           },
           {
+            "kind": "const",
+            "line": 35,
+            "name": "LOGIN_PAGE",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 36,
+            "name": "LOGIN_SCRIPT",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "struct",
-            "line": 37,
+            "line": 39,
             "name": "AuthConfigError",
             "passes": [
               "rust.declaration"
@@ -11780,7 +11834,7 @@
           },
           {
             "kind": "fn",
-            "line": 40,
+            "line": 42,
             "name": "fmt",
             "passes": [
               "rust.declaration"
@@ -11788,7 +11842,7 @@
           },
           {
             "kind": "struct",
-            "line": 48,
+            "line": 50,
             "name": "AuthConfig",
             "passes": [
               "rust.declaration"
@@ -11796,7 +11850,7 @@
           },
           {
             "kind": "fn",
-            "line": 54,
+            "line": 56,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -11804,7 +11858,7 @@
           },
           {
             "kind": "fn",
-            "line": 89,
+            "line": 91,
             "name": "from_env",
             "passes": [
               "rust.declaration"
@@ -11812,7 +11866,7 @@
           },
           {
             "kind": "struct",
-            "line": 106,
+            "line": 108,
             "name": "AuthState",
             "passes": [
               "rust.declaration"
@@ -11820,7 +11874,7 @@
           },
           {
             "kind": "struct",
-            "line": 112,
+            "line": 114,
             "name": "AuthStoreError",
             "passes": [
               "rust.declaration"
@@ -11828,7 +11882,7 @@
           },
           {
             "kind": "fn",
-            "line": 115,
+            "line": 117,
             "name": "fmt",
             "passes": [
               "rust.declaration"
@@ -11836,7 +11890,7 @@
           },
           {
             "kind": "trait",
-            "line": 123,
+            "line": 125,
             "name": "AuthStore",
             "passes": [
               "rust.declaration"
@@ -11844,7 +11898,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 124,
+            "line": 126,
             "name": "begin_login",
             "passes": [
               "rust.declaration"
@@ -11852,7 +11906,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 125,
+            "line": 127,
             "name": "finish_login",
             "passes": [
               "rust.declaration"
@@ -11860,7 +11914,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 126,
+            "line": 128,
             "name": "create_session",
             "passes": [
               "rust.declaration"
@@ -11868,7 +11922,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 132,
+            "line": 134,
             "name": "authorize",
             "passes": [
               "rust.declaration"
@@ -11876,7 +11930,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 137,
+            "line": 139,
             "name": "remove_session",
             "passes": [
               "rust.declaration"
@@ -11884,7 +11938,7 @@
           },
           {
             "kind": "struct",
-            "line": 141,
+            "line": 143,
             "name": "InMemoryAuthStore",
             "passes": [
               "rust.declaration"
@@ -11892,7 +11946,7 @@
           },
           {
             "kind": "struct",
-            "line": 146,
+            "line": 148,
             "name": "MemoryState",
             "passes": [
               "rust.declaration"
@@ -11900,7 +11954,7 @@
           },
           {
             "kind": "struct",
-            "line": 152,
+            "line": 154,
             "name": "LoginAttempts",
             "passes": [
               "rust.declaration"
@@ -11908,7 +11962,7 @@
           },
           {
             "kind": "struct",
-            "line": 155,
+            "line": 157,
             "name": "LoginAttempt",
             "passes": [
               "rust.declaration"
@@ -11916,7 +11970,7 @@
           },
           {
             "kind": "struct",
-            "line": 160,
+            "line": 162,
             "name": "Session",
             "passes": [
               "rust.declaration"
@@ -11924,7 +11978,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 169,
+            "line": 171,
             "name": "begin_login",
             "passes": [
               "rust.declaration"
@@ -11932,7 +11986,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 191,
+            "line": 193,
             "name": "finish_login",
             "passes": [
               "rust.declaration"
@@ -11940,7 +11994,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 204,
+            "line": 206,
             "name": "create_session",
             "passes": [
               "rust.declaration"
@@ -11948,7 +12002,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 236,
+            "line": 238,
             "name": "authorize",
             "passes": [
               "rust.declaration"
@@ -11956,7 +12010,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 254,
+            "line": 256,
             "name": "remove_session",
             "passes": [
               "rust.declaration"
@@ -11964,7 +12018,7 @@
           },
           {
             "kind": "struct",
-            "line": 264,
+            "line": 266,
             "name": "PostgresAuthStore",
             "passes": [
               "rust.declaration"
@@ -11972,7 +12026,7 @@
           },
           {
             "kind": "fn",
-            "line": 271,
+            "line": 273,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -11980,7 +12034,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 281,
+            "line": 283,
             "name": "begin_login",
             "passes": [
               "rust.declaration"
@@ -11988,7 +12042,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 308,
+            "line": 310,
             "name": "finish_login",
             "passes": [
               "rust.declaration"
@@ -11996,7 +12050,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 327,
+            "line": 329,
             "name": "create_session",
             "passes": [
               "rust.declaration"
@@ -12004,7 +12058,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 358,
+            "line": 360,
             "name": "authorize",
             "passes": [
               "rust.declaration"
@@ -12012,7 +12066,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 381,
+            "line": 383,
             "name": "remove_session",
             "passes": [
               "rust.declaration"
@@ -12020,7 +12074,7 @@
           },
           {
             "kind": "fn",
-            "line": 396,
+            "line": 398,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -12028,7 +12082,7 @@
           },
           {
             "kind": "fn",
-            "line": 399,
+            "line": 401,
             "name": "with_store",
             "passes": [
               "rust.declaration"
@@ -12036,7 +12090,7 @@
           },
           {
             "kind": "fn",
-            "line": 403,
+            "line": 405,
             "name": "from_env",
             "passes": [
               "rust.declaration"
@@ -12044,7 +12098,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 407,
+            "line": 409,
             "name": "authorize",
             "passes": [
               "rust.declaration"
@@ -12052,7 +12106,7 @@
           },
           {
             "kind": "struct",
-            "line": 433,
+            "line": 435,
             "name": "LoginRequest",
             "passes": [
               "rust.declaration"
@@ -12060,7 +12114,7 @@
           },
           {
             "kind": "struct",
-            "line": 438,
+            "line": 440,
             "name": "LoginResponse",
             "passes": [
               "rust.declaration"
@@ -12068,7 +12122,7 @@
           },
           {
             "kind": "fn",
-            "line": 442,
+            "line": 444,
             "name": "protect_router",
             "passes": [
               "rust.declaration"
@@ -12076,7 +12130,23 @@
           },
           {
             "kind": "async-fn",
-            "line": 453,
+            "line": 457,
+            "name": "login_page",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 476,
+            "name": "login_script",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 489,
             "name": "login",
             "passes": [
               "rust.declaration"
@@ -12084,7 +12154,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 551,
+            "line": 587,
             "name": "logout",
             "passes": [
               "rust.declaration"
@@ -12092,7 +12162,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 574,
+            "line": 610,
             "name": "require_session",
             "passes": [
               "rust.declaration"
@@ -12100,7 +12170,7 @@
           },
           {
             "kind": "fn",
-            "line": 585,
+            "line": 635,
             "name": "auth_error",
             "passes": [
               "rust.declaration"
@@ -12108,7 +12178,7 @@
           },
           {
             "kind": "fn",
-            "line": 604,
+            "line": 654,
             "name": "no_store",
             "passes": [
               "rust.declaration"
@@ -12116,7 +12186,7 @@
           },
           {
             "kind": "fn",
-            "line": 611,
+            "line": 661,
             "name": "random_token",
             "passes": [
               "rust.declaration"
@@ -12124,7 +12194,7 @@
           },
           {
             "kind": "fn",
-            "line": 617,
+            "line": 667,
             "name": "secret_hash",
             "passes": [
               "rust.declaration"
@@ -12132,7 +12202,7 @@
           },
           {
             "kind": "fn",
-            "line": 621,
+            "line": 671,
             "name": "cookie_value",
             "passes": [
               "rust.declaration"
@@ -12140,14 +12210,14 @@
           },
           {
             "kind": "fn",
-            "line": 631,
+            "line": 681,
             "name": "constant_time_eq",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 642,
+        "line_count": 692,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -13911,6 +13981,34 @@
           "rust.declaration"
         ],
         "path": "src/lib.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 40,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "src/login.html",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "runtime",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 44,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "src/login.js",
         "semantic_citations": 0,
         "touched": false
       },
@@ -17116,7 +17214,7 @@
       {
         "citations": 0,
         "component": "delivery-gates",
-        "declaration_count": 27,
+        "declaration_count": 29,
         "declarations": [
           {
             "kind": "const",
@@ -17281,6 +17379,22 @@
           {
             "kind": "async-fn",
             "line": 157,
+            "name": "browser_login_page_is_public_and_password_safe",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 192,
+            "name": "browser_navigation_redirects_to_login_but_api_clients_receive_json_401",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 224,
             "name": "protected_api_rejects_before_extractors_and_store_access",
             "passes": [
               "rust.declaration"
@@ -17288,7 +17402,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 175,
+            "line": 242,
             "name": "login_issues_secure_bounded_session_and_logout_requires_csrf",
             "passes": [
               "rust.declaration"
@@ -17296,7 +17410,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 258,
+            "line": 325,
             "name": "repeated_bad_passwords_are_rate_limited",
             "passes": [
               "rust.declaration"
@@ -17304,7 +17418,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 272,
+            "line": 339,
             "name": "concurrent_bad_passwords_cannot_bypass_the_attempt_budget",
             "passes": [
               "rust.declaration"
@@ -17312,7 +17426,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 294,
+            "line": 361,
             "name": "sessions_and_rate_limits_are_shared_across_runtime_instances",
             "passes": [
               "rust.declaration"
@@ -17320,7 +17434,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 346,
+            "line": 413,
             "name": "login_body_is_bounded_before_password_verification",
             "passes": [
               "rust.declaration"
@@ -17328,14 +17442,14 @@
           },
           {
             "kind": "fn",
-            "line": 353,
+            "line": 420,
             "name": "configuration_requires_argon2id_and_bounded_session_lifetime",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 385,
+        "line_count": 452,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -17692,7 +17806,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 184,
+        "line_count": 188,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -19817,14 +19931,14 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1763,
+        "citations": 1769,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
         "files": 62,
         "id": "rust.declaration"
       },
       {
-        "citations": 23,
+        "citations": 25,
         "class": "mechanical",
         "description": "Literal Axum method and path routes extracted from Rust source.",
         "files": 5,
@@ -19837,7 +19951,7 @@
         "boundary": 3,
         "contract": 1,
         "deployment": 3,
-        "endpoint": 23,
+        "endpoint": 25,
         "external": 4,
         "projection": 2,
         "projector": 1,
@@ -19848,16 +19962,16 @@
         "surface": 1,
         "worker": 8
       },
-      "citations": 62,
-      "declarations": 1763,
-      "entities": 62,
-      "entities_with_origin": 62,
-      "files": 176,
+      "citations": 64,
+      "declarations": 1769,
+      "entities": 64,
+      "entities_with_origin": 64,
+      "files": 178,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
       "touched_files": 31,
-      "untouched_files": 145
+      "untouched_files": 147
     }
   },
   "interplay": {
@@ -20697,7 +20811,7 @@
         "evidence": [
           {
             "excerpt": "pub struct AuthState {",
-            "line": 106,
+            "line": 108,
             "path": "src/auth.rs"
           }
         ],
@@ -21019,7 +21133,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/auth/login\", post(login))",
-            "line": 449,
+            "line": 452,
             "path": "src/auth.rs"
           }
         ],
@@ -21032,8 +21146,36 @@
         "component": "runtime",
         "evidence": [
           {
+            "excerpt": ".route(\"/auth/login\", get(login_page))",
+            "line": 451,
+            "path": "src/auth.rs"
+          }
+        ],
+        "id": "http:login-page",
+        "kind": "endpoint",
+        "label": "GET /auth/login",
+        "page": "experience"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
+            "excerpt": ".route(\"/auth/login.js\", get(login_script))",
+            "line": 453,
+            "path": "src/auth.rs"
+          }
+        ],
+        "id": "http:login-script",
+        "kind": "endpoint",
+        "label": "GET /auth/login.js",
+        "page": "experience"
+      },
+      {
+        "component": "runtime",
+        "evidence": [
+          {
             "excerpt": ".route(\"/auth/logout\", post(logout))",
-            "line": 450,
+            "line": 454,
             "path": "src/auth.rs"
           }
         ],
@@ -21516,9 +21658,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1763,
-    "files": 176,
-    "lines": 53340
+    "declarations": 1769,
+    "files": 178,
+    "lines": 53545
   },
   "layers": [
     {
@@ -21559,7 +21701,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "bcc16af5cd945a70af79c8744ede1d2b698ebfc83021c92f3c079cd4bdd6a806",
+  "source_tree_sha256": "306ff844da56f07242c89d0187fb8fb1b1b51b2436493bd6e156a685f1085813",
   "stores": {
     "count": 2,
     "items": [

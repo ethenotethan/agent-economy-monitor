@@ -28,6 +28,10 @@ class LeanGoogleCloudRuntimeTest(unittest.TestCase):
         dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
         self.assertIn('resource "google_cloud_run_v2_service" "cockpit"', runtime)
+        self.assertIn("iap_enabled          = false", runtime)
+        self.assertIn("invoker_iam_disabled = true", runtime)
+        self.assertNotIn('resource "google_cloud_run_v2_service_iam_member" "cockpit_invoker"', runtime)
+        self.assertNotIn('member   = "allUsers"', runtime)
         self.assertIn("min_instance_count = 0", runtime)
         self.assertIn("max_instance_count = 2", runtime)
         self.assertIn('resource "google_cloud_run_v2_job" "worker"', runtime)
