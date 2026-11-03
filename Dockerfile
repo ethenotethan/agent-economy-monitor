@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM rust:1.90-bookworm AS builder
+FROM rust:1.91-bookworm AS builder
 WORKDIR /workspace
 COPY . .
 RUN cargo build --locked --release --bin agent-economy-monitor
