@@ -286,7 +286,7 @@ impl AuthStore for PostgresAuthStore {
             .query_opt(
                 "INSERT INTO agent_economy.auth_login_limits \
                    (namespace_id, window_started_at, attempt_count) \
-                 VALUES ($1::uuid, clock_timestamp(), 1) \
+                 VALUES ($1::text::uuid, clock_timestamp(), 1) \
                  ON CONFLICT (namespace_id) DO UPDATE SET \
                    window_started_at = CASE \
                      WHEN auth_login_limits.window_started_at \
@@ -318,7 +318,7 @@ impl AuthStore for PostgresAuthStore {
                 .execute(
                     "UPDATE agent_economy.auth_login_limits \
                      SET window_started_at = clock_timestamp(), attempt_count = 0 \
-                     WHERE namespace_id = $1::uuid",
+                     WHERE namespace_id = $1::text::uuid",
                     &[&self.namespace_id],
                 )
                 .await
@@ -338,18 +338,18 @@ impl AuthStore for PostgresAuthStore {
             .execute(
                 "WITH purged AS (\
                    DELETE FROM agent_economy.auth_sessions \
-                   WHERE namespace_id = $1::uuid AND expires_at <= clock_timestamp()\
+                   WHERE namespace_id = $1::text::uuid AND expires_at <= clock_timestamp()\
                  ), trimmed AS (\
                    DELETE FROM agent_economy.auth_sessions \
-                   WHERE namespace_id = $1::uuid AND token_hash IN (\
+                   WHERE namespace_id = $1::text::uuid AND token_hash IN (\
                      SELECT token_hash FROM agent_economy.auth_sessions \
-                     WHERE namespace_id = $1::uuid \
+                     WHERE namespace_id = $1::text::uuid \
                      ORDER BY created_at DESC, token_hash DESC OFFSET 1023\
                    )\
                  ) \
                  INSERT INTO agent_economy.auth_sessions \
                    (namespace_id, token_hash, csrf_hash, created_at, expires_at) \
-                 VALUES ($1::uuid, $2, $3, clock_timestamp(), \
+                 VALUES ($1::text::uuid, $2, $3, clock_timestamp(), \
                          clock_timestamp() + make_interval(secs => $4::double precision))",
                 &[&self.namespace_id, &token_hash, &csrf_hash, &ttl_seconds],
             )
@@ -368,10 +368,10 @@ impl AuthStore for PostgresAuthStore {
             .query_opt(
                 "WITH purged AS (\
                    DELETE FROM agent_economy.auth_sessions \
-                   WHERE namespace_id = $1::uuid AND expires_at <= clock_timestamp()\
+                   WHERE namespace_id = $1::text::uuid AND expires_at <= clock_timestamp()\
                  ) \
                  SELECT 1 FROM agent_economy.auth_sessions \
-                 WHERE namespace_id = $1::uuid AND token_hash = $2 \
+                 WHERE namespace_id = $1::text::uuid AND token_hash = $2 \
                    AND ($3::text IS NULL OR csrf_hash = $3) \
                    AND expires_at > clock_timestamp()",
                 &[&self.namespace_id, &token_hash, &csrf_hash],
@@ -385,7 +385,7 @@ impl AuthStore for PostgresAuthStore {
         self.client
             .execute(
                 "DELETE FROM agent_economy.auth_sessions \
-                 WHERE namespace_id = $1::uuid AND token_hash = $2",
+                 WHERE namespace_id = $1::text::uuid AND token_hash = $2",
                 &[&self.namespace_id, &token_hash],
             )
             .await
