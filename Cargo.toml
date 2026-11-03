@@ -33,6 +33,7 @@ async-trait = "0.1"
 argon2 = "0.5"
 axum = "0.8"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std"] }
 base64 = "0.22"
 leptos = { version = "0.8", default-features = false, features = ["ssr"] }
 rand_core = { version = "0.6", features = ["getrandom"] }

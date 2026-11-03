@@ -976,7 +976,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 11091
+      "line_count": 11104
     },
     {
       "declaration_count": 137,
@@ -1859,7 +1859,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 8053
+      "line_count": 8056
     },
     {
       "declaration_count": 95,
@@ -2694,7 +2694,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 645,
+            "line": 646,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/healthz\", get(status))"
@@ -2949,7 +2949,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 643,
+            "line": 644,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/status\", get(status))"
@@ -3129,7 +3129,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 648,
+            "line": 649,
             "path": "src/main.rs",
             "rule": "declared.topology",
             "via": "info!(%address, \"agent economy monitor listening\");"
@@ -3311,7 +3311,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 4727,
+        "line_count": 4728,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3325,7 +3325,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 55,
+        "line_count": 56,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -14059,7 +14059,7 @@
           },
           {
             "kind": "fn",
-            "line": 178,
+            "line": 179,
             "name": "reject_mixed_worker_authority",
             "passes": [
               "rust.declaration"
@@ -14067,7 +14067,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 240,
+            "line": 241,
             "name": "run_classify_once",
             "passes": [
               "rust.declaration"
@@ -14075,7 +14075,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 284,
+            "line": 285,
             "name": "run_enrich_once",
             "passes": [
               "rust.declaration"
@@ -14083,7 +14083,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 369,
+            "line": 370,
             "name": "run_reduce_once",
             "passes": [
               "rust.declaration"
@@ -14091,7 +14091,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 418,
+            "line": 419,
             "name": "run_verify_evidence_once",
             "passes": [
               "rust.declaration"
@@ -14099,7 +14099,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 475,
+            "line": 476,
             "name": "run_collect_once",
             "passes": [
               "rust.declaration"
@@ -14107,7 +14107,7 @@
           },
           {
             "kind": "fn",
-            "line": 554,
+            "line": 555,
             "name": "collection_rpc_transport",
             "passes": [
               "rust.declaration"
@@ -14115,7 +14115,7 @@
           },
           {
             "kind": "fn",
-            "line": 579,
+            "line": 580,
             "name": "required_collection_env",
             "passes": [
               "rust.declaration"
@@ -14123,14 +14123,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 588,
+            "line": 589,
             "name": "serve",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 651,
+        "line_count": 652,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -17806,7 +17806,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 189,
+        "line_count": 202,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -21091,7 +21091,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/healthz\", get(status))",
-            "line": 645,
+            "line": 646,
             "path": "src/main.rs"
           }
         ],
@@ -21329,7 +21329,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/status\", get(status))",
-            "line": 643,
+            "line": 644,
             "path": "src/main.rs"
           }
         ],
@@ -21497,7 +21497,7 @@
         "evidence": [
           {
             "excerpt": "info!(%address, \"agent economy monitor listening\");",
-            "line": 648,
+            "line": 649,
             "path": "src/main.rs"
           }
         ],
@@ -21660,7 +21660,7 @@
   "inventory": {
     "declarations": 1769,
     "files": 178,
-    "lines": 53546
+    "lines": 53562
   },
   "layers": [
     {
@@ -21701,7 +21701,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "d5100808bd21e37fa5f41777a52a9ec991405daf5a1860860e77b4bcc9f7b546",
+  "source_tree_sha256": "7aef2a56e6dbfb898ac3e17b6b547579c898229b13d493f710da8b1fe88bc43e",
   "stores": {
     "count": 2,
     "items": [

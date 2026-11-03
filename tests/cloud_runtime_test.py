@@ -47,6 +47,19 @@ class LeanGoogleCloudRuntimeTest(unittest.TestCase):
         self.assertIn("FROM gcr.io/distroless/cc-debian12:nonroot", dockerfile)
         self.assertIn('ENTRYPOINT ["/agent-economy-monitor"]', dockerfile)
 
+    def test_production_binary_selects_tls_provider_before_startup(self) -> None:
+        cargo = (ROOT / "Cargo.toml").read_text(encoding="utf-8")
+        main = (ROOT / "src" / "main.rs").read_text(encoding="utf-8")
+
+        self.assertIn(
+            'rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std"] }',
+            cargo,
+        )
+        self.assertIn(
+            "rustls::crypto::aws_lc_rs::default_provider().install_default()",
+            main,
+        )
+
     def test_worker_jobs_receive_only_their_mode_authority(self) -> None:
         runtime = (DEPLOY / "runtime.tf").read_text(encoding="utf-8")
         variables = (DEPLOY / "variables.tf").read_text(encoding="utf-8")
