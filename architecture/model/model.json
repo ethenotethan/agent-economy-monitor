@@ -976,7 +976,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 11112
+      "line_count": 11114
     },
     {
       "declaration_count": 137,
@@ -19007,7 +19007,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 348,
+            "line": 350,
             "name": "restricted_dashboard_role_serves_every_query_path",
             "passes": [
               "rust.declaration"
@@ -19015,14 +19015,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 430,
+            "line": 432,
             "name": "buyer_dossier_keeps_classification_and_relationship_evidence_explicit",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 472,
+        "line_count": 474,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -21660,7 +21660,7 @@
   "inventory": {
     "declarations": 1769,
     "files": 178,
-    "lines": 53571
+    "lines": 53573
   },
   "layers": [
     {
@@ -21701,7 +21701,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "17aa9cbcae7d8c23cab4f4c4c3107bbb46888d49a1643798817aa1bc3196f077",
+  "source_tree_sha256": "9d13077c37b34761c8c7cb72d1419a342e25dda01ae97b891836348eac307e4f",
   "stores": {
     "count": 2,
     "items": [
