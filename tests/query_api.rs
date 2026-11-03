@@ -340,7 +340,9 @@ async fn purpose_built_surface_is_documented_without_graphql_or_sql() {
 fn postgres_store_is_the_runtime_query_backend() {
     let _constructor: fn(tokio_postgres::Client, String) -> PostgresQueryStore =
         PostgresQueryStore::new;
-    assert!(include_str!("../src/main.rs").contains("SET ROLE agent_economy_dashboard_reader"));
+    let main = include_str!("../src/main.rs");
+    assert!(main.contains("DASHBOARD_DATABASE_URL"));
+    assert!(!main.contains("SET ROLE agent_economy_dashboard_reader"));
 }
 
 #[tokio::test]
