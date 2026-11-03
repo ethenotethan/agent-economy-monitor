@@ -976,7 +976,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 11104
+      "line_count": 11112
     },
     {
       "declaration_count": 137,
@@ -1859,7 +1859,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 8056
+      "line_count": 8057
     },
     {
       "declaration_count": 95,
@@ -2694,7 +2694,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 646,
+            "line": 647,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/healthz\", get(status))"
@@ -2949,7 +2949,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 644,
+            "line": 645,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/status\", get(status))"
@@ -3129,7 +3129,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 649,
+            "line": 650,
             "path": "src/main.rs",
             "rule": "declared.topology",
             "via": "info!(%address, \"agent economy monitor listening\");"
@@ -14130,7 +14130,7 @@
             ]
           }
         ],
-        "line_count": 652,
+        "line_count": 653,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -17806,7 +17806,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 202,
+        "line_count": 210,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -21091,7 +21091,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/healthz\", get(status))",
-            "line": 646,
+            "line": 647,
             "path": "src/main.rs"
           }
         ],
@@ -21329,7 +21329,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/status\", get(status))",
-            "line": 644,
+            "line": 645,
             "path": "src/main.rs"
           }
         ],
@@ -21497,7 +21497,7 @@
         "evidence": [
           {
             "excerpt": "info!(%address, \"agent economy monitor listening\");",
-            "line": 649,
+            "line": 650,
             "path": "src/main.rs"
           }
         ],
@@ -21660,7 +21660,7 @@
   "inventory": {
     "declarations": 1769,
     "files": 178,
-    "lines": 53562
+    "lines": 53571
   },
   "layers": [
     {
@@ -21701,7 +21701,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "7aef2a56e6dbfb898ac3e17b6b547579c898229b13d493f710da8b1fe88bc43e",
+  "source_tree_sha256": "17aa9cbcae7d8c23cab4f4c4c3107bbb46888d49a1643798817aa1bc3196f077",
   "stores": {
     "count": 2,
     "items": [

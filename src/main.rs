@@ -609,21 +609,22 @@ async fn serve() -> Result<(), Box<dyn std::error::Error>> {
     ));
     let auth = AuthState::from_env(auth_store)?;
 
-    let (query_client, query_connection) = tokio_postgres::connect(&database_url, NoTls).await?;
-    query_client
-        .batch_execute("SET ROLE agent_economy_dashboard_reader")
-        .await?;
+    let dashboard_database_url = env::var("DASHBOARD_DATABASE_URL")?;
+    info!("connecting dashboard database session");
+    let (query_client, query_connection) =
+        tokio_postgres::connect(&dashboard_database_url, NoTls).await?;
+    info!("dashboard database session connected");
     tokio::spawn(async move {
         if query_connection.await.is_err() {
             tracing::error!("PostgreSQL query connection closed unexpectedly");
         }
     });
     let query_store = PostgresQueryStore::new(query_client, namespace_id.clone());
+    let projection_gateway_database_url = env::var("PROJECTION_GATEWAY_DATABASE_URL")?;
+    info!("connecting projection gateway database session");
     let (gateway_client, gateway_connection) =
-        tokio_postgres::connect(&database_url, NoTls).await?;
-    gateway_client
-        .batch_execute("SET ROLE agent_economy_projection_writer")
-        .await?;
+        tokio_postgres::connect(&projection_gateway_database_url, NoTls).await?;
+    info!("projection gateway database session connected");
     tokio::spawn(async move {
         if gateway_connection.await.is_err() {
             tracing::error!("PostgreSQL projection gateway connection closed unexpectedly");

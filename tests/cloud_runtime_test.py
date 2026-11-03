@@ -60,6 +60,14 @@ class LeanGoogleCloudRuntimeTest(unittest.TestCase):
             main,
         )
 
+    def test_cockpit_uses_dedicated_database_sessions(self) -> None:
+        main = (ROOT / "src" / "main.rs").read_text(encoding="utf-8")
+
+        self.assertIn('env::var("DASHBOARD_DATABASE_URL")', main)
+        self.assertIn('env::var("PROJECTION_GATEWAY_DATABASE_URL")', main)
+        self.assertNotIn("SET ROLE agent_economy_dashboard_reader", main)
+        self.assertNotIn("SET ROLE agent_economy_projection_writer", main)
+
     def test_worker_jobs_receive_only_their_mode_authority(self) -> None:
         runtime = (DEPLOY / "runtime.tf").read_text(encoding="utf-8")
         variables = (DEPLOY / "variables.tf").read_text(encoding="utf-8")
