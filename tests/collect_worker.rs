@@ -212,7 +212,7 @@ fn bazaar_job(input_sha256: String) -> LeasedJob {
 }
 
 fn bazaar_fixture() -> Vec<u8> {
-    br#"{"items":[{"accepts":[{"amount":"5000","asset":"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913","extra":{"name":"USD Coin","version":"2"},"maxAmountRequired":"5000","maxTimeoutSeconds":60,"network":"eip155:8453","payTo":"0x589a2314a2E05F45e40C4823Da3Ba58D421dB3d8","resource":"https://www.api-xpay.com/x402/quote","scheme":"exact"}],"resource":"https://www.api-xpay.com/x402/quote","x402Version":2}]}"#.to_vec()
+    include_bytes!("../crates/x402-adapter/tests/fixtures/bazaar-v2-heterogeneous.json").to_vec()
 }
 
 fn rpc_transport(chain: &str, reported_height: u64) -> FakeRpcTransport {
@@ -339,7 +339,7 @@ async fn genuine_public_bazaar_evidence_is_archived_then_replayed_into_an_observ
         vec![verified],
     )
     .unwrap();
-    assert_eq!(promoted.observations().len(), 1);
+    assert_eq!(promoted.observations().len(), 2);
     assert_eq!(promoted.observations()[0].protocol(), "x402");
     assert_eq!(source_requests.lock().unwrap().len(), 2);
     fs::remove_dir_all(root).unwrap();

@@ -266,10 +266,13 @@ impl ProtocolAdapter for X402Adapter {
             .iter()
             .any(|(document, _)| document.accepts.iter().any(|offer| offer.scheme == "exact"))
         {
+            if self.context.kind == EvidenceKind::Bazaar {
+                return Ok(Vec::new());
+            }
             return Err(AdapterError::UnsupportedScheme);
         }
         let evidence_ref = EvidenceRef::sha256(evidence, media_type(self.context.kind))?;
-        documents
+        let candidates = documents
             .into_iter()
             .flat_map(|(document, default_resource)| {
                 document
@@ -278,37 +281,44 @@ impl ProtocolAdapter for X402Adapter {
                     .filter(|offer| offer.scheme == "exact")
                     .map(move |offer| (document.x402_version, default_resource.clone(), offer))
             })
-            .enumerate()
-            .map(
-                |(offer_index, (protocol_version, default_resource, offer))| {
-                    validate_token_metadata(&offer)?;
-                    let resource = offer.resource.unwrap_or(default_resource);
-                    let offer_index =
-                        u64::try_from(offer_index).map_err(|_| AdapterError::InvalidJson)?;
-                    let discovery_fingerprint =
-                        discovery_fingerprint(&request_fingerprint, &resource, offer_index);
-                    Observation::new(
-                        Provenance::new(
-                            self.context.source_id.clone(),
-                            self.context.observed_at_unix_ms,
-                            self.parser_version.clone(),
-                        )?,
-                        evidence_ref.clone(),
-                        ProtocolObservation::X402(X402Observation::discovery(
-                            X402EventKey::discovery(discovery_fingerprint, resource.clone())?,
-                            offer.asset,
-                            offer.amount,
-                            protocol_version,
-                            offer.scheme,
-                            offer.network,
-                            offer.pay_to,
-                            resource,
-                        )?),
-                    )
-                    .map_err(AdapterError::from)
-                },
-            )
-            .collect()
+            .enumerate();
+        let mut observations = Vec::new();
+        for (offer_index, (protocol_version, default_resource, offer)) in candidates {
+            let observation = (|| {
+                validate_token_metadata(&offer)?;
+                let resource = offer.resource.unwrap_or(default_resource);
+                let offer_index =
+                    u64::try_from(offer_index).map_err(|_| AdapterError::InvalidJson)?;
+                let discovery_fingerprint =
+                    discovery_fingerprint(&request_fingerprint, &resource, offer_index);
+                Observation::new(
+                    Provenance::new(
+                        self.context.source_id.clone(),
+                        self.context.observed_at_unix_ms,
+                        self.parser_version.clone(),
+                    )?,
+                    evidence_ref.clone(),
+                    ProtocolObservation::X402(X402Observation::discovery(
+                        X402EventKey::discovery(discovery_fingerprint, resource.clone())?,
+                        offer.asset,
+                        offer.amount,
+                        protocol_version,
+                        offer.scheme,
+                        offer.network,
+                        offer.pay_to,
+                        resource,
+                    )?),
+                )
+                .map_err(AdapterError::from)
+            })();
+            match observation {
+                Ok(observation) => observations.push(observation),
+                Err(AdapterError::InvalidTokenMetadata | AdapterError::Observation(_))
+                    if self.context.kind == EvidenceKind::Bazaar => {}
+                Err(error) => return Err(error),
+            }
+        }
+        Ok(observations)
     }
 }
 

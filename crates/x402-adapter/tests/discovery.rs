@@ -14,6 +14,7 @@ const WELL_KNOWN_V1: &[u8] = include_bytes!("fixtures/well-known-v1.json");
 const OPENAPI_V2: &[u8] = include_bytes!("fixtures/openapi-v2.json");
 const BAZAAR_V2_REDUNDANT_MAX_AMOUNT: &[u8] =
     include_bytes!("fixtures/bazaar-v2-redundant-max-amount.json");
+const BAZAAR_V2_HETEROGENEOUS: &[u8] = include_bytes!("fixtures/bazaar-v2-heterogeneous.json");
 const MALFORMED_RUNTIME: &[u8] = include_bytes!("fixtures/malformed-runtime.http");
 const SIWX_ONLY: &[u8] = include_bytes!("fixtures/siwx-only.json");
 const BASE_USDC_TICKER_NAME: &[u8] = include_bytes!("fixtures/base-usdc-ticker-name.json");
@@ -129,6 +130,20 @@ fn bazaar_v2_rejects_conflicting_redundant_max_amount() {
 }
 
 #[test]
+fn heterogeneous_bazaar_snapshot_preserves_valid_offers() {
+    let observations = adapter(EvidenceKind::Bazaar)
+        .observe(BAZAAR_V2_HETEROGENEOUS)
+        .expect("invalid or unsupported offers do not poison valid Bazaar offers");
+
+    assert_eq!(observations.len(), 2);
+    assert_eq!(x402(&observations[0]).amount_atomic(), "1000");
+    assert_eq!(x402(&observations[1]).amount_atomic(), "2000");
+    assert!(observations.iter().all(|observation| {
+        observation.evidence().byte_length() == BAZAAR_V2_HETEROGENEOUS.len() as u64
+    }));
+}
+
+#[test]
 fn malformed_bazaar_snapshot_fails_closed() {
     let evidence = br#"{"items":[{"resource":"https://merchant.example/paid","x402Version":2,"accepts":"not-an-array"}]}"#;
 
@@ -141,6 +156,16 @@ fn empty_bazaar_snapshot_is_a_successful_no_op() {
         adapter(EvidenceKind::Bazaar)
             .observe(br#"{"items":[]}"#)
             .unwrap(),
+        Vec::new()
+    );
+}
+
+#[test]
+fn unsupported_only_bazaar_snapshot_is_a_successful_no_op() {
+    let evidence = br#"{"items":[{"resource":"https://merchant.example/paid","x402Version":2,"accepts":[{"scheme":"upto","network":"eip155:8453","amount":"1000","asset":"USDC","payTo":"0x1111111111111111111111111111111111111111"}]}]}"#;
+
+    assert_eq!(
+        adapter(EvidenceKind::Bazaar).observe(evidence).unwrap(),
         Vec::new()
     );
 }
