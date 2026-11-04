@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use time::OffsetDateTime;
 
-use crate::collect::{ArchivedEvidence, verify_replayed_evidence};
+use crate::collect::{ArchivedEvidence, verify_recovery_rpc_evidence};
 
 pub const MAX_MANIFEST_BYTES: usize = 8 * 1024 * 1024;
 const MAX_EVIDENCE_OBJECTS: usize = 10_000;
@@ -255,7 +255,7 @@ impl StoredRecoveryEvidence {
             bytes,
         )
         .map_err(|_| RecoveryError::InvalidPayload)?;
-        let batch = verify_replayed_evidence(
+        let batch = verify_recovery_rpc_evidence(
             self.chain.clone(),
             self.source_id.clone(),
             self.observed_at_unix_ms,

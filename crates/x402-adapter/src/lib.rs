@@ -18,6 +18,7 @@ pub enum EvidenceKind {
     Runtime402,
     WellKnown,
     OpenApi,
+    Bazaar,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -256,7 +257,11 @@ impl ProtocolAdapter for X402Adapter {
                 parse_openapi(evidence, &self.context.endpoint)?,
                 content_fingerprint(evidence),
             ),
+            EvidenceKind::Bazaar => (parse_bazaar(evidence)?, content_fingerprint(evidence)),
         };
+        if documents.is_empty() && self.context.kind == EvidenceKind::Bazaar {
+            return Ok(Vec::new());
+        }
         if !documents
             .iter()
             .any(|(document, _)| document.accepts.iter().any(|offer| offer.scheme == "exact"))
@@ -425,6 +430,31 @@ fn parse_openapi(
         return Err(AdapterError::MissingAccepts);
     }
     Ok(documents)
+}
+
+#[derive(Deserialize)]
+struct RawBazaarSnapshot {
+    items: Vec<serde_json::Value>,
+}
+
+fn parse_bazaar(evidence: &[u8]) -> Result<Vec<(PaymentRequired, String)>, AdapterError> {
+    reject_duplicate_json_members(evidence)?;
+    let snapshot: RawBazaarSnapshot =
+        serde_json::from_slice(evidence).map_err(|_| AdapterError::InvalidJson)?;
+    snapshot
+        .items
+        .into_iter()
+        .map(|item| {
+            let resource = item
+                .get("resource")
+                .and_then(serde_json::Value::as_str)
+                .filter(|value| !value.trim().is_empty())
+                .ok_or(AdapterError::InvalidJson)?
+                .to_owned();
+            let encoded = serde_json::to_vec(&item).map_err(|_| AdapterError::InvalidJson)?;
+            Ok((parse_payment_required(&encoded)?, resource))
+        })
+        .collect()
 }
 
 #[derive(Clone, Copy)]
@@ -614,7 +644,9 @@ fn observation_resource(observation: &Observation) -> String {
 fn media_type(kind: EvidenceKind) -> &'static str {
     match kind {
         EvidenceKind::Runtime402 => "application/http",
-        EvidenceKind::WellKnown | EvidenceKind::OpenApi => "application/json",
+        EvidenceKind::WellKnown | EvidenceKind::OpenApi | EvidenceKind::Bazaar => {
+            "application/json"
+        }
     }
 }
 
@@ -630,7 +662,9 @@ fn quarantine_reason(error: &AdapterError, kind: EvidenceKind) -> QuarantineReas
         | AdapterError::MissingAccepts
         | AdapterError::Observation(_) => match kind {
             EvidenceKind::Runtime402 => QuarantineReason::MalformedRuntime,
-            EvidenceKind::WellKnown | EvidenceKind::OpenApi => QuarantineReason::MalformedMetadata,
+            EvidenceKind::WellKnown | EvidenceKind::OpenApi | EvidenceKind::Bazaar => {
+                QuarantineReason::MalformedMetadata
+            }
         },
     }
 }

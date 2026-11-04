@@ -880,12 +880,13 @@ fn valid_collection_replay_inputs(inputs: &BTreeMap<String, String>) -> bool {
                     | "x402_runtime"
                     | "x402_well_known"
                     | "x402_openapi"
+                    | "x402_bazaar"
                     | "mpp_openapi"
             )
         })
         && inputs
             .get("provider")
-            .is_some_and(|value| value == "collection-manifest")
+            .is_some_and(|value| matches!(value.as_str(), "collection-manifest" | "cdp-bazaar"))
         && inputs
             .get("source")
             .is_some_and(|value| valid_source(value))

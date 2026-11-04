@@ -16,6 +16,7 @@ use agent_economy_x402_adapter::{
 };
 use async_trait::async_trait;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
+
 use serde::Deserialize;
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -35,12 +36,96 @@ const MAX_EVIDENCE_BYTES: usize = 4 * 1024 * 1024;
 const MAX_OBSERVATIONS: usize = 50_000;
 const X402_PARSER_VERSION: &str = "x402-adapter@1";
 const MPP_PARSER_VERSION: &str = "mpp-adapter@1";
+const CDP_BAZAAR_URL: &str =
+    "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=0";
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CollectionError {
     InvalidInput,
     EvidenceUnavailable,
     CommitUnavailable,
+}
+
+#[derive(Clone)]
+pub struct PublicSourceResponse {
+    body: Vec<u8>,
+}
+
+impl PublicSourceResponse {
+    pub fn try_new(status: u16, body: Vec<u8>) -> Result<Self, CollectionError> {
+        if status != 200 || body.is_empty() || body.len() > MAX_EVIDENCE_BYTES {
+            return Err(CollectionError::EvidenceUnavailable);
+        }
+        Ok(Self { body })
+    }
+}
+
+#[async_trait]
+pub trait PublicSourceTransport: Send + Sync + 'static {
+    async fn fetch(&self, url: &str) -> Result<PublicSourceResponse, CollectionError>;
+}
+
+struct DisabledPublicSourceTransport;
+
+#[async_trait]
+impl PublicSourceTransport for DisabledPublicSourceTransport {
+    async fn fetch(&self, _url: &str) -> Result<PublicSourceResponse, CollectionError> {
+        Err(CollectionError::EvidenceUnavailable)
+    }
+}
+
+pub struct CdpBazaarTransport {
+    client: reqwest::Client,
+}
+
+impl CdpBazaarTransport {
+    pub fn new() -> Result<Self, CollectionError> {
+        let client = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|_| CollectionError::EvidenceUnavailable)?;
+        Ok(Self { client })
+    }
+}
+
+#[async_trait]
+impl PublicSourceTransport for CdpBazaarTransport {
+    async fn fetch(&self, url: &str) -> Result<PublicSourceResponse, CollectionError> {
+        if url != CDP_BAZAAR_URL {
+            return Err(CollectionError::InvalidInput);
+        }
+        let mut response = self
+            .client
+            .get(url)
+            .header(reqwest::header::USER_AGENT, "agent-economy-monitor/0.1")
+            .send()
+            .await
+            .map_err(|_| CollectionError::EvidenceUnavailable)?;
+        let status = response.status().as_u16();
+        if response
+            .content_length()
+            .is_some_and(|size| size > MAX_EVIDENCE_BYTES as u64)
+        {
+            return Err(CollectionError::EvidenceUnavailable);
+        }
+        let mut body = Vec::new();
+        while let Some(chunk) = response
+            .chunk()
+            .await
+            .map_err(|_| CollectionError::EvidenceUnavailable)?
+        {
+            if body
+                .len()
+                .checked_add(chunk.len())
+                .is_none_or(|size| size > MAX_EVIDENCE_BYTES)
+            {
+                return Err(CollectionError::EvidenceUnavailable);
+            }
+            body.extend_from_slice(&chunk);
+        }
+        PublicSourceResponse::try_new(status, body)
+    }
 }
 
 impl std::fmt::Display for CollectionError {
@@ -76,8 +161,10 @@ impl ArchivedEvidence {
         height: u64,
         archived_bytes: Vec<u8>,
     ) -> Result<Self, CollectionError> {
-        if media_type != "application/vnd.agent-economy.rpc"
-            || archived_bytes.is_empty()
+        if !matches!(
+            media_type.as_str(),
+            "application/vnd.agent-economy.rpc" | "application/json"
+        ) || archived_bytes.is_empty()
             || archived_bytes.len() > MAX_EVIDENCE_BYTES
             || format!("{:x}", Sha256::digest(&archived_bytes)) != sha256
         {
@@ -661,6 +748,7 @@ pub struct CollectionHandler<S: ?Sized, C, T> {
     evidence_store: Arc<S>,
     commit_store: Arc<C>,
     rpc_transport: Mutex<T>,
+    public_source_transport: Arc<dyn PublicSourceTransport>,
 }
 
 impl<S: ?Sized, C, T> CollectionHandler<S, C, T> {
@@ -675,7 +763,16 @@ impl<S: ?Sized, C, T> CollectionHandler<S, C, T> {
             evidence_store,
             commit_store,
             rpc_transport: Mutex::new(rpc_transport),
+            public_source_transport: Arc::new(DisabledPublicSourceTransport),
         }
+    }
+
+    pub fn with_public_source_transport(
+        mut self,
+        transport: Arc<dyn PublicSourceTransport>,
+    ) -> Self {
+        self.public_source_transport = transport;
+        self
     }
 }
 
@@ -698,6 +795,7 @@ struct ManifestInput {
     height: u64,
     kind: InputKind,
     context: String,
+    #[serde(default)]
     evidence_base64: String,
 }
 
@@ -709,6 +807,7 @@ enum InputKind {
     X402WellKnown,
     #[serde(rename = "x402_openapi")]
     X402OpenApi,
+    X402Bazaar,
     #[serde(rename = "mpp_openapi")]
     MppOpenApi,
 }
@@ -803,9 +902,14 @@ where
             || admission.source_id != manifest.source_id
             || admission.start_height != manifest.start_height
             || admission.end_height != manifest.end_height
-            || admission.acquisition_contract != "alchemy-rpc-block-v1"
             || admission.evidence_contract != "evidence-store-create-read-sha256-v1"
         {
+            return Err(CollectionError::InvalidInput);
+        }
+        if admission.acquisition_contract == "cdp-x402-bazaar-v1" {
+            return self.build_public_source_batch(manifest).await;
+        }
+        if admission.acquisition_contract != "alchemy-rpc-block-v1" {
             return Err(CollectionError::InvalidInput);
         }
         let chain = manifest_chain(&manifest.chain)?;
@@ -864,6 +968,69 @@ where
             observations: Vec::new(),
         })
     }
+
+    async fn build_public_source_batch(
+        &self,
+        manifest: Manifest,
+    ) -> Result<CollectionBatch, CollectionError> {
+        if manifest.source_id != "cdp-x402-bazaar-base"
+            || manifest.chain != "base"
+            || manifest.start_height != 0
+            || manifest.end_height != 0
+            || manifest.inputs.len() != 1
+        {
+            return Err(CollectionError::InvalidInput);
+        }
+        let input = &manifest.inputs[0];
+        if !matches!(input.kind, InputKind::X402Bazaar)
+            || input.height != manifest.start_height
+            || input.context != CDP_BAZAAR_URL
+            || !input.evidence_base64.is_empty()
+        {
+            return Err(CollectionError::InvalidInput);
+        }
+        let response = self.public_source_transport.fetch(&input.context).await?;
+        let provenance = EvidenceProvenance::new(
+            "public-http-source-v1",
+            &format!("cdp-x402-bazaar:offset:0:height:{}", input.height),
+            [
+                ("chain", manifest.chain.clone()),
+                ("height", input.height.to_string()),
+                ("input-kind", "x402_bazaar".to_owned()),
+                ("provider", "cdp-bazaar".to_owned()),
+                ("source", manifest.source_id.clone()),
+            ],
+        )
+        .map_err(|_| CollectionError::InvalidInput)?;
+        let context = EvidenceContext::new(&manifest.source_id, &manifest.observed_date)
+            .map_err(|_| CollectionError::InvalidInput)?
+            .with_provenance(provenance);
+        let receipt = self
+            .evidence_store
+            .archive_verified(&context, &response.body)
+            .await?;
+        let archived = ArchivedEvidence {
+            evidence_id: format!("evidence:sha256:{}", receipt.object.sha256()),
+            sha256: receipt.object.sha256(),
+            storage_uri: receipt.object.name().to_owned(),
+            storage_generation: receipt.generation,
+            media_type: "application/json".to_owned(),
+            byte_length: response.body.len() as u64,
+            height: input.height,
+            verified: true,
+            archived_bytes: response.body,
+        };
+        parse_protocol_input(&manifest, input, &archived.archived_bytes)?;
+        Ok(CollectionBatch {
+            chain: manifest.chain,
+            source_id: manifest.source_id,
+            observed_at_unix_ms: manifest.observed_at_unix_ms,
+            start_height: manifest.start_height,
+            end_height: manifest.end_height,
+            evidence: vec![archived],
+            observations: Vec::new(),
+        })
+    }
 }
 
 pub fn verify_replayed_evidence(
@@ -872,7 +1039,47 @@ pub fn verify_replayed_evidence(
     observed_at_unix_ms: i64,
     start_height: u64,
     end_height: u64,
+    evidence: Vec<ArchivedEvidence>,
+) -> Result<CollectionBatch, CollectionError> {
+    verify_evidence(
+        chain,
+        source_id,
+        observed_at_unix_ms,
+        start_height,
+        end_height,
+        evidence,
+        false,
+    )
+}
+
+#[doc(hidden)]
+pub fn verify_recovery_rpc_evidence(
+    chain: String,
+    source_id: String,
+    observed_at_unix_ms: i64,
+    start_height: u64,
+    end_height: u64,
+    evidence: Vec<ArchivedEvidence>,
+) -> Result<CollectionBatch, CollectionError> {
+    verify_evidence(
+        chain,
+        source_id,
+        observed_at_unix_ms,
+        start_height,
+        end_height,
+        evidence,
+        true,
+    )
+}
+
+fn verify_evidence(
+    chain: String,
+    source_id: String,
+    observed_at_unix_ms: i64,
+    start_height: u64,
+    end_height: u64,
     mut evidence: Vec<ArchivedEvidence>,
+    allow_recovery_envelope: bool,
 ) -> Result<CollectionBatch, CollectionError> {
     evidence.sort_by_key(ArchivedEvidence::height);
     if evidence.len() != end_height.saturating_sub(start_height).saturating_add(1) as usize
@@ -882,6 +1089,7 @@ pub fn verify_replayed_evidence(
     {
         return Err(CollectionError::InvalidInput);
     }
+    let is_bazaar = source_id == "cdp-x402-bazaar-base";
     let manifest = Manifest {
         schema_version: 1,
         chain: chain.clone(),
@@ -892,23 +1100,48 @@ pub fn verify_replayed_evidence(
         end_height,
         inputs: vec![ManifestInput {
             height: start_height,
-            kind: InputKind::ChainTransfer,
-            context: "readback".to_owned(),
-            evidence_base64: STANDARD.encode(b"readback"),
+            kind: if is_bazaar {
+                InputKind::X402Bazaar
+            } else {
+                InputKind::ChainTransfer
+            },
+            context: if is_bazaar {
+                CDP_BAZAAR_URL.to_owned()
+            } else {
+                "readback".to_owned()
+            },
+            evidence_base64: String::new(),
         }],
     };
     let mut observations = Vec::new();
     for archived in &evidence {
-        let rpc = RpcEvidence::decode(&archived.archived_bytes)
-            .map_err(|_| CollectionError::InvalidInput)?;
-        for input in protocol_inputs_from_rpc(rpc.body(), archived.height)? {
-            let bytes = STANDARD
-                .decode(&input.evidence_base64)
+        let inputs = if archived.media_type == "application/vnd.agent-economy.rpc" {
+            let rpc = RpcEvidence::decode(&archived.archived_bytes)
                 .map_err(|_| CollectionError::InvalidInput)?;
-            if bytes.is_empty() || bytes.len() > MAX_EVIDENCE_BYTES {
-                return Err(CollectionError::InvalidInput);
+            if allow_recovery_envelope {
+                protocol_inputs_from_recovery_envelope(rpc.body(), archived.height)?
+            } else {
+                Vec::new()
             }
-            for observation in parse_protocol_input(&manifest, &input, &bytes)? {
+        } else if archived.media_type == "application/json" && is_bazaar {
+            vec![ManifestInput {
+                height: archived.height,
+                kind: InputKind::X402Bazaar,
+                context: CDP_BAZAAR_URL.to_owned(),
+                evidence_base64: String::new(),
+            }]
+        } else {
+            return Err(CollectionError::InvalidInput);
+        };
+        for input in inputs {
+            let input_bytes = if input.evidence_base64.is_empty() {
+                archived.archived_bytes.clone()
+            } else {
+                STANDARD
+                    .decode(&input.evidence_base64)
+                    .map_err(|_| CollectionError::InvalidInput)?
+            };
+            for observation in parse_protocol_input(&manifest, &input, &input_bytes)? {
                 if observations.len() >= MAX_OBSERVATIONS {
                     return Err(CollectionError::InvalidInput);
                 }
@@ -938,7 +1171,7 @@ pub fn verify_replayed_evidence(
     })
 }
 
-fn protocol_inputs_from_rpc(
+fn protocol_inputs_from_recovery_envelope(
     bytes: &[u8],
     height: u64,
 ) -> Result<Vec<ManifestInput>, CollectionError> {
@@ -974,11 +1207,15 @@ fn parse_protocol_input(
 ) -> Result<Vec<Observation>, CollectionError> {
     match input.kind {
         InputKind::ChainTransfer => Ok(Vec::new()),
-        InputKind::X402Runtime | InputKind::X402WellKnown | InputKind::X402OpenApi => {
+        InputKind::X402Runtime
+        | InputKind::X402WellKnown
+        | InputKind::X402OpenApi
+        | InputKind::X402Bazaar => {
             let kind = match input.kind {
                 InputKind::X402Runtime => EvidenceKind::Runtime402,
                 InputKind::X402WellKnown => EvidenceKind::WellKnown,
                 InputKind::X402OpenApi => EvidenceKind::OpenApi,
+                InputKind::X402Bazaar => EvidenceKind::Bazaar,
                 _ => unreachable!(),
             };
             let context = X402EvidenceContext::new(
@@ -1011,7 +1248,15 @@ fn validate_manifest(manifest: &Manifest) -> Result<(), CollectionError> {
         .iter()
         .map(|input| input.height)
         .collect::<std::collections::BTreeSet<_>>();
-    let expected_source = format!("alchemy-{}", manifest.chain);
+    let expected_source = if manifest
+        .inputs
+        .iter()
+        .all(|input| matches!(input.kind, InputKind::X402Bazaar))
+    {
+        "cdp-x402-bazaar-base".to_owned()
+    } else {
+        format!("alchemy-{}", manifest.chain)
+    };
     if manifest.schema_version != 1
         || !matches!(
             manifest.chain.as_str(),

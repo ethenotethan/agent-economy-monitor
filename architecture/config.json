@@ -76,13 +76,14 @@
       ]
     },
     {
-      "description": "Namespace-bound leased collector that acquires bounded RPC inputs, creates immutable evidence objects, recovers backend generation through metadata-only exact-name listing, and stages a noncanonical manifest without object-body read or canonical-promotion authority.",
+      "description": "Namespace-bound leased collector that acquires bounded chain-bound RPC or fixed public x402 Bazaar inputs, creates immutable evidence objects, recovers backend generation through metadata-only exact-name listing, and stages a noncanonical manifest without object-body read or canonical-promotion authority.",
       "id": "collect-worker",
       "label": "Create-only evidence collection worker",
       "layer": "evidence",
       "patterns": [
         "src/collect.rs",
-        "migrations/0013_collect_worker.*.sql"
+        "migrations/0013_collect_worker.*.sql",
+        "migrations/0018_public_source_collection.*.sql"
       ]
     },
     {

@@ -176,6 +176,72 @@ fn rpc_endpoint_debug_never_exposes_credentials() {
 }
 
 #[test]
+fn official_and_public_rpc_endpoints_are_accepted_for_their_chain() {
+    let endpoints = [
+        (
+            Chain::Ethereum,
+            RpcEndpoint::parse("https://ethereum-rpc.publicnode.com").unwrap(),
+        ),
+        (
+            Chain::Base,
+            RpcEndpoint::parse("https://mainnet.base.org").unwrap(),
+        ),
+        (
+            Chain::Solana,
+            RpcEndpoint::parse("https://api.mainnet-beta.solana.com").unwrap(),
+        ),
+        (
+            Chain::Tempo,
+            RpcEndpoint::parse("https://rpc.tempo.xyz").unwrap(),
+        ),
+    ];
+
+    assert!(AlchemyTransport::new(endpoints).is_ok());
+}
+
+#[test]
+fn rpc_endpoint_policy_rejects_private_redirectable_and_cross_chain_targets() {
+    for url in [
+        "http://mainnet.base.org",
+        "https://127.0.0.1",
+        "https://[::1]",
+        "https://10.0.0.1",
+        "https://localhost",
+        "https://user:password@mainnet.base.org",
+        "https://mainnet.base.org:8443",
+        "https://mainnet.base.org/#redirect",
+    ] {
+        assert!(
+            RpcEndpoint::parse(url).is_err(),
+            "unsafe endpoint unexpectedly accepted: {url}"
+        );
+    }
+
+    let endpoints = [
+        (
+            Chain::Ethereum,
+            RpcEndpoint::parse("https://mainnet.base.org").unwrap(),
+        ),
+        (
+            Chain::Base,
+            RpcEndpoint::parse("https://ethereum-rpc.publicnode.com").unwrap(),
+        ),
+        (
+            Chain::Solana,
+            RpcEndpoint::parse("https://api.mainnet-beta.solana.com").unwrap(),
+        ),
+        (
+            Chain::Tempo,
+            RpcEndpoint::parse("https://rpc.tempo.xyz").unwrap(),
+        ),
+    ];
+    assert!(matches!(
+        AlchemyTransport::new(endpoints),
+        Err(CollectorError::InvalidEndpoint)
+    ));
+}
+
+#[test]
 fn alchemy_endpoints_must_match_their_configured_chain() {
     let endpoints = [
         (

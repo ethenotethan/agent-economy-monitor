@@ -83,6 +83,50 @@ fn well_known_v1_metadata_emits_versioned_observation() {
 }
 
 #[test]
+fn genuine_bazaar_snapshot_emits_source_cited_observations() {
+    let evidence = br#"{"items":[{"resource":"https://merchant.example/paid","x402Version":2,"accepts":[{"scheme":"exact","network":"eip155:8453","amount":"1000","asset":"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913","payTo":"0x1111111111111111111111111111111111111111","extra":{"name":"USD Coin"}}]}]}"#;
+    let adapter = X402Adapter::new(
+        EvidenceContext::new(
+            EvidenceKind::Bazaar,
+            "cdp-x402-bazaar-base",
+            "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=0",
+            1_793_754_000_000,
+        )
+        .unwrap(),
+        "x402-adapter@1",
+    )
+    .unwrap();
+
+    let first = adapter
+        .observe(evidence)
+        .expect("valid public Bazaar snapshot");
+    let replay = adapter.observe(evidence).expect("idempotent replay");
+
+    assert_eq!(first.len(), 1);
+    assert_eq!(first[0].id(), replay[0].id());
+    assert_eq!(first[0].evidence().media_type(), "application/json");
+    assert_eq!(first[0].evidence().byte_length(), evidence.len() as u64);
+    assert_eq!(x402(&first[0]).resource(), "https://merchant.example/paid");
+}
+
+#[test]
+fn malformed_bazaar_snapshot_fails_closed() {
+    let evidence = br#"{"items":[{"resource":"https://merchant.example/paid","x402Version":2,"accepts":"not-an-array"}]}"#;
+
+    assert!(adapter(EvidenceKind::Bazaar).observe(evidence).is_err());
+}
+
+#[test]
+fn empty_bazaar_snapshot_is_a_successful_no_op() {
+    assert_eq!(
+        adapter(EvidenceKind::Bazaar)
+            .observe(br#"{"items":[]}"#)
+            .unwrap(),
+        Vec::new()
+    );
+}
+
+#[test]
 fn runtime_v1_challenge_does_not_require_v2_payment_required_header() {
     let adapter = X402Adapter::new(
         EvidenceContext::new(

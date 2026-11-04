@@ -270,7 +270,7 @@
       "id": "architecture-policy",
       "label": "Architecture policy",
       "layer": "governance",
-      "line_count": 519
+      "line_count": 534
     },
     {
       "declaration_count": 0,
@@ -308,7 +308,7 @@
       "id": "architecture-tooling",
       "label": "Architecture tooling",
       "layer": "governance",
-      "line_count": 5676
+      "line_count": 5677
     },
     {
       "declaration_count": 44,
@@ -612,10 +612,12 @@
       "line_count": 27
     },
     {
-      "declaration_count": 66,
+      "declaration_count": 77,
       "declarations": [
         "ArchivedEvidence",
         "BatchRpcArchive",
+        "CDP_BAZAAR_URL",
+        "CdpBazaarTransport",
         "CollectedObservation",
         "CollectionBatch",
         "CollectionCommitStore",
@@ -623,6 +625,7 @@
         "CollectionEvidenceStore",
         "CollectionHandler",
         "CollectionRetryDelay",
+        "DisabledPublicSourceTransport",
         "InputKind",
         "MAX_EVIDENCE_BYTES",
         "MAX_INPUTS",
@@ -634,11 +637,14 @@
         "ManifestInput",
         "PostgresCollectionCommitStore",
         "PostgresCollectionJobStore",
+        "PublicSourceResponse",
+        "PublicSourceTransport",
         "StagedCursorStore",
         "X402_PARSER_VERSION",
         "archive",
         "archive_verified",
         "build_batch",
+        "build_public_source_batch",
         "chain",
         "claim",
         "collection_row_to_job",
@@ -649,6 +655,7 @@
         "evidence_id",
         "evidence_manifest_sha256",
         "fail",
+        "fetch",
         "fmt",
         "fn",
         "from_shared",
@@ -667,35 +674,41 @@
         "parse_protocol_input",
         "poison",
         "process",
-        "protocol_inputs_from_rpc",
+        "protocol_inputs_from_recovery_envelope",
         "renew",
         "retryable",
         "sha256",
         "source_id",
         "storage_generation",
         "storage_uri",
+        "try_new",
         "valid_collection_error_code",
         "valid_lease_owner",
         "valid_sha256",
         "validate_manifest",
+        "verify_evidence",
+        "verify_recovery_rpc_evidence",
         "verify_replayed_evidence",
-        "wait"
+        "wait",
+        "with_public_source_transport"
       ],
-      "description": "Namespace-bound leased collector that acquires bounded RPC inputs, creates immutable evidence objects, recovers backend generation through metadata-only exact-name listing, and stages a noncanonical manifest without object-body read or canonical-promotion authority.",
+      "description": "Namespace-bound leased collector that acquires bounded chain-bound RPC or fixed public x402 Bazaar inputs, creates immutable evidence objects, recovers backend generation through metadata-only exact-name listing, and stages a noncanonical manifest without object-body read or canonical-promotion authority.",
       "external": false,
-      "file_count": 3,
+      "file_count": 5,
       "files": [
         "migrations/0013_collect_worker.down.sql",
         "migrations/0013_collect_worker.up.sql",
+        "migrations/0018_public_source_collection.down.sql",
+        "migrations/0018_public_source_collection.up.sql",
         "src/collect.rs"
       ],
       "id": "collect-worker",
       "label": "Create-only evidence collection worker",
       "layer": "evidence",
-      "line_count": 1921
+      "line_count": 3070
     },
     {
-      "declaration_count": 225,
+      "declaration_count": 229,
       "declarations": [
         "CLASSIFIER_PASSWORD",
         "COLLECTOR_PASSWORD",
@@ -706,6 +719,7 @@
         "ENRICHER_PASSWORD",
         "Error",
         "EventLog",
+        "FakePublicSourceTransport",
         "FakeRpcTransport",
         "FixtureGateway",
         "FixtureProjector",
@@ -749,8 +763,10 @@
         "archive",
         "auth_config",
         "auth_state",
+        "bazaar_fixture",
+        "bazaar_job",
+        "bazaar_manifest",
         "binary_wires_a_bounded_outbound_projection_mode",
-        "bounded_launch_chain_fixtures_archive_before_emitting_only_explicit_protocol_observations",
         "browser_login_page_is_public_and_password_safe",
         "browser_navigation_redirects_to_login_but_api_clients_receive_json_401",
         "buyer",
@@ -799,6 +815,8 @@
         "fixture_observation",
         "full_manifest",
         "gateway_routes_require_bearer_auth_and_expose_the_complete_flow",
+        "generic_rpc_protocol_shaped_field_cannot_create_an_observation",
+        "genuine_public_bazaar_evidence_is_archived_then_replayed_into_an_observation",
         "graph",
         "handler_failure_records_only_a_safe_code_and_returns_nonzero_semantics",
         "insert_chain_job",
@@ -824,7 +842,6 @@
         "manifest",
         "manifest_chain",
         "manifest_for_chain",
-        "manifest_payload_cannot_create_observation_when_rpc_evidence_has_only_ordinary_transfer",
         "manifest_rejects_duplicate_json_members",
         "manifest_requires_nonzero_generation_and_bounded_input",
         "materialized_manifest",
@@ -837,7 +854,6 @@
         "mpp_event_key_rejects_invalid_method_grammar",
         "mpp_event_keys_are_scoped_by_required_realm",
         "mpp_extension_replays_through_the_shared_envelope",
-        "mpp_fixture",
         "native_wiki_adapter_uses_real_rpc_and_preserves_curated_content",
         "observation",
         "observation_construction_rejects_invalid_provenance",
@@ -863,6 +879,7 @@
         "protocol_fixture",
         "protocol_observation_construction_rejects_invalid_amount",
         "provenance",
+        "public_bazaar_page_coordinate_must_match_the_fixed_source_request",
         "publication_rejects_private_snapshot_canaries_and_unauthorized_citations",
         "publish",
         "publish_bundle_if_absent",
@@ -977,7 +994,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 11123
+      "line_count": 11216
     },
     {
       "declaration_count": 137,
@@ -1261,7 +1278,7 @@
       "id": "evidence-store",
       "label": "Evidence storage contract",
       "layer": "evidence",
-      "line_count": 1688
+      "line_count": 1689
     },
     {
       "declaration_count": 14,
@@ -1495,7 +1512,7 @@
       "line_count": 130
     },
     {
-      "declaration_count": 183,
+      "declaration_count": 185,
       "declarations": [
         "ALL",
         "ANALYTICS_SCHEMA",
@@ -1637,6 +1654,7 @@
         "new",
         "next_cursor",
         "noncanonical_evm_quantities_cannot_advance_cursor",
+        "official_and_public_rpc_endpoints_are_accepted_for_their_chain",
         "oversized_provider_response_is_rejected_before_allocation_contract_accepts_it",
         "parse",
         "postgres_cursor_compare_and_set_rejects_stale_writer",
@@ -1653,6 +1671,7 @@
         "retry_policy",
         "retryable_status",
         "rpc_endpoint_debug_never_exposes_credentials",
+        "rpc_endpoint_policy_rejects_private_redirectable_and_cross_chain_targets",
         "run_configuration_rejects_unbounded_caller_values",
         "solana_block",
         "solana_cursor_tracks_requested_slots_not_block_heights",
@@ -1697,7 +1716,7 @@
       "id": "rpc-collector",
       "label": "External RPC collector",
       "layer": "evidence",
-      "line_count": 3683
+      "line_count": 3777
     },
     {
       "declaration_count": 137,
@@ -1860,7 +1879,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 8057
+      "line_count": 8055
     },
     {
       "declaration_count": 95,
@@ -2048,7 +2067,7 @@
       "line_count": 825
     },
     {
-      "declaration_count": 83,
+      "declaration_count": 88,
       "declarations": [
         "AdapterError",
         "BASE_USDC",
@@ -2067,6 +2086,7 @@
         "QuarantinedEvidence",
         "RUNTIME_V1",
         "RUNTIME_V2",
+        "RawBazaarSnapshot",
         "RawPaymentOption",
         "RawPaymentRequired",
         "RejectDuplicateMembers",
@@ -2085,8 +2105,11 @@
         "discover",
         "discovery_fingerprint",
         "duplicate_json_members_are_quarantined_as_malformed_metadata",
+        "empty_bazaar_snapshot_is_a_successful_no_op",
         "evidence",
         "expecting",
+        "genuine_bazaar_snapshot_emits_source_cited_observations",
+        "malformed_bazaar_snapshot_fails_closed",
         "malformed_openapi_version_prefix_is_rejected",
         "malformed_runtime_prevents_static_metadata_from_becoming_authoritative",
         "malformed_runtime_response_is_quarantined_with_evidence_hash",
@@ -2101,6 +2124,7 @@
         "openapi_duplicate_members_are_rejected",
         "openapi_without_supported_version_is_rejected",
         "openapi_x402_extension_uses_operation_path_as_resource",
+        "parse_bazaar",
         "parse_openapi",
         "parse_payment_required",
         "quarantine_reason",
@@ -2152,7 +2176,7 @@
       "id": "x402-adapter",
       "label": "x402 adapter",
       "layer": "evidence",
-      "line_count": 1106
+      "line_count": 1184
     }
   ],
   "description": "Source-backed architecture of the Agent Economy Monitor, preserving deterministic evidence, canonical knowledge, and semantic projection as separate authorities.",
@@ -2425,7 +2449,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 659,
+            "line": 746,
             "path": "src/collect.rs",
             "rule": "declared.topology",
             "via": "pub struct CollectionHandler<S: ?Sized, C, T> {"
@@ -2440,7 +2464,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 729,
+            "line": 757,
             "path": "crates/rpc-collector/src/lib.rs",
             "rule": "declared.topology",
             "via": "pub struct Collector<'a, T, A, C, D> {"
@@ -2695,7 +2719,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 647,
+            "line": 645,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/healthz\", get(status))"
@@ -2950,7 +2974,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 645,
+            "line": 643,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/status\", get(status))"
@@ -3085,7 +3109,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 201,
+            "line": 202,
             "path": "crates/x402-adapter/src/lib.rs",
             "rule": "declared.topology",
             "via": "pub struct X402Adapter {"
@@ -3130,7 +3154,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 650,
+            "line": 648,
             "path": "src/main.rs",
             "rule": "declared.topology",
             "via": "info!(%address, \"agent economy monitor listening\");"
@@ -3354,7 +3378,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 152,
+        "line_count": 155,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -3368,7 +3392,7 @@
         "component": "architecture-tooling",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 680,
+        "line_count": 681,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -5947,7 +5971,7 @@
           },
           {
             "kind": "fn",
-            "line": 893,
+            "line": 894,
             "name": "valid_metadata_value",
             "passes": [
               "rust.declaration"
@@ -5955,7 +5979,7 @@
           },
           {
             "kind": "fn",
-            "line": 901,
+            "line": 902,
             "name": "valid_bucket",
             "passes": [
               "rust.declaration"
@@ -5963,7 +5987,7 @@
           },
           {
             "kind": "fn",
-            "line": 916,
+            "line": 917,
             "name": "bucket_resource",
             "passes": [
               "rust.declaration"
@@ -5971,7 +5995,7 @@
           },
           {
             "kind": "fn",
-            "line": 920,
+            "line": 921,
             "name": "classify_gcs_error",
             "passes": [
               "rust.declaration"
@@ -5979,7 +6003,7 @@
           },
           {
             "kind": "fn",
-            "line": 934,
+            "line": 935,
             "name": "valid_date",
             "passes": [
               "rust.declaration"
@@ -5987,7 +6011,7 @@
           },
           {
             "kind": "fn",
-            "line": 951,
+            "line": 952,
             "name": "hex_digest",
             "passes": [
               "rust.declaration"
@@ -5995,7 +6019,7 @@
           },
           {
             "kind": "fn",
-            "line": 961,
+            "line": 962,
             "name": "parse_hex_digest",
             "passes": [
               "rust.declaration"
@@ -6003,7 +6027,7 @@
           },
           {
             "kind": "fn",
-            "line": 974,
+            "line": 975,
             "name": "verify_digest",
             "passes": [
               "rust.declaration"
@@ -6011,7 +6035,7 @@
           },
           {
             "kind": "fn",
-            "line": 986,
+            "line": 987,
             "name": "open_or_create_directory",
             "passes": [
               "rust.declaration"
@@ -6019,7 +6043,7 @@
           },
           {
             "kind": "fn",
-            "line": 1005,
+            "line": 1006,
             "name": "open_directory_nofollow",
             "passes": [
               "rust.declaration"
@@ -6027,7 +6051,7 @@
           },
           {
             "kind": "fn",
-            "line": 1027,
+            "line": 1028,
             "name": "open_regular_file_nofollow",
             "passes": [
               "rust.declaration"
@@ -6035,7 +6059,7 @@
           },
           {
             "kind": "fn",
-            "line": 1046,
+            "line": 1047,
             "name": "sync_directory",
             "passes": [
               "rust.declaration"
@@ -6043,7 +6067,7 @@
           },
           {
             "kind": "mod",
-            "line": 1056,
+            "line": 1057,
             "name": "tests",
             "passes": [
               "rust.declaration"
@@ -6051,7 +6075,7 @@
           },
           {
             "kind": "fn",
-            "line": 1062,
+            "line": 1063,
             "name": "final_object_symlink_is_never_followed",
             "passes": [
               "rust.declaration"
@@ -6059,14 +6083,14 @@
           },
           {
             "kind": "fn",
-            "line": 1081,
+            "line": 1082,
             "name": "final_object_fifo_is_rejected_promptly",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 1105,
+        "line_count": 1106,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -8525,7 +8549,7 @@
           },
           {
             "kind": "fn",
-            "line": 63,
+            "line": 74,
             "name": "fmt",
             "passes": [
               "rust.declaration"
@@ -8533,7 +8557,7 @@
           },
           {
             "kind": "struct",
-            "line": 69,
+            "line": 80,
             "name": "RpcEndpoint",
             "passes": [
               "rust.declaration"
@@ -8541,7 +8565,7 @@
           },
           {
             "kind": "fn",
-            "line": 72,
+            "line": 83,
             "name": "parse",
             "passes": [
               "rust.declaration"
@@ -8549,7 +8573,7 @@
           },
           {
             "kind": "fn",
-            "line": 79,
+            "line": 107,
             "name": "expose",
             "passes": [
               "rust.declaration"
@@ -8557,7 +8581,7 @@
           },
           {
             "kind": "fn",
-            "line": 83,
+            "line": 111,
             "name": "matches_chain",
             "passes": [
               "rust.declaration"
@@ -8565,7 +8589,7 @@
           },
           {
             "kind": "fn",
-            "line": 93,
+            "line": 121,
             "name": "fmt",
             "passes": [
               "rust.declaration"
@@ -8573,7 +8597,7 @@
           },
           {
             "kind": "struct",
-            "line": 97,
+            "line": 125,
             "name": "AlchemyRequest",
             "passes": [
               "rust.declaration"
@@ -8581,7 +8605,7 @@
           },
           {
             "kind": "fn",
-            "line": 105,
+            "line": 133,
             "name": "block",
             "passes": [
               "rust.declaration"
@@ -8589,7 +8613,7 @@
           },
           {
             "kind": "fn",
-            "line": 130,
+            "line": 158,
             "name": "method",
             "passes": [
               "rust.declaration"
@@ -8597,7 +8621,7 @@
           },
           {
             "kind": "const",
-            "line": 138,
+            "line": 166,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8605,7 +8629,7 @@
           },
           {
             "kind": "struct",
-            "line": 143,
+            "line": 171,
             "name": "AlchemyTransport",
             "passes": [
               "rust.declaration"
@@ -8613,7 +8637,7 @@
           },
           {
             "kind": "fn",
-            "line": 150,
+            "line": 178,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -8621,7 +8645,7 @@
           },
           {
             "kind": "struct",
-            "line": 169,
+            "line": 197,
             "name": "RawRpcResponse",
             "passes": [
               "rust.declaration"
@@ -8629,7 +8653,7 @@
           },
           {
             "kind": "fn",
-            "line": 177,
+            "line": 205,
             "name": "try_new",
             "passes": [
               "rust.declaration"
@@ -8637,7 +8661,7 @@
           },
           {
             "kind": "fn",
-            "line": 187,
+            "line": 215,
             "name": "with_retry_after",
             "passes": [
               "rust.declaration"
@@ -8645,7 +8669,7 @@
           },
           {
             "kind": "const",
-            "line": 192,
+            "line": 220,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8653,7 +8677,7 @@
           },
           {
             "kind": "fn",
-            "line": 196,
+            "line": 224,
             "name": "bytes",
             "passes": [
               "rust.declaration"
@@ -8661,7 +8685,7 @@
           },
           {
             "kind": "fn",
-            "line": 200,
+            "line": 228,
             "name": "with_optional_retry_after",
             "passes": [
               "rust.declaration"
@@ -8669,7 +8693,7 @@
           },
           {
             "kind": "struct",
-            "line": 206,
+            "line": 234,
             "name": "RpcEvidence",
             "passes": [
               "rust.declaration"
@@ -8677,7 +8701,7 @@
           },
           {
             "kind": "const",
-            "line": 217,
+            "line": 245,
             "name": "MAGIC",
             "passes": [
               "rust.declaration"
@@ -8685,7 +8709,7 @@
           },
           {
             "kind": "const",
-            "line": 218,
+            "line": 246,
             "name": "HEADER_LENGTH",
             "passes": [
               "rust.declaration"
@@ -8693,7 +8717,7 @@
           },
           {
             "kind": "fn",
-            "line": 219,
+            "line": 247,
             "name": "from_response",
             "passes": [
               "rust.declaration"
@@ -8701,7 +8725,7 @@
           },
           {
             "kind": "fn",
-            "line": 235,
+            "line": 263,
             "name": "encode",
             "passes": [
               "rust.declaration"
@@ -8709,7 +8733,7 @@
           },
           {
             "kind": "fn",
-            "line": 249,
+            "line": 277,
             "name": "decode",
             "passes": [
               "rust.declaration"
@@ -8717,7 +8741,7 @@
           },
           {
             "kind": "const",
-            "line": 279,
+            "line": 307,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8725,7 +8749,7 @@
           },
           {
             "kind": "const",
-            "line": 283,
+            "line": 311,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8733,7 +8757,7 @@
           },
           {
             "kind": "fn",
-            "line": 287,
+            "line": 315,
             "name": "method",
             "passes": [
               "rust.declaration"
@@ -8741,7 +8765,7 @@
           },
           {
             "kind": "const",
-            "line": 291,
+            "line": 319,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8749,7 +8773,7 @@
           },
           {
             "kind": "const",
-            "line": 295,
+            "line": 323,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8757,7 +8781,7 @@
           },
           {
             "kind": "const",
-            "line": 299,
+            "line": 327,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8765,7 +8789,7 @@
           },
           {
             "kind": "const",
-            "line": 303,
+            "line": 331,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8773,7 +8797,7 @@
           },
           {
             "kind": "fn",
-            "line": 307,
+            "line": 335,
             "name": "body",
             "passes": [
               "rust.declaration"
@@ -8781,7 +8805,7 @@
           },
           {
             "kind": "const",
-            "line": 312,
+            "line": 340,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8789,7 +8813,7 @@
           },
           {
             "kind": "fn",
-            "line": 321,
+            "line": 349,
             "name": "chain_from_code",
             "passes": [
               "rust.declaration"
@@ -8797,7 +8821,7 @@
           },
           {
             "kind": "trait",
-            "line": 333,
+            "line": 361,
             "name": "RpcTransport",
             "passes": [
               "rust.declaration"
@@ -8805,7 +8829,7 @@
           },
           {
             "kind": "fn",
-            "line": 334,
+            "line": 362,
             "name": "fetch_block",
             "passes": [
               "rust.declaration"
@@ -8813,7 +8837,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 342,
+            "line": 370,
             "name": "fetch_block",
             "passes": [
               "rust.declaration"
@@ -8821,7 +8845,7 @@
           },
           {
             "kind": "trait",
-            "line": 389,
+            "line": 417,
             "name": "EvidenceArchive",
             "passes": [
               "rust.declaration"
@@ -8829,7 +8853,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 390,
+            "line": 418,
             "name": "archive",
             "passes": [
               "rust.declaration"
@@ -8837,7 +8861,7 @@
           },
           {
             "kind": "struct",
-            "line": 396,
+            "line": 424,
             "name": "StoreEvidenceArchive",
             "passes": [
               "rust.declaration"
@@ -8845,7 +8869,7 @@
           },
           {
             "kind": "const",
-            "line": 402,
+            "line": 430,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8853,7 +8877,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 408,
+            "line": 436,
             "name": "archive",
             "passes": [
               "rust.declaration"
@@ -8861,7 +8885,7 @@
           },
           {
             "kind": "struct",
-            "line": 449,
+            "line": 477,
             "name": "CursorCheckpoint",
             "passes": [
               "rust.declaration"
@@ -8869,7 +8893,7 @@
           },
           {
             "kind": "const",
-            "line": 455,
+            "line": 483,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8877,7 +8901,7 @@
           },
           {
             "kind": "const",
-            "line": 461,
+            "line": 489,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8885,7 +8909,7 @@
           },
           {
             "kind": "const",
-            "line": 465,
+            "line": 493,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8893,7 +8917,7 @@
           },
           {
             "kind": "trait",
-            "line": 472,
+            "line": 500,
             "name": "CursorStore",
             "passes": [
               "rust.declaration"
@@ -8901,7 +8925,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 473,
+            "line": 501,
             "name": "load",
             "passes": [
               "rust.declaration"
@@ -8909,7 +8933,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 474,
+            "line": 502,
             "name": "initialize",
             "passes": [
               "rust.declaration"
@@ -8917,7 +8941,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 480,
+            "line": 508,
             "name": "compare_and_set",
             "passes": [
               "rust.declaration"
@@ -8925,7 +8949,7 @@
           },
           {
             "kind": "const",
-            "line": 488,
+            "line": 516,
             "name": "POSTGRES_CURSOR_SCHEMA",
             "passes": [
               "rust.declaration"
@@ -8933,7 +8957,7 @@
           },
           {
             "kind": "struct",
-            "line": 490,
+            "line": 518,
             "name": "PostgresCursorStore",
             "passes": [
               "rust.declaration"
@@ -8941,7 +8965,7 @@
           },
           {
             "kind": "const",
-            "line": 496,
+            "line": 524,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -8949,7 +8973,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 499,
+            "line": 527,
             "name": "migrate",
             "passes": [
               "rust.declaration"
@@ -8957,7 +8981,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 509,
+            "line": 537,
             "name": "load",
             "passes": [
               "rust.declaration"
@@ -8965,7 +8989,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 520,
+            "line": 548,
             "name": "initialize",
             "passes": [
               "rust.declaration"
@@ -8973,7 +8997,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 539,
+            "line": 567,
             "name": "compare_and_set",
             "passes": [
               "rust.declaration"
@@ -8981,7 +9005,7 @@
           },
           {
             "kind": "fn",
-            "line": 569,
+            "line": 597,
             "name": "database_integer",
             "passes": [
               "rust.declaration"
@@ -8989,7 +9013,7 @@
           },
           {
             "kind": "fn",
-            "line": 573,
+            "line": 601,
             "name": "checkpoint_from_row",
             "passes": [
               "rust.declaration"
@@ -8997,7 +9021,7 @@
           },
           {
             "kind": "struct",
-            "line": 584,
+            "line": 612,
             "name": "RetryPolicy",
             "passes": [
               "rust.declaration"
@@ -9005,7 +9029,7 @@
           },
           {
             "kind": "const",
-            "line": 590,
+            "line": 618,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -9013,7 +9037,7 @@
           },
           {
             "kind": "fn",
-            "line": 602,
+            "line": 630,
             "name": "delay",
             "passes": [
               "rust.declaration"
@@ -9021,7 +9045,7 @@
           },
           {
             "kind": "fn",
-            "line": 610,
+            "line": 638,
             "name": "default",
             "passes": [
               "rust.declaration"
@@ -9029,7 +9053,7 @@
           },
           {
             "kind": "trait",
-            "line": 619,
+            "line": 647,
             "name": "RetryDelay",
             "passes": [
               "rust.declaration"
@@ -9037,7 +9061,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 620,
+            "line": 648,
             "name": "wait",
             "passes": [
               "rust.declaration"
@@ -9045,7 +9069,7 @@
           },
           {
             "kind": "struct",
-            "line": 624,
+            "line": 652,
             "name": "TokioRetryDelay",
             "passes": [
               "rust.declaration"
@@ -9053,7 +9077,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 627,
+            "line": 655,
             "name": "wait",
             "passes": [
               "rust.declaration"
@@ -9061,7 +9085,7 @@
           },
           {
             "kind": "struct",
-            "line": 633,
+            "line": 661,
             "name": "CollectRequest",
             "passes": [
               "rust.declaration"
@@ -9069,7 +9093,7 @@
           },
           {
             "kind": "fn",
-            "line": 642,
+            "line": 670,
             "name": "try_new",
             "passes": [
               "rust.declaration"
@@ -9077,7 +9101,7 @@
           },
           {
             "kind": "struct",
-            "line": 663,
+            "line": 691,
             "name": "Gap",
             "passes": [
               "rust.declaration"
@@ -9085,7 +9109,7 @@
           },
           {
             "kind": "const",
-            "line": 669,
+            "line": 697,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -9093,7 +9117,7 @@
           },
           {
             "kind": "const",
-            "line": 672,
+            "line": 700,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -9101,7 +9125,7 @@
           },
           {
             "kind": "struct",
-            "line": 679,
+            "line": 707,
             "name": "CollectionReport",
             "passes": [
               "rust.declaration"
@@ -9109,63 +9133,7 @@
           },
           {
             "kind": "const",
-            "line": 692,
-            "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 695,
-            "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 699,
-            "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 703,
-            "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 707,
-            "name": "fn",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 711,
-            "name": "gaps",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 715,
-            "name": "evidence_objects",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 719,
+            "line": 720,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -9180,8 +9148,64 @@
             ]
           },
           {
+            "kind": "const",
+            "line": 727,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 731,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 735,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 739,
+            "name": "gaps",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 743,
+            "name": "evidence_objects",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 747,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 751,
+            "name": "fn",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "struct",
-            "line": 728,
+            "line": 756,
             "name": "Collector",
             "passes": [
               "rust.declaration"
@@ -9189,7 +9213,7 @@
           },
           {
             "kind": "fn",
-            "line": 744,
+            "line": 772,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -9197,7 +9221,7 @@
           },
           {
             "kind": "const",
-            "line": 758,
+            "line": 786,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -9205,7 +9229,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 763,
+            "line": 791,
             "name": "collect",
             "passes": [
               "rust.declaration"
@@ -9213,7 +9237,7 @@
           },
           {
             "kind": "fn",
-            "line": 891,
+            "line": 919,
             "name": "retryable_status",
             "passes": [
               "rust.declaration"
@@ -9221,7 +9245,7 @@
           },
           {
             "kind": "fn",
-            "line": 895,
+            "line": 923,
             "name": "decode_height",
             "passes": [
               "rust.declaration"
@@ -9229,7 +9253,7 @@
           },
           {
             "kind": "fn",
-            "line": 976,
+            "line": 1004,
             "name": "validate_archived_success",
             "passes": [
               "rust.declaration"
@@ -9237,7 +9261,7 @@
           },
           {
             "kind": "struct",
-            "line": 996,
+            "line": 1024,
             "name": "RejectDuplicateMembers",
             "passes": [
               "rust.declaration"
@@ -9245,7 +9269,7 @@
           },
           {
             "kind": "type",
-            "line": 999,
+            "line": 1027,
             "name": "Value",
             "passes": [
               "rust.declaration"
@@ -9253,7 +9277,7 @@
           },
           {
             "kind": "fn",
-            "line": 1000,
+            "line": 1028,
             "name": "deserialize",
             "passes": [
               "rust.declaration"
@@ -9261,7 +9285,7 @@
           },
           {
             "kind": "type",
-            "line": 1010,
+            "line": 1038,
             "name": "Value",
             "passes": [
               "rust.declaration"
@@ -9269,7 +9293,7 @@
           },
           {
             "kind": "fn",
-            "line": 1011,
+            "line": 1039,
             "name": "expecting",
             "passes": [
               "rust.declaration"
@@ -9277,7 +9301,7 @@
           },
           {
             "kind": "fn",
-            "line": 1015,
+            "line": 1043,
             "name": "visit_bool",
             "passes": [
               "rust.declaration"
@@ -9285,7 +9309,7 @@
           },
           {
             "kind": "fn",
-            "line": 1019,
+            "line": 1047,
             "name": "visit_i64",
             "passes": [
               "rust.declaration"
@@ -9293,7 +9317,7 @@
           },
           {
             "kind": "fn",
-            "line": 1023,
+            "line": 1051,
             "name": "visit_u64",
             "passes": [
               "rust.declaration"
@@ -9301,7 +9325,7 @@
           },
           {
             "kind": "fn",
-            "line": 1027,
+            "line": 1055,
             "name": "visit_f64",
             "passes": [
               "rust.declaration"
@@ -9309,7 +9333,7 @@
           },
           {
             "kind": "fn",
-            "line": 1031,
+            "line": 1059,
             "name": "visit_str",
             "passes": [
               "rust.declaration"
@@ -9317,7 +9341,7 @@
           },
           {
             "kind": "fn",
-            "line": 1035,
+            "line": 1063,
             "name": "visit_string",
             "passes": [
               "rust.declaration"
@@ -9325,7 +9349,7 @@
           },
           {
             "kind": "fn",
-            "line": 1039,
+            "line": 1067,
             "name": "visit_none",
             "passes": [
               "rust.declaration"
@@ -9333,7 +9357,7 @@
           },
           {
             "kind": "fn",
-            "line": 1043,
+            "line": 1071,
             "name": "visit_unit",
             "passes": [
               "rust.declaration"
@@ -9341,7 +9365,7 @@
           },
           {
             "kind": "fn",
-            "line": 1047,
+            "line": 1075,
             "name": "visit_some",
             "passes": [
               "rust.declaration"
@@ -9349,7 +9373,7 @@
           },
           {
             "kind": "fn",
-            "line": 1054,
+            "line": 1082,
             "name": "visit_seq",
             "passes": [
               "rust.declaration"
@@ -9357,7 +9381,7 @@
           },
           {
             "kind": "fn",
-            "line": 1062,
+            "line": 1090,
             "name": "visit_map",
             "passes": [
               "rust.declaration"
@@ -9365,7 +9389,7 @@
           },
           {
             "kind": "fn",
-            "line": 1077,
+            "line": 1105,
             "name": "reject_duplicate_json_members",
             "passes": [
               "rust.declaration"
@@ -9373,7 +9397,7 @@
           },
           {
             "kind": "enum",
-            "line": 1089,
+            "line": 1117,
             "name": "CollectorError",
             "passes": [
               "rust.declaration"
@@ -9381,7 +9405,7 @@
           },
           {
             "kind": "fn",
-            "line": 1134,
+            "line": 1162,
             "name": "with_report",
             "passes": [
               "rust.declaration"
@@ -9389,7 +9413,7 @@
           },
           {
             "kind": "fn",
-            "line": 1140,
+            "line": 1168,
             "name": "cause",
             "passes": [
               "rust.declaration"
@@ -9397,14 +9421,14 @@
           },
           {
             "kind": "fn",
-            "line": 1147,
+            "line": 1175,
             "name": "report",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 1154,
+        "line_count": 1182,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -9758,7 +9782,7 @@
       {
         "citations": 0,
         "component": "rpc-collector",
-        "declaration_count": 37,
+        "declaration_count": 39,
         "declarations": [
           {
             "kind": "struct",
@@ -9899,6 +9923,22 @@
           {
             "kind": "fn",
             "line": 179,
+            "name": "official_and_public_rpc_endpoints_are_accepted_for_their_chain",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 203,
+            "name": "rpc_endpoint_policy_rejects_private_redirectable_and_cross_chain_targets",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 245,
             "name": "alchemy_endpoints_must_match_their_configured_chain",
             "passes": [
               "rust.declaration"
@@ -9906,7 +9946,7 @@
           },
           {
             "kind": "fn",
-            "line": 206,
+            "line": 272,
             "name": "oversized_provider_response_is_rejected_before_allocation_contract_accepts_it",
             "passes": [
               "rust.declaration"
@@ -9914,7 +9954,7 @@
           },
           {
             "kind": "fn",
-            "line": 216,
+            "line": 282,
             "name": "archived_rpc_evidence_replays_provider_provenance_and_exact_body",
             "passes": [
               "rust.declaration"
@@ -9922,7 +9962,7 @@
           },
           {
             "kind": "fn",
-            "line": 235,
+            "line": 301,
             "name": "run_configuration_rejects_unbounded_caller_values",
             "passes": [
               "rust.declaration"
@@ -9930,7 +9970,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 255,
+            "line": 321,
             "name": "response_is_archived_before_parsing_or_cursor_commit",
             "passes": [
               "rust.declaration"
@@ -9938,7 +9978,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 289,
+            "line": 355,
             "name": "collector_resumes_and_advances_only_contiguous_archived_blocks",
             "passes": [
               "rust.declaration"
@@ -9946,7 +9986,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 319,
+            "line": 385,
             "name": "gap_is_reported_without_skipping_the_missing_height",
             "passes": [
               "rust.declaration"
@@ -9954,7 +9994,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 344,
+            "line": 410,
             "name": "solana_cursor_tracks_requested_slots_not_block_heights",
             "passes": [
               "rust.declaration"
@@ -9962,7 +10002,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 367,
+            "line": 433,
             "name": "retries_are_bounded_by_policy_and_request_budget",
             "passes": [
               "rust.declaration"
@@ -9970,7 +10010,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 393,
+            "line": 459,
             "name": "terminal_provider_failure_preserves_run_metrics",
             "passes": [
               "rust.declaration"
@@ -9978,7 +10018,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 421,
+            "line": 487,
             "name": "cursor_height_overflow_fails_without_wrapping_or_committing",
             "passes": [
               "rust.declaration"
@@ -9986,7 +10026,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 443,
+            "line": 509,
             "name": "provider_retry_after_is_capped",
             "passes": [
               "rust.declaration"
@@ -9994,7 +10034,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 469,
+            "line": 535,
             "name": "transport_retry_backoff_is_capped",
             "passes": [
               "rust.declaration"
@@ -10002,7 +10042,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 492,
+            "line": 558,
             "name": "duplicate_json_members_are_archived_but_rejected",
             "passes": [
               "rust.declaration"
@@ -10010,7 +10050,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 515,
+            "line": 581,
             "name": "response_with_result_and_error_is_archived_but_rejected",
             "passes": [
               "rust.declaration"
@@ -10018,7 +10058,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 541,
+            "line": 607,
             "name": "mismatched_json_rpc_id_cannot_advance_cursor",
             "passes": [
               "rust.declaration"
@@ -10026,7 +10066,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 566,
+            "line": 632,
             "name": "noncanonical_evm_quantities_cannot_advance_cursor",
             "passes": [
               "rust.declaration"
@@ -10034,7 +10074,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 589,
+            "line": 655,
             "name": "solana_skipped_slot_is_exposed_as_a_gap",
             "passes": [
               "rust.declaration"
@@ -10042,7 +10082,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 612,
+            "line": 678,
             "name": "malformed_solana_block_cannot_advance_cursor",
             "passes": [
               "rust.declaration"
@@ -10050,14 +10090,14 @@
           },
           {
             "kind": "fn",
-            "line": 635,
+            "line": 701,
             "name": "fmt",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 638,
+        "line_count": 704,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -10106,7 +10146,7 @@
       {
         "citations": 1,
         "component": "x402-adapter",
-        "declaration_count": 56,
+        "declaration_count": 58,
         "declarations": [
           {
             "kind": "enum",
@@ -10118,7 +10158,7 @@
           },
           {
             "kind": "struct",
-            "line": 24,
+            "line": 25,
             "name": "EvidenceContext",
             "passes": [
               "rust.declaration"
@@ -10126,7 +10166,7 @@
           },
           {
             "kind": "fn",
-            "line": 32,
+            "line": 33,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -10134,7 +10174,7 @@
           },
           {
             "kind": "struct",
-            "line": 59,
+            "line": 60,
             "name": "EvidenceInput",
             "passes": [
               "rust.declaration"
@@ -10142,7 +10182,7 @@
           },
           {
             "kind": "fn",
-            "line": 65,
+            "line": 66,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -10150,7 +10190,7 @@
           },
           {
             "kind": "enum",
-            "line": 71,
+            "line": 72,
             "name": "QuarantineReason",
             "passes": [
               "rust.declaration"
@@ -10158,7 +10198,7 @@
           },
           {
             "kind": "struct",
-            "line": 80,
+            "line": 81,
             "name": "QuarantinedEvidence",
             "passes": [
               "rust.declaration"
@@ -10166,7 +10206,7 @@
           },
           {
             "kind": "fn",
-            "line": 86,
+            "line": 87,
             "name": "evidence",
             "passes": [
               "rust.declaration"
@@ -10174,7 +10214,7 @@
           },
           {
             "kind": "fn",
-            "line": 89,
+            "line": 90,
             "name": "reason",
             "passes": [
               "rust.declaration"
@@ -10182,7 +10222,7 @@
           },
           {
             "kind": "struct",
-            "line": 96,
+            "line": 97,
             "name": "DiscoveryResult",
             "passes": [
               "rust.declaration"
@@ -10190,7 +10230,7 @@
           },
           {
             "kind": "fn",
-            "line": 103,
+            "line": 104,
             "name": "observations",
             "passes": [
               "rust.declaration"
@@ -10198,7 +10238,7 @@
           },
           {
             "kind": "fn",
-            "line": 106,
+            "line": 107,
             "name": "authoritative_observations",
             "passes": [
               "rust.declaration"
@@ -10206,7 +10246,7 @@
           },
           {
             "kind": "fn",
-            "line": 110,
+            "line": 111,
             "name": "quarantined",
             "passes": [
               "rust.declaration"
@@ -10214,7 +10254,7 @@
           },
           {
             "kind": "struct",
-            "line": 117,
+            "line": 118,
             "name": "X402Discovery",
             "passes": [
               "rust.declaration"
@@ -10222,7 +10262,7 @@
           },
           {
             "kind": "fn",
-            "line": 122,
+            "line": 123,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -10230,7 +10270,7 @@
           },
           {
             "kind": "fn",
-            "line": 129,
+            "line": 130,
             "name": "discover",
             "passes": [
               "rust.declaration"
@@ -10238,7 +10278,7 @@
           },
           {
             "kind": "enum",
-            "line": 179,
+            "line": 180,
             "name": "AdapterError",
             "passes": [
               "rust.declaration"
@@ -10246,7 +10286,7 @@
           },
           {
             "kind": "struct",
-            "line": 201,
+            "line": 202,
             "name": "X402Adapter",
             "passes": [
               "rust.declaration"
@@ -10254,7 +10294,7 @@
           },
           {
             "kind": "fn",
-            "line": 207,
+            "line": 208,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -10262,7 +10302,7 @@
           },
           {
             "kind": "type",
-            "line": 223,
+            "line": 224,
             "name": "Error",
             "passes": [
               "rust.declaration"
@@ -10270,7 +10310,7 @@
           },
           {
             "kind": "fn",
-            "line": 224,
+            "line": 225,
             "name": "observe",
             "passes": [
               "rust.declaration"
@@ -10278,7 +10318,7 @@
           },
           {
             "kind": "struct",
-            "line": 312,
+            "line": 317,
             "name": "RawPaymentRequired",
             "passes": [
               "rust.declaration"
@@ -10286,7 +10326,7 @@
           },
           {
             "kind": "struct",
-            "line": 319,
+            "line": 324,
             "name": "RawPaymentOption",
             "passes": [
               "rust.declaration"
@@ -10294,7 +10334,7 @@
           },
           {
             "kind": "struct",
-            "line": 331,
+            "line": 336,
             "name": "PaymentExtra",
             "passes": [
               "rust.declaration"
@@ -10302,7 +10342,7 @@
           },
           {
             "kind": "struct",
-            "line": 334,
+            "line": 339,
             "name": "PaymentRequired",
             "passes": [
               "rust.declaration"
@@ -10310,7 +10350,7 @@
           },
           {
             "kind": "struct",
-            "line": 339,
+            "line": 344,
             "name": "PaymentOption",
             "passes": [
               "rust.declaration"
@@ -10318,7 +10358,7 @@
           },
           {
             "kind": "fn",
-            "line": 349,
+            "line": 354,
             "name": "parse_payment_required",
             "passes": [
               "rust.declaration"
@@ -10326,7 +10366,7 @@
           },
           {
             "kind": "fn",
-            "line": 386,
+            "line": 391,
             "name": "parse_openapi",
             "passes": [
               "rust.declaration"
@@ -10334,7 +10374,23 @@
           },
           {
             "kind": "struct",
-            "line": 431,
+            "line": 436,
+            "name": "RawBazaarSnapshot",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 439,
+            "name": "parse_bazaar",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 461,
             "name": "RejectDuplicateMembers",
             "passes": [
               "rust.declaration"
@@ -10342,7 +10398,7 @@
           },
           {
             "kind": "type",
-            "line": 434,
+            "line": 464,
             "name": "Value",
             "passes": [
               "rust.declaration"
@@ -10350,7 +10406,7 @@
           },
           {
             "kind": "fn",
-            "line": 435,
+            "line": 465,
             "name": "deserialize",
             "passes": [
               "rust.declaration"
@@ -10358,7 +10414,7 @@
           },
           {
             "kind": "type",
-            "line": 445,
+            "line": 475,
             "name": "Value",
             "passes": [
               "rust.declaration"
@@ -10366,7 +10422,7 @@
           },
           {
             "kind": "fn",
-            "line": 446,
+            "line": 476,
             "name": "expecting",
             "passes": [
               "rust.declaration"
@@ -10374,7 +10430,7 @@
           },
           {
             "kind": "fn",
-            "line": 450,
+            "line": 480,
             "name": "visit_bool",
             "passes": [
               "rust.declaration"
@@ -10382,7 +10438,7 @@
           },
           {
             "kind": "fn",
-            "line": 454,
+            "line": 484,
             "name": "visit_i64",
             "passes": [
               "rust.declaration"
@@ -10390,7 +10446,7 @@
           },
           {
             "kind": "fn",
-            "line": 458,
+            "line": 488,
             "name": "visit_u64",
             "passes": [
               "rust.declaration"
@@ -10398,7 +10454,7 @@
           },
           {
             "kind": "fn",
-            "line": 462,
+            "line": 492,
             "name": "visit_f64",
             "passes": [
               "rust.declaration"
@@ -10406,7 +10462,7 @@
           },
           {
             "kind": "fn",
-            "line": 466,
+            "line": 496,
             "name": "visit_str",
             "passes": [
               "rust.declaration"
@@ -10414,7 +10470,7 @@
           },
           {
             "kind": "fn",
-            "line": 470,
+            "line": 500,
             "name": "visit_string",
             "passes": [
               "rust.declaration"
@@ -10422,7 +10478,7 @@
           },
           {
             "kind": "fn",
-            "line": 474,
+            "line": 504,
             "name": "visit_none",
             "passes": [
               "rust.declaration"
@@ -10430,7 +10486,7 @@
           },
           {
             "kind": "fn",
-            "line": 478,
+            "line": 508,
             "name": "visit_unit",
             "passes": [
               "rust.declaration"
@@ -10438,7 +10494,7 @@
           },
           {
             "kind": "fn",
-            "line": 482,
+            "line": 512,
             "name": "visit_some",
             "passes": [
               "rust.declaration"
@@ -10446,7 +10502,7 @@
           },
           {
             "kind": "fn",
-            "line": 489,
+            "line": 519,
             "name": "visit_seq",
             "passes": [
               "rust.declaration"
@@ -10454,7 +10510,7 @@
           },
           {
             "kind": "fn",
-            "line": 497,
+            "line": 527,
             "name": "visit_map",
             "passes": [
               "rust.declaration"
@@ -10462,7 +10518,7 @@
           },
           {
             "kind": "fn",
-            "line": 512,
+            "line": 542,
             "name": "reject_duplicate_json_members",
             "passes": [
               "rust.declaration"
@@ -10470,7 +10526,7 @@
           },
           {
             "kind": "struct",
-            "line": 520,
+            "line": 550,
             "name": "RuntimeEvidence",
             "passes": [
               "rust.declaration"
@@ -10478,7 +10534,7 @@
           },
           {
             "kind": "fn",
-            "line": 525,
+            "line": 555,
             "name": "runtime_evidence",
             "passes": [
               "rust.declaration"
@@ -10486,7 +10542,7 @@
           },
           {
             "kind": "fn",
-            "line": 561,
+            "line": 591,
             "name": "content_fingerprint",
             "passes": [
               "rust.declaration"
@@ -10494,7 +10550,7 @@
           },
           {
             "kind": "fn",
-            "line": 565,
+            "line": 595,
             "name": "discovery_fingerprint",
             "passes": [
               "rust.declaration"
@@ -10502,7 +10558,7 @@
           },
           {
             "kind": "fn",
-            "line": 575,
+            "line": 605,
             "name": "supported_openapi_version",
             "passes": [
               "rust.declaration"
@@ -10510,7 +10566,7 @@
           },
           {
             "kind": "fn",
-            "line": 591,
+            "line": 621,
             "name": "split_http",
             "passes": [
               "rust.declaration"
@@ -10518,7 +10574,7 @@
           },
           {
             "kind": "fn",
-            "line": 604,
+            "line": 634,
             "name": "observation_resource",
             "passes": [
               "rust.declaration"
@@ -10526,7 +10582,7 @@
           },
           {
             "kind": "fn",
-            "line": 613,
+            "line": 643,
             "name": "media_type",
             "passes": [
               "rust.declaration"
@@ -10534,7 +10590,7 @@
           },
           {
             "kind": "fn",
-            "line": 620,
+            "line": 652,
             "name": "quarantine_reason",
             "passes": [
               "rust.declaration"
@@ -10542,7 +10598,7 @@
           },
           {
             "kind": "fn",
-            "line": 637,
+            "line": 671,
             "name": "validate_token_metadata",
             "passes": [
               "rust.declaration"
@@ -10550,14 +10606,14 @@
           },
           {
             "kind": "const",
-            "line": 639,
+            "line": 673,
             "name": "BASE_USDC",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 647,
+        "line_count": 681,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -10569,7 +10625,7 @@
       {
         "citations": 0,
         "component": "x402-adapter",
-        "declaration_count": 31,
+        "declaration_count": 34,
         "declarations": [
           {
             "kind": "const",
@@ -10654,6 +10710,30 @@
           {
             "kind": "fn",
             "line": 86,
+            "name": "genuine_bazaar_snapshot_emits_source_cited_observations",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 113,
+            "name": "malformed_bazaar_snapshot_fails_closed",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 120,
+            "name": "empty_bazaar_snapshot_is_a_successful_no_op",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 130,
             "name": "runtime_v1_challenge_does_not_require_v2_payment_required_header",
             "passes": [
               "rust.declaration"
@@ -10661,7 +10741,7 @@
           },
           {
             "kind": "fn",
-            "line": 106,
+            "line": 150,
             "name": "openapi_x402_extension_uses_operation_path_as_resource",
             "passes": [
               "rust.declaration"
@@ -10669,7 +10749,7 @@
           },
           {
             "kind": "fn",
-            "line": 129,
+            "line": 173,
             "name": "openapi_without_supported_version_is_rejected",
             "passes": [
               "rust.declaration"
@@ -10677,7 +10757,7 @@
           },
           {
             "kind": "fn",
-            "line": 136,
+            "line": 180,
             "name": "openapi_duplicate_members_are_rejected",
             "passes": [
               "rust.declaration"
@@ -10685,7 +10765,7 @@
           },
           {
             "kind": "fn",
-            "line": 143,
+            "line": 187,
             "name": "malformed_openapi_version_prefix_is_rejected",
             "passes": [
               "rust.declaration"
@@ -10693,7 +10773,7 @@
           },
           {
             "kind": "fn",
-            "line": 150,
+            "line": 194,
             "name": "malformed_runtime_response_is_quarantined_with_evidence_hash",
             "passes": [
               "rust.declaration"
@@ -10701,7 +10781,7 @@
           },
           {
             "kind": "fn",
-            "line": 177,
+            "line": 221,
             "name": "runtime_observation_is_authoritative_without_discarding_static_evidence",
             "passes": [
               "rust.declaration"
@@ -10709,7 +10789,7 @@
           },
           {
             "kind": "fn",
-            "line": 211,
+            "line": 255,
             "name": "siwx_only_metadata_is_quarantined_as_unsupported_scheme",
             "passes": [
               "rust.declaration"
@@ -10717,7 +10797,7 @@
           },
           {
             "kind": "fn",
-            "line": 233,
+            "line": 277,
             "name": "base_usdc_ticker_as_eip712_name_is_quarantined",
             "passes": [
               "rust.declaration"
@@ -10725,7 +10805,7 @@
           },
           {
             "kind": "fn",
-            "line": 255,
+            "line": 299,
             "name": "runtime_v2_uses_payment_required_header_as_authoritative_payload",
             "passes": [
               "rust.declaration"
@@ -10733,7 +10813,7 @@
           },
           {
             "kind": "fn",
-            "line": 271,
+            "line": 315,
             "name": "runtime_v2_header_does_not_depend_on_body_schema",
             "passes": [
               "rust.declaration"
@@ -10741,7 +10821,7 @@
           },
           {
             "kind": "fn",
-            "line": 287,
+            "line": 331,
             "name": "runtime_v2_event_key_does_not_depend_on_non_authoritative_body",
             "passes": [
               "rust.declaration"
@@ -10749,7 +10829,7 @@
           },
           {
             "kind": "fn",
-            "line": 312,
+            "line": 356,
             "name": "runtime_status_line_must_use_http_grammar",
             "passes": [
               "rust.declaration"
@@ -10757,7 +10837,7 @@
           },
           {
             "kind": "fn",
-            "line": 332,
+            "line": 376,
             "name": "duplicate_json_members_are_quarantined_as_malformed_metadata",
             "passes": [
               "rust.declaration"
@@ -10765,7 +10845,7 @@
           },
           {
             "kind": "fn",
-            "line": 349,
+            "line": 393,
             "name": "v2_rejects_v1_max_amount_field",
             "passes": [
               "rust.declaration"
@@ -10773,7 +10853,7 @@
           },
           {
             "kind": "fn",
-            "line": 356,
+            "line": 400,
             "name": "malformed_runtime_prevents_static_metadata_from_becoming_authoritative",
             "passes": [
               "rust.declaration"
@@ -10781,7 +10861,7 @@
           },
           {
             "kind": "fn",
-            "line": 370,
+            "line": 414,
             "name": "mixed_exact_and_siwx_metadata_preserves_supported_offer",
             "passes": [
               "rust.declaration"
@@ -10789,7 +10869,7 @@
           },
           {
             "kind": "fn",
-            "line": 382,
+            "line": 426,
             "name": "multiple_offers_for_one_resource_have_distinct_event_keys",
             "passes": [
               "rust.declaration"
@@ -10797,7 +10877,7 @@
           },
           {
             "kind": "fn",
-            "line": 397,
+            "line": 441,
             "name": "offers_on_different_operations_have_distinct_event_keys",
             "passes": [
               "rust.declaration"
@@ -10805,7 +10885,7 @@
           },
           {
             "kind": "fn",
-            "line": 410,
+            "line": 454,
             "name": "context",
             "passes": [
               "rust.declaration"
@@ -10813,14 +10893,14 @@
           },
           {
             "kind": "fn",
-            "line": 420,
+            "line": 464,
             "name": "adapter",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 423,
+        "line_count": 467,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -11058,7 +11138,7 @@
         "component": "architecture-policy",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 185,
+        "line_count": 197,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -11577,6 +11657,34 @@
           "declared.topology"
         ],
         "path": "migrations/0017_classify_enrich_workers.up.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "collect-worker",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 445,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0018_public_source_collection.down.sql",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "collect-worker",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 459,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "migrations/0018_public_source_collection.up.sql",
         "semantic_citations": 0,
         "touched": false
       },
@@ -12831,11 +12939,11 @@
       {
         "citations": 1,
         "component": "collect-worker",
-        "declaration_count": 80,
+        "declaration_count": 94,
         "declarations": [
           {
             "kind": "const",
-            "line": 29,
+            "line": 30,
             "name": "MAX_RANGE_HEIGHTS",
             "passes": [
               "rust.declaration"
@@ -12843,7 +12951,7 @@
           },
           {
             "kind": "const",
-            "line": 31,
+            "line": 32,
             "name": "MAX_INPUTS",
             "passes": [
               "rust.declaration"
@@ -12851,7 +12959,7 @@
           },
           {
             "kind": "const",
-            "line": 32,
+            "line": 33,
             "name": "MAX_MANIFEST_BYTES",
             "passes": [
               "rust.declaration"
@@ -12859,7 +12967,7 @@
           },
           {
             "kind": "const",
-            "line": 33,
+            "line": 34,
             "name": "MAX_EVIDENCE_BYTES",
             "passes": [
               "rust.declaration"
@@ -12867,7 +12975,7 @@
           },
           {
             "kind": "const",
-            "line": 34,
+            "line": 35,
             "name": "MAX_OBSERVATIONS",
             "passes": [
               "rust.declaration"
@@ -12875,7 +12983,7 @@
           },
           {
             "kind": "const",
-            "line": 36,
+            "line": 37,
             "name": "X402_PARSER_VERSION",
             "passes": [
               "rust.declaration"
@@ -12883,23 +12991,103 @@
           },
           {
             "kind": "const",
-            "line": 37,
+            "line": 38,
             "name": "MPP_PARSER_VERSION",
             "passes": [
               "rust.declaration"
             ]
           },
           {
+            "kind": "const",
+            "line": 39,
+            "name": "CDP_BAZAAR_URL",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "enum",
-            "line": 40,
+            "line": 43,
             "name": "CollectionError",
             "passes": [
               "rust.declaration"
             ]
           },
           {
+            "kind": "struct",
+            "line": 50,
+            "name": "PublicSourceResponse",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "fn",
-            "line": 47,
+            "line": 55,
+            "name": "try_new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "trait",
+            "line": 64,
+            "name": "PublicSourceTransport",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 65,
+            "name": "fetch",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 67,
+            "name": "DisabledPublicSourceTransport",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 72,
+            "name": "fetch",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 76,
+            "name": "CdpBazaarTransport",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 82,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 94,
+            "name": "fetch",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 132,
             "name": "fmt",
             "passes": [
               "rust.declaration"
@@ -12907,7 +13095,7 @@
           },
           {
             "kind": "struct",
-            "line": 59,
+            "line": 144,
             "name": "ArchivedEvidence",
             "passes": [
               "rust.declaration"
@@ -12915,7 +13103,7 @@
           },
           {
             "kind": "fn",
-            "line": 72,
+            "line": 157,
             "name": "from_verified_readback",
             "passes": [
               "rust.declaration"
@@ -12923,7 +13111,7 @@
           },
           {
             "kind": "fn",
-            "line": 98,
+            "line": 185,
             "name": "evidence_id",
             "passes": [
               "rust.declaration"
@@ -12931,7 +13119,7 @@
           },
           {
             "kind": "fn",
-            "line": 102,
+            "line": 189,
             "name": "sha256",
             "passes": [
               "rust.declaration"
@@ -12939,7 +13127,7 @@
           },
           {
             "kind": "fn",
-            "line": 106,
+            "line": 193,
             "name": "storage_uri",
             "passes": [
               "rust.declaration"
@@ -12947,7 +13135,7 @@
           },
           {
             "kind": "fn",
-            "line": 110,
+            "line": 197,
             "name": "storage_generation",
             "passes": [
               "rust.declaration"
@@ -12955,7 +13143,7 @@
           },
           {
             "kind": "fn",
-            "line": 114,
+            "line": 201,
             "name": "media_type",
             "passes": [
               "rust.declaration"
@@ -12963,7 +13151,7 @@
           },
           {
             "kind": "const",
-            "line": 118,
+            "line": 205,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -12971,7 +13159,7 @@
           },
           {
             "kind": "const",
-            "line": 122,
+            "line": 209,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -12979,7 +13167,7 @@
           },
           {
             "kind": "const",
-            "line": 126,
+            "line": 213,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -12987,7 +13175,7 @@
           },
           {
             "kind": "struct",
-            "line": 133,
+            "line": 220,
             "name": "CollectedObservation",
             "passes": [
               "rust.declaration"
@@ -12995,7 +13183,7 @@
           },
           {
             "kind": "fn",
-            "line": 142,
+            "line": 229,
             "name": "id",
             "passes": [
               "rust.declaration"
@@ -13003,7 +13191,7 @@
           },
           {
             "kind": "const",
-            "line": 145,
+            "line": 232,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -13011,7 +13199,7 @@
           },
           {
             "kind": "fn",
-            "line": 149,
+            "line": 236,
             "name": "evidence_id",
             "passes": [
               "rust.declaration"
@@ -13019,7 +13207,7 @@
           },
           {
             "kind": "fn",
-            "line": 153,
+            "line": 240,
             "name": "observation_hash",
             "passes": [
               "rust.declaration"
@@ -13027,7 +13215,7 @@
           },
           {
             "kind": "const",
-            "line": 157,
+            "line": 244,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -13035,7 +13223,7 @@
           },
           {
             "kind": "fn",
-            "line": 161,
+            "line": 248,
             "name": "observation",
             "passes": [
               "rust.declaration"
@@ -13043,7 +13231,7 @@
           },
           {
             "kind": "struct",
-            "line": 168,
+            "line": 255,
             "name": "CollectionBatch",
             "passes": [
               "rust.declaration"
@@ -13051,7 +13239,7 @@
           },
           {
             "kind": "fn",
-            "line": 179,
+            "line": 266,
             "name": "chain",
             "passes": [
               "rust.declaration"
@@ -13059,7 +13247,7 @@
           },
           {
             "kind": "fn",
-            "line": 182,
+            "line": 269,
             "name": "source_id",
             "passes": [
               "rust.declaration"
@@ -13067,7 +13255,7 @@
           },
           {
             "kind": "const",
-            "line": 186,
+            "line": 273,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -13075,7 +13263,7 @@
           },
           {
             "kind": "const",
-            "line": 190,
+            "line": 277,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -13083,7 +13271,7 @@
           },
           {
             "kind": "const",
-            "line": 194,
+            "line": 281,
             "name": "fn",
             "passes": [
               "rust.declaration"
@@ -13091,7 +13279,7 @@
           },
           {
             "kind": "fn",
-            "line": 198,
+            "line": 285,
             "name": "evidence",
             "passes": [
               "rust.declaration"
@@ -13099,7 +13287,7 @@
           },
           {
             "kind": "fn",
-            "line": 202,
+            "line": 289,
             "name": "observations",
             "passes": [
               "rust.declaration"
@@ -13107,7 +13295,7 @@
           },
           {
             "kind": "fn",
-            "line": 206,
+            "line": 293,
             "name": "output_sha256",
             "passes": [
               "rust.declaration"
@@ -13115,7 +13303,7 @@
           },
           {
             "kind": "fn",
-            "line": 262,
+            "line": 349,
             "name": "evidence_manifest_sha256",
             "passes": [
               "rust.declaration"
@@ -13123,7 +13311,7 @@
           },
           {
             "kind": "trait",
-            "line": 271,
+            "line": 358,
             "name": "CollectionCommitStore",
             "passes": [
               "rust.declaration"
@@ -13131,7 +13319,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 272,
+            "line": 359,
             "name": "commit",
             "passes": [
               "rust.declaration"
@@ -13139,7 +13327,7 @@
           },
           {
             "kind": "struct",
-            "line": 274,
+            "line": 361,
             "name": "PostgresCollectionCommitStore",
             "passes": [
               "rust.declaration"
@@ -13147,7 +13335,7 @@
           },
           {
             "kind": "fn",
-            "line": 280,
+            "line": 367,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -13155,7 +13343,7 @@
           },
           {
             "kind": "fn",
-            "line": 283,
+            "line": 370,
             "name": "from_shared",
             "passes": [
               "rust.declaration"
@@ -13163,7 +13351,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 291,
+            "line": 378,
             "name": "commit",
             "passes": [
               "rust.declaration"
@@ -13171,7 +13359,7 @@
           },
           {
             "kind": "struct",
-            "line": 349,
+            "line": 436,
             "name": "PostgresCollectionJobStore",
             "passes": [
               "rust.declaration"
@@ -13179,7 +13367,7 @@
           },
           {
             "kind": "fn",
-            "line": 355,
+            "line": 442,
             "name": "from_shared",
             "passes": [
               "rust.declaration"
@@ -13187,7 +13375,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 362,
+            "line": 449,
             "name": "claim",
             "passes": [
               "rust.declaration"
@@ -13195,7 +13383,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 389,
+            "line": 476,
             "name": "renew",
             "passes": [
               "rust.declaration"
@@ -13203,7 +13391,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 412,
+            "line": 499,
             "name": "complete",
             "passes": [
               "rust.declaration"
@@ -13211,7 +13399,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 434,
+            "line": 521,
             "name": "fail",
             "passes": [
               "rust.declaration"
@@ -13219,7 +13407,7 @@
           },
           {
             "kind": "fn",
-            "line": 465,
+            "line": 552,
             "name": "collection_row_to_job",
             "passes": [
               "rust.declaration"
@@ -13227,7 +13415,7 @@
           },
           {
             "kind": "fn",
-            "line": 490,
+            "line": 577,
             "name": "valid_lease_owner",
             "passes": [
               "rust.declaration"
@@ -13235,7 +13423,7 @@
           },
           {
             "kind": "fn",
-            "line": 498,
+            "line": 585,
             "name": "valid_collection_error_code",
             "passes": [
               "rust.declaration"
@@ -13243,7 +13431,7 @@
           },
           {
             "kind": "trait",
-            "line": 508,
+            "line": 595,
             "name": "CollectionEvidenceStore",
             "passes": [
               "rust.declaration"
@@ -13251,7 +13439,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 509,
+            "line": 596,
             "name": "archive_verified",
             "passes": [
               "rust.declaration"
@@ -13259,48 +13447,8 @@
           },
           {
             "kind": "async-fn",
-            "line": 518,
+            "line": 605,
             "name": "archive_verified",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 534,
-            "name": "archive_verified",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "struct",
-            "line": 544,
-            "name": "BatchRpcArchive",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 551,
-            "name": "new",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 563,
-            "name": "archive",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "struct",
-            "line": 616,
-            "name": "StagedCursorStore",
             "passes": [
               "rust.declaration"
             ]
@@ -13308,6 +13456,46 @@
           {
             "kind": "async-fn",
             "line": 621,
+            "name": "archive_verified",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 631,
+            "name": "BatchRpcArchive",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 638,
+            "name": "new",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 650,
+            "name": "archive",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "struct",
+            "line": 703,
+            "name": "StagedCursorStore",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 708,
             "name": "load",
             "passes": [
               "rust.declaration"
@@ -13315,7 +13503,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 624,
+            "line": 711,
             "name": "initialize",
             "passes": [
               "rust.declaration"
@@ -13323,7 +13511,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 634,
+            "line": 721,
             "name": "compare_and_set",
             "passes": [
               "rust.declaration"
@@ -13331,7 +13519,7 @@
           },
           {
             "kind": "struct",
-            "line": 651,
+            "line": 738,
             "name": "CollectionRetryDelay",
             "passes": [
               "rust.declaration"
@@ -13339,7 +13527,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 654,
+            "line": 741,
             "name": "wait",
             "passes": [
               "rust.declaration"
@@ -13347,7 +13535,7 @@
           },
           {
             "kind": "struct",
-            "line": 658,
+            "line": 745,
             "name": "CollectionHandler",
             "passes": [
               "rust.declaration"
@@ -13355,15 +13543,23 @@
           },
           {
             "kind": "fn",
-            "line": 667,
+            "line": 755,
             "name": "new",
             "passes": [
               "rust.declaration"
             ]
           },
           {
+            "kind": "fn",
+            "line": 769,
+            "name": "with_public_source_transport",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "struct",
-            "line": 684,
+            "line": 781,
             "name": "Manifest",
             "passes": [
               "rust.declaration"
@@ -13371,7 +13567,7 @@
           },
           {
             "kind": "struct",
-            "line": 697,
+            "line": 794,
             "name": "ManifestInput",
             "passes": [
               "rust.declaration"
@@ -13379,7 +13575,7 @@
           },
           {
             "kind": "enum",
-            "line": 706,
+            "line": 804,
             "name": "InputKind",
             "passes": [
               "rust.declaration"
@@ -13387,7 +13583,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 723,
+            "line": 822,
             "name": "process",
             "passes": [
               "rust.declaration"
@@ -13395,7 +13591,7 @@
           },
           {
             "kind": "fn",
-            "line": 757,
+            "line": 856,
             "name": "load_manifest",
             "passes": [
               "rust.declaration"
@@ -13403,15 +13599,23 @@
           },
           {
             "kind": "async-fn",
-            "line": 792,
+            "line": 891,
             "name": "build_batch",
             "passes": [
               "rust.declaration"
             ]
           },
           {
+            "kind": "async-fn",
+            "line": 971,
+            "name": "build_public_source_batch",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "fn",
-            "line": 868,
+            "line": 1035,
             "name": "verify_replayed_evidence",
             "passes": [
               "rust.declaration"
@@ -13419,15 +13623,31 @@
           },
           {
             "kind": "fn",
-            "line": 940,
-            "name": "protocol_inputs_from_rpc",
+            "line": 1056,
+            "name": "verify_recovery_rpc_evidence",
             "passes": [
               "rust.declaration"
             ]
           },
           {
             "kind": "fn",
-            "line": 969,
+            "line": 1074,
+            "name": "verify_evidence",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 1173,
+            "name": "protocol_inputs_from_recovery_envelope",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 1202,
             "name": "parse_protocol_input",
             "passes": [
               "rust.declaration"
@@ -13435,7 +13655,7 @@
           },
           {
             "kind": "fn",
-            "line": 1007,
+            "line": 1244,
             "name": "validate_manifest",
             "passes": [
               "rust.declaration"
@@ -13443,7 +13663,7 @@
           },
           {
             "kind": "fn",
-            "line": 1045,
+            "line": 1290,
             "name": "manifest_chain",
             "passes": [
               "rust.declaration"
@@ -13451,7 +13671,7 @@
           },
           {
             "kind": "fn",
-            "line": 1055,
+            "line": 1300,
             "name": "valid_sha256",
             "passes": [
               "rust.declaration"
@@ -13459,7 +13679,7 @@
           },
           {
             "kind": "fn",
-            "line": 1062,
+            "line": 1307,
             "name": "poison",
             "passes": [
               "rust.declaration"
@@ -13467,14 +13687,14 @@
           },
           {
             "kind": "fn",
-            "line": 1066,
+            "line": 1311,
             "name": "retryable",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 1069,
+        "line_count": 1314,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -14108,7 +14328,7 @@
           },
           {
             "kind": "fn",
-            "line": 555,
+            "line": 553,
             "name": "collection_rpc_transport",
             "passes": [
               "rust.declaration"
@@ -14116,7 +14336,7 @@
           },
           {
             "kind": "fn",
-            "line": 580,
+            "line": 578,
             "name": "required_collection_env",
             "passes": [
               "rust.declaration"
@@ -14124,14 +14344,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 589,
+            "line": 587,
             "name": "serve",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 653,
+        "line_count": 651,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -17886,7 +18106,7 @@
       {
         "citations": 0,
         "component": "delivery-gates",
-        "declaration_count": 23,
+        "declaration_count": 28,
         "declarations": [
           {
             "kind": "struct",
@@ -17913,8 +18133,24 @@
             ]
           },
           {
+            "kind": "struct",
+            "line": 36,
+            "name": "FakePublicSourceTransport",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "async-fn",
-            "line": 38,
+            "line": 44,
+            "name": "fetch",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 51,
             "name": "fetch_block",
             "passes": [
               "rust.declaration"
@@ -17922,7 +18158,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 50,
+            "line": 63,
             "name": "create_object",
             "passes": [
               "rust.declaration"
@@ -17930,7 +18166,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 61,
+            "line": 74,
             "name": "inspect_object",
             "passes": [
               "rust.declaration"
@@ -17938,7 +18174,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 74,
+            "line": 87,
             "name": "read_object",
             "passes": [
               "rust.declaration"
@@ -17946,7 +18182,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 91,
+            "line": 104,
             "name": "commit",
             "passes": [
               "rust.declaration"
@@ -17954,7 +18190,7 @@
           },
           {
             "kind": "fn",
-            "line": 100,
+            "line": 113,
             "name": "leased_job",
             "passes": [
               "rust.declaration"
@@ -17962,7 +18198,7 @@
           },
           {
             "kind": "fn",
-            "line": 104,
+            "line": 117,
             "name": "leased_job_for",
             "passes": [
               "rust.declaration"
@@ -17970,7 +18206,7 @@
           },
           {
             "kind": "fn",
-            "line": 129,
+            "line": 142,
             "name": "x402_fixture",
             "passes": [
               "rust.declaration"
@@ -17978,15 +18214,7 @@
           },
           {
             "kind": "fn",
-            "line": 138,
-            "name": "mpp_fixture",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 142,
+            "line": 151,
             "name": "manifest",
             "passes": [
               "rust.declaration"
@@ -17994,7 +18222,31 @@
           },
           {
             "kind": "fn",
-            "line": 173,
+            "line": 182,
+            "name": "bazaar_manifest",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 200,
+            "name": "bazaar_job",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 213,
+            "name": "bazaar_fixture",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 217,
             "name": "rpc_transport",
             "passes": [
               "rust.declaration"
@@ -18002,7 +18254,7 @@
           },
           {
             "kind": "fn",
-            "line": 177,
+            "line": 221,
             "name": "rpc_transport_with_protocol",
             "passes": [
               "rust.declaration"
@@ -18010,7 +18262,7 @@
           },
           {
             "kind": "fn",
-            "line": 218,
+            "line": 262,
             "name": "manifest_chain",
             "passes": [
               "rust.declaration"
@@ -18018,15 +18270,23 @@
           },
           {
             "kind": "async-fn",
-            "line": 230,
-            "name": "bounded_launch_chain_fixtures_archive_before_emitting_only_explicit_protocol_observations",
+            "line": 274,
+            "name": "genuine_public_bazaar_evidence_is_archived_then_replayed_into_an_observation",
             "passes": [
               "rust.declaration"
             ]
           },
           {
             "kind": "async-fn",
-            "line": 312,
+            "line": 349,
+            "name": "public_bazaar_page_coordinate_must_match_the_fixed_source_request",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 388,
             "name": "malformed_explicit_attribution_fails_before_cursor_or_observation_commit",
             "passes": [
               "rust.declaration"
@@ -18034,15 +18294,15 @@
           },
           {
             "kind": "async-fn",
-            "line": 372,
-            "name": "manifest_payload_cannot_create_observation_when_rpc_evidence_has_only_ordinary_transfer",
+            "line": 418,
+            "name": "generic_rpc_protocol_shaped_field_cannot_create_an_observation",
             "passes": [
               "rust.declaration"
             ]
           },
           {
             "kind": "async-fn",
-            "line": 404,
+            "line": 477,
             "name": "production_gcs_store_receives_bounded_collection_provenance_before_commit",
             "passes": [
               "rust.declaration"
@@ -18050,7 +18310,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 454,
+            "line": 527,
             "name": "oversized_protocol_evidence_is_rejected_before_archive_or_commit",
             "passes": [
               "rust.declaration"
@@ -18058,7 +18318,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 492,
+            "line": 565,
             "name": "rpc_acquisition_represents_every_height_when_protocol_inputs_are_sparse",
             "passes": [
               "rust.declaration"
@@ -18066,14 +18326,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 525,
+            "line": 598,
             "name": "rpc_acquisition_rejects_a_reported_height_mismatch_before_commit",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 551,
+        "line_count": 624,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -18174,7 +18434,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 141,
+        "line_count": 161,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -19940,7 +20200,7 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1770,
+        "citations": 1796,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
         "files": 62,
@@ -19972,15 +20232,15 @@
         "worker": 8
       },
       "citations": 64,
-      "declarations": 1770,
+      "declarations": 1796,
       "entities": 64,
       "entities_with_origin": 64,
-      "files": 178,
+      "files": 180,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
       "touched_files": 31,
-      "untouched_files": 147
+      "untouched_files": 149
     }
   },
   "interplay": {
@@ -20848,7 +21108,7 @@
         "evidence": [
           {
             "excerpt": "pub struct CollectionHandler<S: ?Sized, C, T> {",
-            "line": 659,
+            "line": 746,
             "path": "src/collect.rs"
           }
         ],
@@ -20862,7 +21122,7 @@
         "evidence": [
           {
             "excerpt": "pub struct Collector<'a, T, A, C, D> {",
-            "line": 729,
+            "line": 757,
             "path": "crates/rpc-collector/src/lib.rs"
           }
         ],
@@ -21100,7 +21360,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/healthz\", get(status))",
-            "line": 647,
+            "line": 645,
             "path": "src/main.rs"
           }
         ],
@@ -21338,7 +21598,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/status\", get(status))",
-            "line": 645,
+            "line": 643,
             "path": "src/main.rs"
           }
         ],
@@ -21464,7 +21724,7 @@
         "evidence": [
           {
             "excerpt": "pub struct X402Adapter {",
-            "line": 201,
+            "line": 202,
             "path": "crates/x402-adapter/src/lib.rs"
           }
         ],
@@ -21506,7 +21766,7 @@
         "evidence": [
           {
             "excerpt": "info!(%address, \"agent economy monitor listening\");",
-            "line": 650,
+            "line": 648,
             "path": "src/main.rs"
           }
         ],
@@ -21667,9 +21927,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1770,
-    "files": 178,
-    "lines": 53582
+    "declarations": 1796,
+    "files": 180,
+    "lines": 55011
   },
   "layers": [
     {
@@ -21710,7 +21970,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "538d034c5e6008defe3b74bc9485b4f955ace2e6351445f60d41a8d2d31fcb94",
+  "source_tree_sha256": "c57624ff482eb8bb853e709765091d02d4b26f485be8917c232f8934e7f2de38",
   "stores": {
     "count": 2,
     "items": [

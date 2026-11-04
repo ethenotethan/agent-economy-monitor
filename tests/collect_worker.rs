@@ -11,7 +11,7 @@ use agent_economy_evidence_store::{
 use agent_economy_monitor::{
     collect::{
         ArchivedEvidence, CollectionBatch, CollectionCommitStore, CollectionError,
-        CollectionHandler, verify_replayed_evidence,
+        CollectionHandler, PublicSourceResponse, PublicSourceTransport, verify_replayed_evidence,
     },
     worker::{CollectionAdmission, LeasedJob, WorkerHandler, WorkerMode},
 };
@@ -32,6 +32,19 @@ struct RecordingGcsClient {
 struct FakeRpcTransport {
     responses: VecDeque<Result<RawRpcResponse, CollectorError>>,
     requests: Arc<Mutex<Vec<(Chain, u64)>>>,
+}
+
+struct FakePublicSourceTransport {
+    response: PublicSourceResponse,
+    requests: Arc<Mutex<Vec<String>>>,
+}
+
+#[async_trait]
+impl PublicSourceTransport for FakePublicSourceTransport {
+    async fn fetch(&self, url: &str) -> Result<PublicSourceResponse, CollectionError> {
+        self.requests.lock().unwrap().push(url.to_owned());
+        Ok(self.response.clone())
+    }
 }
 
 impl RpcTransport for FakeRpcTransport {
@@ -136,10 +149,6 @@ fn x402_fixture() -> Vec<u8> {
     .into_bytes()
 }
 
-fn mpp_fixture() -> Vec<u8> {
-    br#"{"openapi":"3.1.0","info":{"title":"Weather","version":"1.0"},"paths":{"/forecast":{"get":{"x-payment-info":{"intent":"charge","method":"tempo","amount":"7","currency":"USD"},"responses":{"402":{"description":"payment required"}}}}}}"#.to_vec()
-}
-
 fn manifest(chain: &str, protocol_kind: &str, protocol_payload: &[u8]) -> Vec<u8> {
     serde_json::to_vec(&serde_json::json!({
         "schema_version": 1,
@@ -169,6 +178,41 @@ fn manifest(chain: &str, protocol_kind: &str, protocol_payload: &[u8]) -> Vec<u8
         ]
     }))
     .unwrap()
+}
+
+fn bazaar_manifest() -> Vec<u8> {
+    serde_json::to_vec(&serde_json::json!({
+        "schema_version": 1,
+        "chain": "base",
+        "source_id": "cdp-x402-bazaar-base",
+        "observed_at_unix_ms": 1790986800000_i64,
+        "observed_date": "2026-10-03",
+        "start_height": 0,
+        "end_height": 0,
+        "inputs": [{
+            "height": 0,
+            "kind": "x402_bazaar",
+            "context": "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=0"
+        }]
+    }))
+    .unwrap()
+}
+
+fn bazaar_job(input_sha256: String) -> LeasedJob {
+    let mut job = leased_job(input_sha256);
+    job.collection_admission = Some(CollectionAdmission {
+        chain_scope: "base".into(),
+        source_id: "cdp-x402-bazaar-base".into(),
+        start_height: 0,
+        end_height: 0,
+        acquisition_contract: "cdp-x402-bazaar-v1".into(),
+        evidence_contract: "evidence-store-create-read-sha256-v1".into(),
+    });
+    job
+}
+
+fn bazaar_fixture() -> Vec<u8> {
+    br#"{"items":[{"accepts":[{"amount":"5000","asset":"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913","extra":{"name":"USD Coin","version":"2"},"maxTimeoutSeconds":60,"network":"eip155:8453","payTo":"0x589a2314a2E05F45e40C4823Da3Ba58D421dB3d8","resource":"https://www.api-xpay.com/x402/quote","scheme":"exact"}],"resource":"https://www.api-xpay.com/x402/quote","x402Version":2}]}"#.to_vec()
 }
 
 fn rpc_transport(chain: &str, reported_height: u64) -> FakeRpcTransport {
@@ -227,85 +271,117 @@ fn manifest_chain(chain: &str) -> Chain {
 }
 
 #[tokio::test]
-async fn bounded_launch_chain_fixtures_archive_before_emitting_only_explicit_protocol_observations()
-{
-    for (chain, kind, payload, expected_protocol) in [
-        ("ethereum", "x402_runtime", x402_fixture(), "x402"),
-        ("base", "x402_runtime", x402_fixture(), "x402"),
-        ("solana", "mpp_openapi", mpp_fixture(), "mpp"),
-        ("tempo", "mpp_openapi", mpp_fixture(), "mpp"),
-    ] {
-        let root =
-            std::env::temp_dir().join(format!("aem-collect-test-{chain}-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&root);
-        let input_root = root.join("inputs");
-        fs::create_dir_all(&input_root).unwrap();
-        let root = fs::canonicalize(&root).unwrap();
-        let input_root = root.join("inputs");
-        let evidence_store =
-            Arc::new(FilesystemEvidenceStore::open(root.join("evidence")).unwrap());
-        let commit_store = Arc::new(RecordingCommitStore::default());
-        let bytes = manifest(chain, kind, &payload);
-        let digest = format!("{:x}", Sha256::digest(&bytes));
-        fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
-        let rpc = rpc_transport_with_protocol(chain, 42, Some((kind, &payload)));
-        let rpc_requests = Arc::clone(&rpc.requests);
-        let handler = CollectionHandler::new(
-            input_root,
-            Arc::clone(&evidence_store),
-            commit_store.clone(),
-            rpc,
+async fn genuine_public_bazaar_evidence_is_archived_then_replayed_into_an_observation() {
+    let root = std::env::temp_dir().join(format!("aem-collect-bazaar-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&root);
+    let input_root = root.join("inputs");
+    fs::create_dir_all(&input_root).unwrap();
+    let root = fs::canonicalize(&root).unwrap();
+    let input_root = root.join("inputs");
+    let evidence_store = Arc::new(FilesystemEvidenceStore::open(root.join("evidence")).unwrap());
+    let commit_store = Arc::new(RecordingCommitStore::default());
+    let bytes = bazaar_manifest();
+    let digest = format!("{:x}", Sha256::digest(&bytes));
+    fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
+    let source_requests = Arc::new(Mutex::new(Vec::new()));
+    let handler = CollectionHandler::new(
+        input_root,
+        Arc::clone(&evidence_store),
+        commit_store.clone(),
+        rpc_transport("base", 42),
+    )
+    .with_public_source_transport(Arc::new(FakePublicSourceTransport {
+        response: PublicSourceResponse::try_new(200, bazaar_fixture()).unwrap(),
+        requests: Arc::clone(&source_requests),
+    }));
+
+    handler.process(&bazaar_job(digest.clone())).await.unwrap();
+    handler.process(&bazaar_job(digest)).await.unwrap();
+    let (stored, sha256) = {
+        let batches = commit_store.0.lock().unwrap();
+        assert_eq!(batches.len(), 2);
+        assert_eq!(batches[0].source_id(), "cdp-x402-bazaar-base");
+        assert_eq!(batches[0].observed_at_unix_ms(), 1_790_986_800_000);
+        assert!(
+            batches[0].evidence()[0]
+                .storage_uri()
+                .contains("/2026-10-03/")
         );
-
-        let result = handler
-            .process(&leased_job_for(digest, chain, 42, 42))
-            .await
-            .unwrap_or_else(|error| panic!("{chain} fixture failed: {error:?}"));
-
-        assert_eq!(result.output_sha256().len(), 64);
-        let (stored, sha256) = {
-            let batches = commit_store.0.lock().unwrap();
-            assert_eq!(batches.len(), 1);
-            assert_eq!(batches[0].chain(), chain);
-            assert_eq!(batches[0].start_height(), 42);
-            assert_eq!(batches[0].end_height(), 42);
-            assert_eq!(batches[0].evidence().len(), 1);
-            assert!(batches[0].observations().is_empty());
-            assert!(batches[0].evidence().iter().all(|item| item.verified()));
-            (
-                batches[0].evidence()[0].storage_uri().to_owned(),
-                batches[0].evidence()[0].sha256().to_owned(),
-            )
-        };
-        let object = EvidenceObject::parse(&stored).unwrap();
-        let readback = EvidenceStore::read(evidence_store.as_ref(), &object)
-            .await
-            .unwrap();
-        let verified = ArchivedEvidence::from_verified_readback(
-            stored,
-            sha256,
-            "application/vnd.agent-economy.rpc".into(),
-            42,
-            readback,
-        )
-        .unwrap();
-        let promoted = verify_replayed_evidence(
-            chain.into(),
-            format!("alchemy-{chain}"),
-            1790986800000,
-            42,
-            42,
-            vec![verified],
-        )
-        .unwrap();
-        assert_eq!(promoted.observations().len(), 1);
-        assert_eq!(promoted.observations()[0].protocol(), expected_protocol);
+        assert_eq!(batches[0].evidence()[0].media_type(), "application/json");
         assert_eq!(
-            rpc_requests.lock().unwrap().as_slice(),
-            &[(manifest_chain(chain), 42)]
+            batches[0].evidence()[0].storage_uri(),
+            batches[1].evidence()[0].storage_uri(),
+            "duplicate source bytes must address the same immutable object"
         );
-        fs::remove_dir_all(root).unwrap();
-    }
+        (
+            batches[0].evidence()[0].storage_uri().to_owned(),
+            batches[0].evidence()[0].sha256().to_owned(),
+        )
+    };
+    let object = EvidenceObject::parse(&stored).unwrap();
+    let readback = EvidenceStore::read(evidence_store.as_ref(), &object)
+        .await
+        .unwrap();
+    let verified = ArchivedEvidence::from_verified_readback(
+        stored,
+        sha256,
+        "application/json".into(),
+        0,
+        readback,
+    )
+    .unwrap();
+    let promoted = verify_replayed_evidence(
+        "base".into(),
+        "cdp-x402-bazaar-base".into(),
+        1790986800000,
+        0,
+        0,
+        vec![verified],
+    )
+    .unwrap();
+    assert_eq!(promoted.observations().len(), 1);
+    assert_eq!(promoted.observations()[0].protocol(), "x402");
+    assert_eq!(source_requests.lock().unwrap().len(), 2);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn public_bazaar_page_coordinate_must_match_the_fixed_source_request() {
+    let root = std::env::temp_dir().join(format!(
+        "aem-collect-bazaar-coordinate-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let input_root = root.join("inputs");
+    fs::create_dir_all(&input_root).unwrap();
+    let root = fs::canonicalize(&root).unwrap();
+    let input_root = root.join("inputs");
+    let evidence_store = Arc::new(FilesystemEvidenceStore::open(root.join("evidence")).unwrap());
+    let commit_store = Arc::new(RecordingCommitStore::default());
+    let mut manifest: serde_json::Value = serde_json::from_slice(&bazaar_manifest()).unwrap();
+    manifest["start_height"] = serde_json::json!(42);
+    manifest["end_height"] = serde_json::json!(42);
+    manifest["inputs"][0]["height"] = serde_json::json!(42);
+    let bytes = serde_json::to_vec(&manifest).unwrap();
+    let digest = format!("{:x}", Sha256::digest(&bytes));
+    fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
+    let mut job = bazaar_job(digest);
+    job.collection_admission.as_mut().unwrap().start_height = 42;
+    job.collection_admission.as_mut().unwrap().end_height = 42;
+    let handler = CollectionHandler::new(
+        input_root,
+        evidence_store,
+        commit_store.clone(),
+        rpc_transport("base", 42),
+    )
+    .with_public_source_transport(Arc::new(FakePublicSourceTransport {
+        response: PublicSourceResponse::try_new(200, bazaar_fixture()).unwrap(),
+        requests: Arc::new(Mutex::new(Vec::new())),
+    }));
+
+    assert!(handler.process(&job).await.is_err());
+    assert!(commit_store.0.lock().unwrap().is_empty());
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[tokio::test]
@@ -318,25 +394,55 @@ async fn malformed_explicit_attribution_fails_before_cursor_or_observation_commi
     let input_root = root.join("inputs");
     let evidence_store = Arc::new(FilesystemEvidenceStore::open(root.join("evidence")).unwrap());
     let commit_store = Arc::new(RecordingCommitStore::default());
-    let bytes = manifest("base", "x402_runtime", b"ordinary transfer, not x402");
+    let bytes = bazaar_manifest();
     let digest = format!("{:x}", Sha256::digest(&bytes));
     fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
     let handler = CollectionHandler::new(
         input_root,
         Arc::clone(&evidence_store),
         commit_store.clone(),
-        rpc_transport_with_protocol(
-            "base",
-            42,
-            Some(("x402_runtime", b"ordinary transfer, not x402")),
-        ),
+        rpc_transport("base", 42),
+    )
+    .with_public_source_transport(Arc::new(FakePublicSourceTransport {
+        response: PublicSourceResponse::try_new(200, br#"{"items":[{"accepts":"bad"}]}"#.to_vec())
+            .unwrap(),
+        requests: Arc::new(Mutex::new(Vec::new())),
+    }));
+
+    assert!(handler.process(&bazaar_job(digest)).await.is_err());
+    assert!(commit_store.0.lock().unwrap().is_empty());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn generic_rpc_protocol_shaped_field_cannot_create_an_observation() {
+    let root = std::env::temp_dir().join(format!(
+        "aem-collect-manifest-divergence-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let input_root = root.join("inputs");
+    fs::create_dir_all(&input_root).unwrap();
+    let root = fs::canonicalize(&root).unwrap();
+    let input_root = root.join("inputs");
+    let evidence_store = Arc::new(FilesystemEvidenceStore::open(root.join("evidence")).unwrap());
+    let commit_store = Arc::new(RecordingCommitStore::default());
+    let bytes = manifest("base", "x402_runtime", &x402_fixture());
+    let digest = format!("{:x}", Sha256::digest(&bytes));
+    fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
+    let handler = CollectionHandler::new(
+        input_root,
+        Arc::clone(&evidence_store),
+        commit_store.clone(),
+        rpc_transport_with_protocol("base", 42, Some(("x402_runtime", &x402_fixture()))),
     );
 
     handler.process(&leased_job(digest)).await.unwrap();
+
     let (stored, sha256) = {
         let batches = commit_store.0.lock().unwrap();
-        assert_eq!(batches.len(), 1);
         assert!(batches[0].observations().is_empty());
+        assert_eq!(batches[0].evidence().len(), 1);
         (
             batches[0].evidence()[0].storage_uri().to_owned(),
             batches[0].evidence()[0].sha256().to_owned(),
@@ -354,49 +460,16 @@ async fn malformed_explicit_attribution_fails_before_cursor_or_observation_commi
         readback,
     )
     .unwrap();
-    assert!(matches!(
-        verify_replayed_evidence(
-            "base".into(),
-            "alchemy-base".into(),
-            1790986800000,
-            42,
-            42,
-            vec![verified],
-        ),
-        Err(CollectionError::InvalidInput)
-    ));
-    fs::remove_dir_all(root).unwrap();
-}
-
-#[tokio::test]
-async fn manifest_payload_cannot_create_observation_when_rpc_evidence_has_only_ordinary_transfer() {
-    let root = std::env::temp_dir().join(format!(
-        "aem-collect-manifest-divergence-{}",
-        std::process::id()
-    ));
-    let _ = fs::remove_dir_all(&root);
-    let input_root = root.join("inputs");
-    fs::create_dir_all(&input_root).unwrap();
-    let root = fs::canonicalize(&root).unwrap();
-    let input_root = root.join("inputs");
-    let evidence_store = Arc::new(FilesystemEvidenceStore::open(root.join("evidence")).unwrap());
-    let commit_store = Arc::new(RecordingCommitStore::default());
-    let bytes = manifest("base", "x402_runtime", &x402_fixture());
-    let digest = format!("{:x}", Sha256::digest(&bytes));
-    fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
-    let handler = CollectionHandler::new(
-        input_root,
-        evidence_store,
-        commit_store.clone(),
-        rpc_transport("base", 42),
-    );
-
-    handler.process(&leased_job(digest)).await.unwrap();
-
-    let batches = commit_store.0.lock().unwrap();
-    assert!(batches[0].observations().is_empty());
-    assert_eq!(batches[0].evidence().len(), 1);
-    drop(batches);
+    let promoted = verify_replayed_evidence(
+        "base".into(),
+        "alchemy-base".into(),
+        1790986800000,
+        42,
+        42,
+        vec![verified],
+    )
+    .unwrap();
+    assert!(promoted.observations().is_empty());
     fs::remove_dir_all(root).unwrap();
 }
 

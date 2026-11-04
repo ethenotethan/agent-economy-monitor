@@ -1,5 +1,5 @@
 use agent_economy_monitor::{
-    collect::{ArchivedEvidence, verify_replayed_evidence},
+    collect::{ArchivedEvidence, verify_recovery_rpc_evidence},
     recovery::{RecoveryDrill, RecoveryError},
 };
 use agent_economy_rpc_collector::{Chain, RawRpcResponse, RpcEvidence};
@@ -114,7 +114,7 @@ fn production_entry(
         bytes.clone(),
     )
     .unwrap();
-    let batch = verify_replayed_evidence(
+    let batch = verify_recovery_rpc_evidence(
         chain_name.to_owned(),
         format!("alchemy-{chain_name}"),
         OBSERVED_AT_UNIX_MS,

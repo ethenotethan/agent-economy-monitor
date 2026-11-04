@@ -8,6 +8,8 @@ SPLIT_UP = ROOT / "migrations" / "0014_collection_custody_split.up.sql"
 SPLIT_DOWN = ROOT / "migrations" / "0014_collection_custody_split.down.sql"
 BOUNDARY_UP = ROOT / "migrations" / "0015_collection_runtime_boundary.up.sql"
 BOUNDARY_DOWN = ROOT / "migrations" / "0015_collection_runtime_boundary.down.sql"
+PUBLIC_SOURCE_UP = ROOT / "migrations" / "0018_public_source_collection.up.sql"
+PUBLIC_SOURCE_DOWN = ROOT / "migrations" / "0018_public_source_collection.down.sql"
 
 
 class CollectWorkerMigrationTest(unittest.TestCase):
@@ -123,6 +125,24 @@ class CollectWorkerMigrationTest(unittest.TestCase):
             "CREATE OR REPLACE FUNCTION agent_economy.bound_collection_namespace", down
         )
         self.assertIn("REVOKE EXECUTE ON FUNCTION", down)
+        self.assertNotIn("CASCADE", down)
+
+    def test_public_source_migration_extends_admission_without_weakening_custody(self):
+        up = PUBLIC_SOURCE_UP.read_text()
+        down = PUBLIC_SOURCE_DOWN.read_text()
+        self.assertIn("cdp-x402-bazaar-v1", up)
+        self.assertIn("application/json", up)
+        self.assertIn("collection_start_height = 0", up)
+        self.assertIn("collection_end_height = 0", up)
+        self.assertIn("collection_chain_scope IN ('ethereum', 'base', 'solana', 'tempo')", up)
+        self.assertIn("collection_source_id = 'alchemy-' || collection_chain_scope", up)
+        self.assertIn("CREATE OR REPLACE FUNCTION agent_economy.stage_collection_batch", up)
+        self.assertIn("CREATE OR REPLACE FUNCTION agent_economy.commit_collection_batch", up)
+        self.assertIn("evidence-store-create-read-sha256-v1", up)
+        self.assertIn("REVOKE ALL ON FUNCTION agent_economy.commit_collection_batch", up)
+        self.assertIn("alchemy-rpc-block-v1", down)
+        self.assertIn("collection_chain_scope IN ('ethereum', 'base', 'solana', 'tempo')", down)
+        self.assertIn("collection_source_id = 'alchemy-' || collection_chain_scope", down)
         self.assertNotIn("CASCADE", down)
 
     def test_canonical_verify_requires_and_executes_split_custody(self):
