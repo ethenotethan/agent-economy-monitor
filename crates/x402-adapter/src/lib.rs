@@ -444,13 +444,32 @@ fn parse_bazaar(evidence: &[u8]) -> Result<Vec<(PaymentRequired, String)>, Adapt
     snapshot
         .items
         .into_iter()
-        .map(|item| {
+        .map(|mut item| {
             let resource = item
                 .get("resource")
                 .and_then(serde_json::Value::as_str)
                 .filter(|value| !value.trim().is_empty())
                 .ok_or(AdapterError::InvalidJson)?
                 .to_owned();
+            if item.get("x402Version") == Some(&serde_json::Value::from(2)) {
+                let accepts = item
+                    .get_mut("accepts")
+                    .and_then(serde_json::Value::as_array_mut)
+                    .ok_or(AdapterError::InvalidJson)?;
+                for offer in accepts {
+                    let offer = offer.as_object_mut().ok_or(AdapterError::InvalidJson)?;
+                    if let Some(max_amount) = offer.get("maxAmountRequired") {
+                        let amount = offer
+                            .get("amount")
+                            .and_then(serde_json::Value::as_str)
+                            .ok_or(AdapterError::InvalidJson)?;
+                        if max_amount.as_str() != Some(amount) {
+                            return Err(AdapterError::InvalidJson);
+                        }
+                        offer.remove("maxAmountRequired");
+                    }
+                }
+            }
             let encoded = serde_json::to_vec(&item).map_err(|_| AdapterError::InvalidJson)?;
             Ok((parse_payment_required(&encoded)?, resource))
         })

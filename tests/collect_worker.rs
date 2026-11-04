@@ -212,7 +212,7 @@ fn bazaar_job(input_sha256: String) -> LeasedJob {
 }
 
 fn bazaar_fixture() -> Vec<u8> {
-    br#"{"items":[{"accepts":[{"amount":"5000","asset":"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913","extra":{"name":"USD Coin","version":"2"},"maxTimeoutSeconds":60,"network":"eip155:8453","payTo":"0x589a2314a2E05F45e40C4823Da3Ba58D421dB3d8","resource":"https://www.api-xpay.com/x402/quote","scheme":"exact"}],"resource":"https://www.api-xpay.com/x402/quote","x402Version":2}]}"#.to_vec()
+    br#"{"items":[{"accepts":[{"amount":"5000","asset":"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913","extra":{"name":"USD Coin","version":"2"},"maxAmountRequired":"5000","maxTimeoutSeconds":60,"network":"eip155:8453","payTo":"0x589a2314a2E05F45e40C4823Da3Ba58D421dB3d8","resource":"https://www.api-xpay.com/x402/quote","scheme":"exact"}],"resource":"https://www.api-xpay.com/x402/quote","x402Version":2}]}"#.to_vec()
 }
 
 fn rpc_transport(chain: &str, reported_height: u64) -> FakeRpcTransport {

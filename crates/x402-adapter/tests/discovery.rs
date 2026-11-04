@@ -12,6 +12,8 @@ const RUNTIME_V2: &[u8] = include_bytes!("fixtures/runtime-v2.http");
 const RUNTIME_V1: &[u8] = include_bytes!("fixtures/runtime-v1.http");
 const WELL_KNOWN_V1: &[u8] = include_bytes!("fixtures/well-known-v1.json");
 const OPENAPI_V2: &[u8] = include_bytes!("fixtures/openapi-v2.json");
+const BAZAAR_V2_REDUNDANT_MAX_AMOUNT: &[u8] =
+    include_bytes!("fixtures/bazaar-v2-redundant-max-amount.json");
 const MALFORMED_RUNTIME: &[u8] = include_bytes!("fixtures/malformed-runtime.http");
 const SIWX_ONLY: &[u8] = include_bytes!("fixtures/siwx-only.json");
 const BASE_USDC_TICKER_NAME: &[u8] = include_bytes!("fixtures/base-usdc-ticker-name.json");
@@ -107,6 +109,23 @@ fn genuine_bazaar_snapshot_emits_source_cited_observations() {
     assert_eq!(first[0].evidence().media_type(), "application/json");
     assert_eq!(first[0].evidence().byte_length(), evidence.len() as u64);
     assert_eq!(x402(&first[0]).resource(), "https://merchant.example/paid");
+}
+
+#[test]
+fn bazaar_v2_accepts_equal_redundant_max_amount() {
+    let observations = adapter(EvidenceKind::Bazaar)
+        .observe(BAZAAR_V2_REDUNDANT_MAX_AMOUNT)
+        .expect("live-shaped Bazaar offer is valid");
+
+    assert_eq!(observations.len(), 1);
+    assert_eq!(x402(&observations[0]).amount_atomic(), "1000");
+}
+
+#[test]
+fn bazaar_v2_rejects_conflicting_redundant_max_amount() {
+    let evidence = br#"{"items":[{"resource":"https://merchant.example/paid","x402Version":2,"accepts":[{"scheme":"exact","network":"eip155:8453","amount":"1000","maxAmountRequired":"2000","asset":"USDC","payTo":"0x1111111111111111111111111111111111111111"}]}]}"#;
+
+    assert!(adapter(EvidenceKind::Bazaar).observe(evidence).is_err());
 }
 
 #[test]

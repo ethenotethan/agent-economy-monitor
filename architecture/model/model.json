@@ -2067,11 +2067,12 @@
       "line_count": 825
     },
     {
-      "declaration_count": 88,
+      "declaration_count": 91,
       "declarations": [
         "AdapterError",
         "BASE_USDC",
         "BASE_USDC_TICKER_NAME",
+        "BAZAAR_V2_REDUNDANT_MAX_AMOUNT",
         "DiscoveryResult",
         "Error",
         "EvidenceContext",
@@ -2099,6 +2100,8 @@
         "adapter",
         "authoritative_observations",
         "base_usdc_ticker_as_eip712_name_is_quarantined",
+        "bazaar_v2_accepts_equal_redundant_max_amount",
+        "bazaar_v2_rejects_conflicting_redundant_max_amount",
         "content_fingerprint",
         "context",
         "deserialize",
@@ -2160,12 +2163,13 @@
       ],
       "description": "Deterministic x402 v1/v2 discovery parser with immutable evidence hashing, typed quarantine, and runtime-over-static authority selection.",
       "external": false,
-      "file_count": 10,
+      "file_count": 11,
       "files": [
         "crates/x402-adapter/Cargo.toml",
         "crates/x402-adapter/src/lib.rs",
         "crates/x402-adapter/tests/discovery.rs",
         "crates/x402-adapter/tests/fixtures/base-usdc-ticker-name.json",
+        "crates/x402-adapter/tests/fixtures/bazaar-v2-redundant-max-amount.json",
         "crates/x402-adapter/tests/fixtures/malformed-runtime.http",
         "crates/x402-adapter/tests/fixtures/openapi-v2.json",
         "crates/x402-adapter/tests/fixtures/runtime-v1.http",
@@ -2176,7 +2180,7 @@
       "id": "x402-adapter",
       "label": "x402 adapter",
       "layer": "evidence",
-      "line_count": 1184
+      "line_count": 1223
     }
   ],
   "description": "Source-backed architecture of the Agent Economy Monitor, preserving deterministic evidence, canonical knowledge, and semantic projection as separate authorities.",
@@ -10390,7 +10394,7 @@
           },
           {
             "kind": "struct",
-            "line": 461,
+            "line": 480,
             "name": "RejectDuplicateMembers",
             "passes": [
               "rust.declaration"
@@ -10398,40 +10402,8 @@
           },
           {
             "kind": "type",
-            "line": 464,
+            "line": 483,
             "name": "Value",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 465,
-            "name": "deserialize",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "type",
-            "line": 475,
-            "name": "Value",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 476,
-            "name": "expecting",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "fn",
-            "line": 480,
-            "name": "visit_bool",
             "passes": [
               "rust.declaration"
             ]
@@ -10439,6 +10411,38 @@
           {
             "kind": "fn",
             "line": 484,
+            "name": "deserialize",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "type",
+            "line": 494,
+            "name": "Value",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 495,
+            "name": "expecting",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 499,
+            "name": "visit_bool",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 503,
             "name": "visit_i64",
             "passes": [
               "rust.declaration"
@@ -10446,7 +10450,7 @@
           },
           {
             "kind": "fn",
-            "line": 488,
+            "line": 507,
             "name": "visit_u64",
             "passes": [
               "rust.declaration"
@@ -10454,7 +10458,7 @@
           },
           {
             "kind": "fn",
-            "line": 492,
+            "line": 511,
             "name": "visit_f64",
             "passes": [
               "rust.declaration"
@@ -10462,7 +10466,7 @@
           },
           {
             "kind": "fn",
-            "line": 496,
+            "line": 515,
             "name": "visit_str",
             "passes": [
               "rust.declaration"
@@ -10470,7 +10474,7 @@
           },
           {
             "kind": "fn",
-            "line": 500,
+            "line": 519,
             "name": "visit_string",
             "passes": [
               "rust.declaration"
@@ -10478,7 +10482,7 @@
           },
           {
             "kind": "fn",
-            "line": 504,
+            "line": 523,
             "name": "visit_none",
             "passes": [
               "rust.declaration"
@@ -10486,7 +10490,7 @@
           },
           {
             "kind": "fn",
-            "line": 508,
+            "line": 527,
             "name": "visit_unit",
             "passes": [
               "rust.declaration"
@@ -10494,7 +10498,7 @@
           },
           {
             "kind": "fn",
-            "line": 512,
+            "line": 531,
             "name": "visit_some",
             "passes": [
               "rust.declaration"
@@ -10502,7 +10506,7 @@
           },
           {
             "kind": "fn",
-            "line": 519,
+            "line": 538,
             "name": "visit_seq",
             "passes": [
               "rust.declaration"
@@ -10510,7 +10514,7 @@
           },
           {
             "kind": "fn",
-            "line": 527,
+            "line": 546,
             "name": "visit_map",
             "passes": [
               "rust.declaration"
@@ -10518,7 +10522,7 @@
           },
           {
             "kind": "fn",
-            "line": 542,
+            "line": 561,
             "name": "reject_duplicate_json_members",
             "passes": [
               "rust.declaration"
@@ -10526,7 +10530,7 @@
           },
           {
             "kind": "struct",
-            "line": 550,
+            "line": 569,
             "name": "RuntimeEvidence",
             "passes": [
               "rust.declaration"
@@ -10534,7 +10538,7 @@
           },
           {
             "kind": "fn",
-            "line": 555,
+            "line": 574,
             "name": "runtime_evidence",
             "passes": [
               "rust.declaration"
@@ -10542,7 +10546,7 @@
           },
           {
             "kind": "fn",
-            "line": 591,
+            "line": 610,
             "name": "content_fingerprint",
             "passes": [
               "rust.declaration"
@@ -10550,7 +10554,7 @@
           },
           {
             "kind": "fn",
-            "line": 595,
+            "line": 614,
             "name": "discovery_fingerprint",
             "passes": [
               "rust.declaration"
@@ -10558,7 +10562,7 @@
           },
           {
             "kind": "fn",
-            "line": 605,
+            "line": 624,
             "name": "supported_openapi_version",
             "passes": [
               "rust.declaration"
@@ -10566,7 +10570,7 @@
           },
           {
             "kind": "fn",
-            "line": 621,
+            "line": 640,
             "name": "split_http",
             "passes": [
               "rust.declaration"
@@ -10574,7 +10578,7 @@
           },
           {
             "kind": "fn",
-            "line": 634,
+            "line": 653,
             "name": "observation_resource",
             "passes": [
               "rust.declaration"
@@ -10582,7 +10586,7 @@
           },
           {
             "kind": "fn",
-            "line": 643,
+            "line": 662,
             "name": "media_type",
             "passes": [
               "rust.declaration"
@@ -10590,7 +10594,7 @@
           },
           {
             "kind": "fn",
-            "line": 652,
+            "line": 671,
             "name": "quarantine_reason",
             "passes": [
               "rust.declaration"
@@ -10598,7 +10602,7 @@
           },
           {
             "kind": "fn",
-            "line": 671,
+            "line": 690,
             "name": "validate_token_metadata",
             "passes": [
               "rust.declaration"
@@ -10606,14 +10610,14 @@
           },
           {
             "kind": "const",
-            "line": 673,
+            "line": 692,
             "name": "BASE_USDC",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 681,
+        "line_count": 700,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -10625,7 +10629,7 @@
       {
         "citations": 0,
         "component": "x402-adapter",
-        "declaration_count": 34,
+        "declaration_count": 37,
         "declarations": [
           {
             "kind": "const",
@@ -10662,15 +10666,7 @@
           {
             "kind": "const",
             "line": 15,
-            "name": "MALFORMED_RUNTIME",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "const",
-            "line": 16,
-            "name": "SIWX_ONLY",
+            "name": "BAZAAR_V2_REDUNDANT_MAX_AMOUNT",
             "passes": [
               "rust.declaration"
             ]
@@ -10678,6 +10674,22 @@
           {
             "kind": "const",
             "line": 17,
+            "name": "MALFORMED_RUNTIME",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 18,
+            "name": "SIWX_ONLY",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "const",
+            "line": 19,
             "name": "BASE_USDC_TICKER_NAME",
             "passes": [
               "rust.declaration"
@@ -10685,7 +10697,7 @@
           },
           {
             "kind": "fn",
-            "line": 18,
+            "line": 20,
             "name": "x402",
             "passes": [
               "rust.declaration"
@@ -10693,7 +10705,7 @@
           },
           {
             "kind": "fn",
-            "line": 29,
+            "line": 31,
             "name": "runtime_v2_challenge_emits_hashed_versioned_observation",
             "passes": [
               "rust.declaration"
@@ -10701,7 +10713,7 @@
           },
           {
             "kind": "fn",
-            "line": 62,
+            "line": 64,
             "name": "well_known_v1_metadata_emits_versioned_observation",
             "passes": [
               "rust.declaration"
@@ -10709,7 +10721,7 @@
           },
           {
             "kind": "fn",
-            "line": 86,
+            "line": 88,
             "name": "genuine_bazaar_snapshot_emits_source_cited_observations",
             "passes": [
               "rust.declaration"
@@ -10717,7 +10729,23 @@
           },
           {
             "kind": "fn",
-            "line": 113,
+            "line": 115,
+            "name": "bazaar_v2_accepts_equal_redundant_max_amount",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 125,
+            "name": "bazaar_v2_rejects_conflicting_redundant_max_amount",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 132,
             "name": "malformed_bazaar_snapshot_fails_closed",
             "passes": [
               "rust.declaration"
@@ -10725,7 +10753,7 @@
           },
           {
             "kind": "fn",
-            "line": 120,
+            "line": 139,
             "name": "empty_bazaar_snapshot_is_a_successful_no_op",
             "passes": [
               "rust.declaration"
@@ -10733,7 +10761,7 @@
           },
           {
             "kind": "fn",
-            "line": 130,
+            "line": 149,
             "name": "runtime_v1_challenge_does_not_require_v2_payment_required_header",
             "passes": [
               "rust.declaration"
@@ -10741,7 +10769,7 @@
           },
           {
             "kind": "fn",
-            "line": 150,
+            "line": 169,
             "name": "openapi_x402_extension_uses_operation_path_as_resource",
             "passes": [
               "rust.declaration"
@@ -10749,7 +10777,7 @@
           },
           {
             "kind": "fn",
-            "line": 173,
+            "line": 192,
             "name": "openapi_without_supported_version_is_rejected",
             "passes": [
               "rust.declaration"
@@ -10757,7 +10785,7 @@
           },
           {
             "kind": "fn",
-            "line": 180,
+            "line": 199,
             "name": "openapi_duplicate_members_are_rejected",
             "passes": [
               "rust.declaration"
@@ -10765,7 +10793,7 @@
           },
           {
             "kind": "fn",
-            "line": 187,
+            "line": 206,
             "name": "malformed_openapi_version_prefix_is_rejected",
             "passes": [
               "rust.declaration"
@@ -10773,7 +10801,7 @@
           },
           {
             "kind": "fn",
-            "line": 194,
+            "line": 213,
             "name": "malformed_runtime_response_is_quarantined_with_evidence_hash",
             "passes": [
               "rust.declaration"
@@ -10781,7 +10809,7 @@
           },
           {
             "kind": "fn",
-            "line": 221,
+            "line": 240,
             "name": "runtime_observation_is_authoritative_without_discarding_static_evidence",
             "passes": [
               "rust.declaration"
@@ -10789,7 +10817,7 @@
           },
           {
             "kind": "fn",
-            "line": 255,
+            "line": 274,
             "name": "siwx_only_metadata_is_quarantined_as_unsupported_scheme",
             "passes": [
               "rust.declaration"
@@ -10797,7 +10825,7 @@
           },
           {
             "kind": "fn",
-            "line": 277,
+            "line": 296,
             "name": "base_usdc_ticker_as_eip712_name_is_quarantined",
             "passes": [
               "rust.declaration"
@@ -10805,7 +10833,7 @@
           },
           {
             "kind": "fn",
-            "line": 299,
+            "line": 318,
             "name": "runtime_v2_uses_payment_required_header_as_authoritative_payload",
             "passes": [
               "rust.declaration"
@@ -10813,7 +10841,7 @@
           },
           {
             "kind": "fn",
-            "line": 315,
+            "line": 334,
             "name": "runtime_v2_header_does_not_depend_on_body_schema",
             "passes": [
               "rust.declaration"
@@ -10821,7 +10849,7 @@
           },
           {
             "kind": "fn",
-            "line": 331,
+            "line": 350,
             "name": "runtime_v2_event_key_does_not_depend_on_non_authoritative_body",
             "passes": [
               "rust.declaration"
@@ -10829,7 +10857,7 @@
           },
           {
             "kind": "fn",
-            "line": 356,
+            "line": 375,
             "name": "runtime_status_line_must_use_http_grammar",
             "passes": [
               "rust.declaration"
@@ -10837,7 +10865,7 @@
           },
           {
             "kind": "fn",
-            "line": 376,
+            "line": 395,
             "name": "duplicate_json_members_are_quarantined_as_malformed_metadata",
             "passes": [
               "rust.declaration"
@@ -10845,7 +10873,7 @@
           },
           {
             "kind": "fn",
-            "line": 393,
+            "line": 412,
             "name": "v2_rejects_v1_max_amount_field",
             "passes": [
               "rust.declaration"
@@ -10853,7 +10881,7 @@
           },
           {
             "kind": "fn",
-            "line": 400,
+            "line": 419,
             "name": "malformed_runtime_prevents_static_metadata_from_becoming_authoritative",
             "passes": [
               "rust.declaration"
@@ -10861,7 +10889,7 @@
           },
           {
             "kind": "fn",
-            "line": 414,
+            "line": 433,
             "name": "mixed_exact_and_siwx_metadata_preserves_supported_offer",
             "passes": [
               "rust.declaration"
@@ -10869,7 +10897,7 @@
           },
           {
             "kind": "fn",
-            "line": 426,
+            "line": 445,
             "name": "multiple_offers_for_one_resource_have_distinct_event_keys",
             "passes": [
               "rust.declaration"
@@ -10877,7 +10905,7 @@
           },
           {
             "kind": "fn",
-            "line": 441,
+            "line": 460,
             "name": "offers_on_different_operations_have_distinct_event_keys",
             "passes": [
               "rust.declaration"
@@ -10885,7 +10913,7 @@
           },
           {
             "kind": "fn",
-            "line": 454,
+            "line": 473,
             "name": "context",
             "passes": [
               "rust.declaration"
@@ -10893,14 +10921,14 @@
           },
           {
             "kind": "fn",
-            "line": 464,
+            "line": 483,
             "name": "adapter",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 467,
+        "line_count": 486,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -10920,6 +10948,20 @@
           "declared.topology"
         ],
         "path": "crates/x402-adapter/tests/fixtures/base-usdc-ticker-name.json",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "x402-adapter",
+        "declaration_count": 0,
+        "declarations": [],
+        "line_count": 1,
+        "mapped_declarations": 0,
+        "passes": [
+          "declared.topology"
+        ],
+        "path": "crates/x402-adapter/tests/fixtures/bazaar-v2-redundant-max-amount.json",
         "semantic_citations": 0,
         "touched": false
       },
@@ -20200,7 +20242,7 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1796,
+        "citations": 1799,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
         "files": 62,
@@ -20232,15 +20274,15 @@
         "worker": 8
       },
       "citations": 64,
-      "declarations": 1796,
+      "declarations": 1799,
       "entities": 64,
       "entities_with_origin": 64,
-      "files": 180,
+      "files": 181,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
       "touched_files": 31,
-      "untouched_files": 149
+      "untouched_files": 150
     }
   },
   "interplay": {
@@ -21927,9 +21969,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1796,
-    "files": 180,
-    "lines": 55011
+    "declarations": 1799,
+    "files": 181,
+    "lines": 55050
   },
   "layers": [
     {
@@ -21970,7 +22012,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "c57624ff482eb8bb853e709765091d02d4b26f485be8917c232f8934e7f2de38",
+  "source_tree_sha256": "080b823e096bfb11ba5549c2776ab8873ea7ef832583b42d628e399df5fc7753",
   "stores": {
     "count": 2,
     "items": [
