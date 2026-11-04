@@ -9,8 +9,8 @@ use agent_economy_monitor::{
     classify::{ClassificationHandler, PostgresClassificationStore},
     cockpit::mount_cockpit,
     collect::{
-        CollectionEvidenceStore, CollectionHandler, PostgresCollectionCommitStore,
-        PostgresCollectionJobStore,
+        CdpBazaarTransport, CollectionEvidenceStore, CollectionHandler,
+        PostgresCollectionCommitStore, PostgresCollectionJobStore,
     },
     enrich::{EnrichmentHandler, EvidenceStoreHistoryArchive, PostgresEnrichmentStore},
     projection_gateway::{
@@ -535,12 +535,10 @@ async fn run_collect_once() -> Result<(), Box<dyn std::error::Error>> {
     )));
     let commits = Arc::new(PostgresCollectionCommitStore::from_shared(shared_client));
     let rpc_transport = collection_rpc_transport()?;
-    let handler = Arc::new(CollectionHandler::new(
-        input_root,
-        evidence_store,
-        commits,
-        rpc_transport,
-    ));
+    let handler = Arc::new(
+        CollectionHandler::new(input_root, evidence_store, commits, rpc_transport)
+            .with_public_source_transport(Arc::new(CdpBazaarTransport::new()?)),
+    );
     let completed = WorkerDispatcher::new(jobs)
         .register(WorkerMode::Collect, handler)
         .run_once(WorkerMode::Collect, &lease_owner)

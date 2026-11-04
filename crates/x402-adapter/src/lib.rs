@@ -18,6 +18,7 @@ pub enum EvidenceKind {
     Runtime402,
     WellKnown,
     OpenApi,
+    Bazaar,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -256,15 +257,22 @@ impl ProtocolAdapter for X402Adapter {
                 parse_openapi(evidence, &self.context.endpoint)?,
                 content_fingerprint(evidence),
             ),
+            EvidenceKind::Bazaar => (parse_bazaar(evidence)?, content_fingerprint(evidence)),
         };
+        if documents.is_empty() && self.context.kind == EvidenceKind::Bazaar {
+            return Ok(Vec::new());
+        }
         if !documents
             .iter()
             .any(|(document, _)| document.accepts.iter().any(|offer| offer.scheme == "exact"))
         {
+            if self.context.kind == EvidenceKind::Bazaar {
+                return Ok(Vec::new());
+            }
             return Err(AdapterError::UnsupportedScheme);
         }
         let evidence_ref = EvidenceRef::sha256(evidence, media_type(self.context.kind))?;
-        documents
+        let candidates = documents
             .into_iter()
             .flat_map(|(document, default_resource)| {
                 document
@@ -273,37 +281,44 @@ impl ProtocolAdapter for X402Adapter {
                     .filter(|offer| offer.scheme == "exact")
                     .map(move |offer| (document.x402_version, default_resource.clone(), offer))
             })
-            .enumerate()
-            .map(
-                |(offer_index, (protocol_version, default_resource, offer))| {
-                    validate_token_metadata(&offer)?;
-                    let resource = offer.resource.unwrap_or(default_resource);
-                    let offer_index =
-                        u64::try_from(offer_index).map_err(|_| AdapterError::InvalidJson)?;
-                    let discovery_fingerprint =
-                        discovery_fingerprint(&request_fingerprint, &resource, offer_index);
-                    Observation::new(
-                        Provenance::new(
-                            self.context.source_id.clone(),
-                            self.context.observed_at_unix_ms,
-                            self.parser_version.clone(),
-                        )?,
-                        evidence_ref.clone(),
-                        ProtocolObservation::X402(X402Observation::discovery(
-                            X402EventKey::discovery(discovery_fingerprint, resource.clone())?,
-                            offer.asset,
-                            offer.amount,
-                            protocol_version,
-                            offer.scheme,
-                            offer.network,
-                            offer.pay_to,
-                            resource,
-                        )?),
-                    )
-                    .map_err(AdapterError::from)
-                },
-            )
-            .collect()
+            .enumerate();
+        let mut observations = Vec::new();
+        for (offer_index, (protocol_version, default_resource, offer)) in candidates {
+            let observation = (|| {
+                validate_token_metadata(&offer)?;
+                let resource = offer.resource.unwrap_or(default_resource);
+                let offer_index =
+                    u64::try_from(offer_index).map_err(|_| AdapterError::InvalidJson)?;
+                let discovery_fingerprint =
+                    discovery_fingerprint(&request_fingerprint, &resource, offer_index);
+                Observation::new(
+                    Provenance::new(
+                        self.context.source_id.clone(),
+                        self.context.observed_at_unix_ms,
+                        self.parser_version.clone(),
+                    )?,
+                    evidence_ref.clone(),
+                    ProtocolObservation::X402(X402Observation::discovery(
+                        X402EventKey::discovery(discovery_fingerprint, resource.clone())?,
+                        offer.asset,
+                        offer.amount,
+                        protocol_version,
+                        offer.scheme,
+                        offer.network,
+                        offer.pay_to,
+                        resource,
+                    )?),
+                )
+                .map_err(AdapterError::from)
+            })();
+            match observation {
+                Ok(observation) => observations.push(observation),
+                Err(AdapterError::InvalidTokenMetadata | AdapterError::Observation(_))
+                    if self.context.kind == EvidenceKind::Bazaar => {}
+                Err(error) => return Err(error),
+            }
+        }
+        Ok(observations)
     }
 }
 
@@ -425,6 +440,50 @@ fn parse_openapi(
         return Err(AdapterError::MissingAccepts);
     }
     Ok(documents)
+}
+
+#[derive(Deserialize)]
+struct RawBazaarSnapshot {
+    items: Vec<serde_json::Value>,
+}
+
+fn parse_bazaar(evidence: &[u8]) -> Result<Vec<(PaymentRequired, String)>, AdapterError> {
+    reject_duplicate_json_members(evidence)?;
+    let snapshot: RawBazaarSnapshot =
+        serde_json::from_slice(evidence).map_err(|_| AdapterError::InvalidJson)?;
+    snapshot
+        .items
+        .into_iter()
+        .map(|mut item| {
+            let resource = item
+                .get("resource")
+                .and_then(serde_json::Value::as_str)
+                .filter(|value| !value.trim().is_empty())
+                .ok_or(AdapterError::InvalidJson)?
+                .to_owned();
+            if item.get("x402Version") == Some(&serde_json::Value::from(2)) {
+                let accepts = item
+                    .get_mut("accepts")
+                    .and_then(serde_json::Value::as_array_mut)
+                    .ok_or(AdapterError::InvalidJson)?;
+                for offer in accepts {
+                    let offer = offer.as_object_mut().ok_or(AdapterError::InvalidJson)?;
+                    if let Some(max_amount) = offer.get("maxAmountRequired") {
+                        let amount = offer
+                            .get("amount")
+                            .and_then(serde_json::Value::as_str)
+                            .ok_or(AdapterError::InvalidJson)?;
+                        if max_amount.as_str() != Some(amount) {
+                            return Err(AdapterError::InvalidJson);
+                        }
+                        offer.remove("maxAmountRequired");
+                    }
+                }
+            }
+            let encoded = serde_json::to_vec(&item).map_err(|_| AdapterError::InvalidJson)?;
+            Ok((parse_payment_required(&encoded)?, resource))
+        })
+        .collect()
 }
 
 #[derive(Clone, Copy)]
@@ -614,7 +673,9 @@ fn observation_resource(observation: &Observation) -> String {
 fn media_type(kind: EvidenceKind) -> &'static str {
     match kind {
         EvidenceKind::Runtime402 => "application/http",
-        EvidenceKind::WellKnown | EvidenceKind::OpenApi => "application/json",
+        EvidenceKind::WellKnown | EvidenceKind::OpenApi | EvidenceKind::Bazaar => {
+            "application/json"
+        }
     }
 }
 
@@ -630,7 +691,9 @@ fn quarantine_reason(error: &AdapterError, kind: EvidenceKind) -> QuarantineReas
         | AdapterError::MissingAccepts
         | AdapterError::Observation(_) => match kind {
             EvidenceKind::Runtime402 => QuarantineReason::MalformedRuntime,
-            EvidenceKind::WellKnown | EvidenceKind::OpenApi => QuarantineReason::MalformedMetadata,
+            EvidenceKind::WellKnown | EvidenceKind::OpenApi | EvidenceKind::Bazaar => {
+                QuarantineReason::MalformedMetadata
+            }
         },
     }
 }

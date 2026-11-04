@@ -137,6 +137,18 @@ RPC endpoint values are secret-bearing types whose debug representation is alway
 redacted. Transport errors intentionally discard underlying URL-bearing error text,
 and request payloads are neither logged nor retained as fixtures.
 
+### Public protocol-source collection
+
+Generic chain blocks are settlement evidence, not x402 or MPP attribution evidence. The
+collector therefore ignores protocol-shaped fields embedded in ordinary RPC results. An
+owner-admitted `cdp-x402-bazaar-v1` job may instead fetch the single fixed Coinbase CDP x402
+Bazaar discovery URL. The transport permits HTTPS only, follows no redirects, applies bounded
+time and body limits, and archives the exact response before the verifier parses it. The source
+page index is the monotonic collection coordinate; empty snapshots are successful no-ops,
+duplicate bytes resolve to the same content-addressed object, and malformed snapshots fail closed.
+The PostgreSQL admission, staged custody, readback verification, canonical observation commit,
+and provenance boundaries are the same ones used by RPC collection.
+
 ### Settlement attribution
 
 The deterministic attribution engine consumes finalized settlements and bounded catalog

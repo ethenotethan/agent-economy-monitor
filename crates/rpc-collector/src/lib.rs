@@ -49,12 +49,23 @@ impl Chain {
         matches!(self, Self::Solana)
     }
 
-    const fn alchemy_host(self) -> &'static str {
+    const fn rpc_hosts(self) -> &'static [&'static str] {
         match self {
-            Self::Ethereum => "eth-mainnet.g.alchemy.com",
-            Self::Base => "base-mainnet.g.alchemy.com",
-            Self::Solana => "solana-mainnet.g.alchemy.com",
-            Self::Tempo => "tempo-mainnet.g.alchemy.com",
+            Self::Ethereum => &[
+                "eth-mainnet.g.alchemy.com",
+                "ethereum-rpc.publicnode.com",
+                "cloudflare-eth.com",
+            ],
+            Self::Base => &[
+                "base-mainnet.g.alchemy.com",
+                "mainnet.base.org",
+                "base-rpc.publicnode.com",
+            ],
+            Self::Solana => &[
+                "solana-mainnet.g.alchemy.com",
+                "api.mainnet-beta.solana.com",
+            ],
+            Self::Tempo => &["tempo-mainnet.g.alchemy.com", "rpc.tempo.xyz"],
         }
     }
 }
@@ -71,7 +82,24 @@ pub struct RpcEndpoint(String);
 impl RpcEndpoint {
     pub fn parse(value: &str) -> Result<Self, CollectorError> {
         let parsed = reqwest::Url::parse(value).map_err(|_| CollectorError::InvalidEndpoint)?;
-        if parsed.scheme() != "https" || parsed.host_str().is_none() {
+        if parsed.scheme() != "https"
+            || parsed.host_str().is_none()
+            || !parsed.host_str().is_some_and(|host| {
+                Chain::ALL
+                    .iter()
+                    .any(|chain| chain.rpc_hosts().contains(&host))
+            })
+            || parsed.host_str().is_some_and(|host| {
+                host.trim_start_matches('[')
+                    .trim_end_matches(']')
+                    .parse::<std::net::IpAddr>()
+                    .is_ok()
+            })
+            || !parsed.username().is_empty()
+            || parsed.password().is_some()
+            || parsed.port().is_some_and(|port| port != 443)
+            || parsed.fragment().is_some()
+        {
             return Err(CollectorError::InvalidEndpoint);
         }
         Ok(Self(value.to_owned()))
@@ -85,7 +113,7 @@ impl RpcEndpoint {
         reqwest::Url::parse(&self.0)
             .ok()
             .and_then(|url| url.host_str().map(str::to_owned))
-            .is_some_and(|host| host == chain.alchemy_host())
+            .is_some_and(|host| chain.rpc_hosts().contains(&host.as_str()))
     }
 }
 

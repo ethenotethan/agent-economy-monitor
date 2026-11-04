@@ -12,6 +12,9 @@ const RUNTIME_V2: &[u8] = include_bytes!("fixtures/runtime-v2.http");
 const RUNTIME_V1: &[u8] = include_bytes!("fixtures/runtime-v1.http");
 const WELL_KNOWN_V1: &[u8] = include_bytes!("fixtures/well-known-v1.json");
 const OPENAPI_V2: &[u8] = include_bytes!("fixtures/openapi-v2.json");
+const BAZAAR_V2_REDUNDANT_MAX_AMOUNT: &[u8] =
+    include_bytes!("fixtures/bazaar-v2-redundant-max-amount.json");
+const BAZAAR_V2_HETEROGENEOUS: &[u8] = include_bytes!("fixtures/bazaar-v2-heterogeneous.json");
 const MALFORMED_RUNTIME: &[u8] = include_bytes!("fixtures/malformed-runtime.http");
 const SIWX_ONLY: &[u8] = include_bytes!("fixtures/siwx-only.json");
 const BASE_USDC_TICKER_NAME: &[u8] = include_bytes!("fixtures/base-usdc-ticker-name.json");
@@ -80,6 +83,91 @@ fn well_known_v1_metadata_emits_versioned_observation() {
     assert_eq!(payload.network(), "base");
     assert_eq!(payload.amount_atomic(), "900");
     assert_eq!(observations[0].evidence().media_type(), "application/json");
+}
+
+#[test]
+fn genuine_bazaar_snapshot_emits_source_cited_observations() {
+    let evidence = br#"{"items":[{"resource":"https://merchant.example/paid","x402Version":2,"accepts":[{"scheme":"exact","network":"eip155:8453","amount":"1000","asset":"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913","payTo":"0x1111111111111111111111111111111111111111","extra":{"name":"USD Coin"}}]}]}"#;
+    let adapter = X402Adapter::new(
+        EvidenceContext::new(
+            EvidenceKind::Bazaar,
+            "cdp-x402-bazaar-base",
+            "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=0",
+            1_793_754_000_000,
+        )
+        .unwrap(),
+        "x402-adapter@1",
+    )
+    .unwrap();
+
+    let first = adapter
+        .observe(evidence)
+        .expect("valid public Bazaar snapshot");
+    let replay = adapter.observe(evidence).expect("idempotent replay");
+
+    assert_eq!(first.len(), 1);
+    assert_eq!(first[0].id(), replay[0].id());
+    assert_eq!(first[0].evidence().media_type(), "application/json");
+    assert_eq!(first[0].evidence().byte_length(), evidence.len() as u64);
+    assert_eq!(x402(&first[0]).resource(), "https://merchant.example/paid");
+}
+
+#[test]
+fn bazaar_v2_accepts_equal_redundant_max_amount() {
+    let observations = adapter(EvidenceKind::Bazaar)
+        .observe(BAZAAR_V2_REDUNDANT_MAX_AMOUNT)
+        .expect("live-shaped Bazaar offer is valid");
+
+    assert_eq!(observations.len(), 1);
+    assert_eq!(x402(&observations[0]).amount_atomic(), "1000");
+}
+
+#[test]
+fn bazaar_v2_rejects_conflicting_redundant_max_amount() {
+    let evidence = br#"{"items":[{"resource":"https://merchant.example/paid","x402Version":2,"accepts":[{"scheme":"exact","network":"eip155:8453","amount":"1000","maxAmountRequired":"2000","asset":"USDC","payTo":"0x1111111111111111111111111111111111111111"}]}]}"#;
+
+    assert!(adapter(EvidenceKind::Bazaar).observe(evidence).is_err());
+}
+
+#[test]
+fn heterogeneous_bazaar_snapshot_preserves_valid_offers() {
+    let observations = adapter(EvidenceKind::Bazaar)
+        .observe(BAZAAR_V2_HETEROGENEOUS)
+        .expect("invalid or unsupported offers do not poison valid Bazaar offers");
+
+    assert_eq!(observations.len(), 2);
+    assert_eq!(x402(&observations[0]).amount_atomic(), "1000");
+    assert_eq!(x402(&observations[1]).amount_atomic(), "2000");
+    assert!(observations.iter().all(|observation| {
+        observation.evidence().byte_length() == BAZAAR_V2_HETEROGENEOUS.len() as u64
+    }));
+}
+
+#[test]
+fn malformed_bazaar_snapshot_fails_closed() {
+    let evidence = br#"{"items":[{"resource":"https://merchant.example/paid","x402Version":2,"accepts":"not-an-array"}]}"#;
+
+    assert!(adapter(EvidenceKind::Bazaar).observe(evidence).is_err());
+}
+
+#[test]
+fn empty_bazaar_snapshot_is_a_successful_no_op() {
+    assert_eq!(
+        adapter(EvidenceKind::Bazaar)
+            .observe(br#"{"items":[]}"#)
+            .unwrap(),
+        Vec::new()
+    );
+}
+
+#[test]
+fn unsupported_only_bazaar_snapshot_is_a_successful_no_op() {
+    let evidence = br#"{"items":[{"resource":"https://merchant.example/paid","x402Version":2,"accepts":[{"scheme":"upto","network":"eip155:8453","amount":"1000","asset":"USDC","payTo":"0x1111111111111111111111111111111111111111"}]}]}"#;
+
+    assert_eq!(
+        adapter(EvidenceKind::Bazaar).observe(evidence).unwrap(),
+        Vec::new()
+    );
 }
 
 #[test]

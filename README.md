@@ -83,12 +83,15 @@ bounded and deterministic.
 
 The `collect` handler consumes a bounded JSON request named `<input_sha256>.json` beneath
 `COLLECTION_INPUT_ROOT`, but the leased job row is the immutable authority for chain, source,
-inclusive height range, RPC acquisition contract, and evidence-verification contract. The
-handler rejects any request that diverges from those admitted coordinates. It acquires every
-height through the configured Alchemy RPC transport and writes each exact encoded RPC response
-through the create-only evidence adapter. The collector then stages only immutable object
-identity, digest, size, media type, and height; it has no evidence-read authority and cannot
-advance canonical cursors or write observations.
+inclusive source coordinate, acquisition contract, and evidence-verification contract. The
+handler rejects any request that diverges from those admitted coordinates. RPC jobs acquire every
+height through a chain-bound allowlist of official/public HTTPS endpoints and write each exact
+encoded response through the create-only evidence adapter. A separately admitted
+`cdp-x402-bazaar-v1` job fetches only the fixed Coinbase CDP x402 Bazaar URL, disables redirects,
+bounds response time and size, and archives the exact public snapshot before parsing it. Generic
+block JSON never supplies protocol observations. The collector stages only immutable object
+identity, digest, size, media type, and source coordinate; it has no evidence-read authority and
+cannot advance canonical cursors or write observations.
 
 Run one leased collection job with `COLLECTOR_DATABASE_URL`, `COLLECTION_INPUT_ROOT`, and exactly
 one create-only evidence backend set, then execute `cargo run -- collect`: use
