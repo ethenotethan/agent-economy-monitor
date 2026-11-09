@@ -43,6 +43,17 @@ variable "service_secret_ids" {
   }
 }
 
+variable "cockpit_password_secret_version" {
+  description = "Numeric Secret Manager version for the cockpit password verifier; never use a moving alias."
+  type        = number
+  default     = 3
+
+  validation {
+    condition     = var.cockpit_password_secret_version >= 1 && floor(var.cockpit_password_secret_version) == var.cockpit_password_secret_version
+    error_message = "cockpit_password_secret_version must be a positive integer"
+  }
+}
+
 locals {
   required_worker_secret_names = {
     collect = toset([

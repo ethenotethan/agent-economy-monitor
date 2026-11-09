@@ -8,6 +8,13 @@ locals {
     classify        = {}
     enrich          = { EVIDENCE_WRITE_BUCKET = google_storage_bucket.evidence.name }
   }
+  worker_volume_names = {
+    collect         = ["cloudsql", "collection-inputs"]
+    verify-evidence = ["cloudsql"]
+    reduce          = ["cloudsql"]
+    classify        = ["cloudsql"]
+    enrich          = ["cloudsql"]
+  }
 }
 
 resource "google_cloud_run_v2_service" "cockpit" {
@@ -64,7 +71,7 @@ resource "google_cloud_run_v2_service" "cockpit" {
           value_source {
             secret_key_ref {
               secret  = env.value
-              version = "latest"
+              version = env.key == "COCKPIT_PASSWORD_HASH" ? tostring(var.cockpit_password_secret_version) : "latest"
             }
           }
         }
@@ -118,20 +125,24 @@ resource "google_cloud_run_v2_job" "worker" {
       timeout         = "900s"
       max_retries     = 3
 
-      volumes {
-        name = "cloudsql"
-        cloud_sql_instance {
-          instances = [google_sql_database_instance.postgres.connection_name]
-        }
-      }
-
       dynamic "volumes" {
-        for_each = each.key == "collect" ? toset(["collection-inputs"]) : toset([])
+        for_each = local.worker_volume_names[each.key]
         content {
           name = volumes.value
-          gcs {
-            bucket    = google_storage_bucket.collection_inputs.name
-            read_only = true
+
+          dynamic "cloud_sql_instance" {
+            for_each = volumes.value == "cloudsql" ? [true] : []
+            content {
+              instances = [google_sql_database_instance.postgres.connection_name]
+            }
+          }
+
+          dynamic "gcs" {
+            for_each = volumes.value == "collection-inputs" ? [true] : []
+            content {
+              bucket    = google_storage_bucket.collection_inputs.name
+              read_only = true
+            }
           }
         }
       }
@@ -169,16 +180,11 @@ resource "google_cloud_run_v2_job" "worker" {
           }
         }
 
-        volume_mounts {
-          name       = "cloudsql"
-          mount_path = "/cloudsql"
-        }
-
         dynamic "volume_mounts" {
-          for_each = each.key == "collect" ? toset(["collection-inputs"]) : toset([])
+          for_each = local.worker_volume_names[each.key]
           content {
             name       = volume_mounts.value
-            mount_path = "/collection-inputs"
+            mount_path = volume_mounts.value == "cloudsql" ? "/cloudsql" : "/collection-inputs"
           }
         }
       }

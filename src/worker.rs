@@ -149,7 +149,6 @@ impl std::error::Error for WorkerStoreError {}
 pub enum WorkerDispatchError {
     UnknownMode(String),
     MissingHandler(WorkerMode),
-    NoJob(WorkerMode),
     HandlerFailed(String),
     InvalidConfiguration,
     Store(WorkerStoreError),
@@ -160,7 +159,6 @@ impl fmt::Display for WorkerDispatchError {
         match self {
             Self::UnknownMode(mode) => write!(formatter, "unknown worker mode: {mode}"),
             Self::MissingHandler(mode) => write!(formatter, "worker handler unavailable: {mode}"),
-            Self::NoJob(mode) => write!(formatter, "no {mode} job was processed"),
             Self::HandlerFailed(code) => write!(formatter, "worker handler failed: {code}"),
             Self::InvalidConfiguration => formatter.write_str("invalid worker configuration"),
             Self::Store(error) => error.fmt(formatter),
@@ -232,17 +230,20 @@ impl WorkerDispatcher {
         &self,
         mode: WorkerMode,
         lease_owner: &str,
-    ) -> Result<CompletedJob, WorkerDispatchError> {
+    ) -> Result<Option<CompletedJob>, WorkerDispatchError> {
         let handler = self
             .handlers
             .get(&mode)
             .ok_or(WorkerDispatchError::MissingHandler(mode))?;
         validate_owner(lease_owner).map_err(WorkerDispatchError::Store)?;
-        let job = self
+        let Some(job) = self
             .store
             .claim(mode, lease_owner, self.lease_seconds)
             .await?
-            .ok_or(WorkerDispatchError::NoJob(mode))?;
+        else {
+            info!(mode = %mode, "no bounded worker job available");
+            return Ok(None);
+        };
         info!(
             job_id = %job.job_id,
             mode = %job.mode,
@@ -261,13 +262,13 @@ impl WorkerDispatcher {
                     output_sha256 = %result.output_sha256(),
                     "committed bounded worker result"
                 );
-                Ok(CompletedJob {
+                Ok(Some(CompletedJob {
                     job_id: job.job_id,
                     mode,
                     attempt: job.attempt,
                     input_sha256: job.input_sha256,
                     output_sha256: result.output_sha256,
-                })
+                }))
             }
             Err(failure) => {
                 warn!(

@@ -158,6 +158,7 @@ async fn classify_worker_claims_runs_persists_and_completes_its_real_job_kind() 
     let completed = dispatcher
         .run_once(WorkerMode::Classify, "classifier:test")
         .await
+        .expect("classification dispatch succeeds")
         .expect("classification completes");
     assert_eq!(completed.job_id, "00000000-0000-0000-0000-000000000051");
     assert_eq!(store.committed.lock().unwrap().len(), 1);

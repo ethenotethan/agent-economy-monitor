@@ -47,6 +47,37 @@ class LeanGoogleCloudRuntimeTest(unittest.TestCase):
         self.assertIn("FROM gcr.io/distroless/cc-debian12:nonroot", dockerfile)
         self.assertIn('ENTRYPOINT ["/agent-economy-monitor"]', dockerfile)
 
+    def test_application_password_edge_is_pinned_without_iap_accessors(self) -> None:
+        runtime = (DEPLOY / "runtime.tf").read_text(encoding="utf-8")
+        variables = (DEPLOY / "variables.tf").read_text(encoding="utf-8")
+        terraform = "\n".join(
+            path.read_text(encoding="utf-8") for path in DEPLOY.glob("*.tf")
+        )
+
+        self.assertIn("iap_enabled          = false", runtime)
+        self.assertIn("invoker_iam_disabled = true", runtime)
+        self.assertIn('variable "cockpit_password_secret_version"', variables)
+        self.assertIn("type        = number", variables)
+        self.assertIn("default     = 3", variables)
+        self.assertIn(
+            'env.key == "COCKPIT_PASSWORD_HASH" ? tostring(var.cockpit_password_secret_version) : "latest"',
+            runtime,
+        )
+        self.assertNotIn("google_iap_web_cloud_run_service_iam_member", terraform)
+        self.assertNotIn("iap_accessors", terraform)
+
+    def test_worker_mounts_use_one_provider_stable_ordering_source(self) -> None:
+        runtime = (DEPLOY / "runtime.tf").read_text(encoding="utf-8")
+        worker = runtime.split(
+            'resource "google_cloud_run_v2_job" "worker"', maxsplit=1
+        )[1]
+
+        self.assertIn("worker_volume_names = {", runtime)
+        self.assertIn('collect         = ["cloudsql", "collection-inputs"]', runtime)
+        self.assertIn("for_each = local.worker_volume_names[each.key]", worker)
+        self.assertEqual(worker.count("dynamic \"volumes\""), 1)
+        self.assertEqual(worker.count("dynamic \"volume_mounts\""), 1)
+
     def test_production_binary_selects_tls_provider_before_startup(self) -> None:
         cargo = (ROOT / "Cargo.toml").read_text(encoding="utf-8")
         main = (ROOT / "src" / "main.rs").read_text(encoding="utf-8")

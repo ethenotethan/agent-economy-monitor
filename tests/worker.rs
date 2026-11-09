@@ -144,7 +144,8 @@ async fn successful_handler_commits_the_exact_output_digest() {
     let result = dispatcher
         .run_once(WorkerMode::Collect, "worker-a")
         .await
-        .unwrap();
+        .unwrap()
+        .expect("queued job must complete");
 
     assert_eq!(result.job_id, "00000000-0000-0000-0000-000000000047");
     assert_eq!(result.output_sha256, "b".repeat(64));
@@ -191,16 +192,22 @@ async fn handler_failure_records_only_a_safe_code_and_returns_nonzero_semantics(
 }
 
 #[tokio::test]
-async fn an_empty_queue_is_not_reported_as_success() {
-    let store = Arc::new(MemoryStore::default());
-    let dispatcher =
-        WorkerDispatcher::new(store).register(WorkerMode::Classify, Arc::new(DigestHandler));
+async fn an_empty_queue_is_a_successful_no_op_for_every_worker_mode() {
+    for mode in [
+        WorkerMode::Collect,
+        WorkerMode::Reduce,
+        WorkerMode::Classify,
+        WorkerMode::Enrich,
+    ] {
+        let store = Arc::new(MemoryStore::default());
+        let dispatcher =
+            WorkerDispatcher::new(store.clone()).register(mode, Arc::new(DigestHandler));
 
-    assert_eq!(
-        dispatcher
-            .run_once(WorkerMode::Classify, "worker-a")
-            .await
-            .unwrap_err(),
-        WorkerDispatchError::NoJob(WorkerMode::Classify)
-    );
+        assert_eq!(
+            dispatcher.run_once(mode, "worker-a").await.unwrap(),
+            None,
+            "{mode} must treat an empty scheduled poll as a successful no-op"
+        );
+        assert_eq!(store.0.lock().await.claims, 1);
+    }
 }
