@@ -112,7 +112,8 @@
       "label": "Dashboard query read models",
       "layer": "canonical",
       "patterns": [
-        "migrations/0008_query_read_models.*.sql"
+        "migrations/0008_query_read_models.*.sql",
+        "migrations/0019_discovery_pulse.*.sql"
       ]
     },
     {

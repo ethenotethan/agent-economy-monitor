@@ -14,6 +14,9 @@ for migration in migrations/*.up.sql; do
     psql "$AEM_COLLECT_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
 done
 
+AEM_DISCOVERY_TEST_DATABASE_URL="$AEM_COLLECT_TEST_DATABASE_URL" \
+    "$PYTHON" -m unittest discover -s tests -p 'discovery_pulse_schema_test.py' -v
+
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --test collect_worker_postgres -- --nocapture

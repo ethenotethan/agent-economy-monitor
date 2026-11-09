@@ -30,7 +30,23 @@ class CockpitBrowserTest(unittest.TestCase):
                 if path == "/":
                     body, content_type = render.stdout.encode(), "text/html; charset=utf-8"
                 elif path == "/api/v1/pulse":
-                    body = json.dumps({"api_version": "v1", "data": [self.fact("pulse:fixture", "pulse_metric", "x402 on base")]}).encode()
+                    discovery = self.fact(
+                        "discovery:fixture", "discovery_observation",
+                        "Observed x402 offers/resources from cdp-x402-bazaar-base on base",
+                    )
+                    discovery["value"] = {
+                        "source_id": "cdp-x402-bazaar-base",
+                        "chain_scope": "base",
+                        "protocol": "x402",
+                        "parser_version": "x402-adapter@1",
+                        "observation_count": "191",
+                        "evidence_ids": ["evidence:sha256:fixture"],
+                    }
+                    body = json.dumps({
+                        "api_version": "v1",
+                        "data": [],
+                        "verified_discovery": [discovery],
+                    }).encode()
                     content_type = "application/json"
                 elif path == "/api/v1/buyers":
                     body = json.dumps({"api_version": "v1", "items": [self.fact("buyer:fixture", "buyer", "Buyer fixture")], "next_cursor": None}).encode()
@@ -147,13 +163,136 @@ class CockpitBrowserTest(unittest.TestCase):
         cls.server.server_close()
         cls.server_thread.join(timeout=5)
 
-    def test_pulse_loads_and_sse_failure_falls_back_to_polling(self):
+    def test_pulse_shows_verified_discovery_when_no_settlements_exist(self):
         page = self.browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(f"http://127.0.0.1:{self.port}/")
         expect(page).to_have_title("Pulse · Agent Economy Monitor")
-        expect(page.locator(".metric-card")).to_contain_text("x402 on base")
+        expect(page.locator('[data-pulse-section="finalized-payments"]')).to_contain_text(
+            "No finalized payments"
+        )
+        discovery = page.locator('[data-pulse-section="verified-discovery"]')
+        expect(discovery).to_contain_text("Verified discovery observations")
+        expect(discovery).to_contain_text("191 observed offers/resources")
+        expect(discovery).to_contain_text("cdp-x402-bazaar-base")
+        expect(discovery).not_to_contain_text("buyer")
+        expect(discovery.locator("button[data-provenance-id]")).to_have_count(1)
+        discovery.locator("button[data-provenance-id]").click()
+        drawer = page.locator("#provenance-drawer")
+        expect(drawer).to_contain_text("runtime-402:fixture")
+        expect(drawer).to_contain_text("x402-adapter@1")
+        expect(drawer).to_contain_text("base")
+        expect(drawer).to_contain_text("sha256:fixture")
         expect(page.locator("#connection-label")).to_have_text("Live unavailable · polling")
         expect(page.locator("#view-root")).to_have_attribute("data-state", "stale")
+        page.close()
+
+    def test_pulse_loading_no_observations_failure_and_fresh_states_are_distinct(self):
+        loading = self.browser.new_page(viewport={"width": 1440, "height": 900})
+        loading.add_init_script(
+            "window.fetch = () => new Promise(() => {}); window.EventSource = undefined;"
+        )
+        loading.goto(f"http://127.0.0.1:{self.port}/")
+        expect(loading.locator("#view-root")).to_have_attribute("data-state", "loading")
+        loading.close()
+
+        empty = self.browser.new_page(viewport={"width": 1440, "height": 900})
+        empty.route(
+            "**/api/v1/pulse",
+            lambda route: route.fulfill(json={
+                "api_version": "v1",
+                "data": [],
+                "verified_discovery": [],
+            }),
+        )
+        empty.goto(f"http://127.0.0.1:{self.port}/")
+        expect(empty.locator("#view-root")).to_have_attribute("data-state", "empty")
+        expect(empty.locator("#view-root")).to_contain_text(
+            "No verified discovery observations or finalized payments"
+        )
+        empty.close()
+
+        failed = self.browser.new_page(viewport={"width": 1440, "height": 900})
+        failed.route("**/api/v1/pulse", lambda route: route.fulfill(status=503, body=""))
+        failed.goto(f"http://127.0.0.1:{self.port}/")
+        expect(failed.locator("#view-root")).to_have_attribute("data-state", "failure")
+        failed.close()
+
+        fresh = self.browser.new_page(viewport={"width": 1440, "height": 900})
+        fresh.route(
+            "**/api/v1/pulse",
+            lambda route: route.fulfill(json={
+                "api_version": "v1",
+                "data": [],
+                "verified_discovery": [{
+                        "id": "discovery:fresh",
+                        "kind": "discovery_observation",
+                        "label": "Observed x402 offers/resources",
+                        "value": {
+                            "source_id": "fresh-source",
+                            "chain_scope": "base",
+                            "protocol": "x402",
+                            "parser_version": "x402@1",
+                            "observation_count": "1",
+                            "evidence_ids": ["evidence:fresh"],
+                        },
+                        "observed_at": "2099-01-01T00:00:00Z",
+                        "provenance_ids": ["11111111-1111-1111-1111-111111111111"],
+                    }],
+            }),
+        )
+        fresh.goto(f"http://127.0.0.1:{self.port}/")
+        expect(fresh.locator("#view-root")).to_have_attribute("data-state", "ready")
+        expect(fresh.locator('[data-pulse-section="finalized-payments"]')).to_contain_text(
+            "No finalized payments"
+        )
+        fresh.close()
+
+    def test_fresh_discovery_cannot_hide_stale_finalized_payments(self):
+        page = self.browser.new_page(viewport={"width": 1440, "height": 900})
+        page.route(
+            "**/api/v1/pulse",
+            lambda route: route.fulfill(json={
+                "api_version": "v1",
+                "data": [{
+                    "id": "payment:stale",
+                    "kind": "pulse_metric",
+                    "label": "Stale finalized payment",
+                    "value": {
+                        "amount_atomic": "1",
+                        "asset": "USDC",
+                        "chain_scope": "base",
+                    },
+                    "observed_at": "2000-01-01T00:00:00Z",
+                    "provenance_ids": ["11111111-1111-1111-1111-111111111111"],
+                }],
+                "verified_discovery": [{
+                    "id": "discovery:fresh",
+                    "kind": "discovery_observation",
+                    "label": "Fresh verified discovery",
+                    "value": {
+                        "source_id": "fresh-source",
+                        "chain_scope": "base",
+                        "protocol": "x402",
+                        "parser_version": "x402@1",
+                        "observation_count": "1",
+                        "evidence_ids": ["evidence:fresh"],
+                    },
+                    "observed_at": "2099-01-01T00:00:00Z",
+                    "provenance_ids": ["11111111-1111-1111-1111-111111111111"],
+                }],
+            }),
+        )
+        page.goto(f"http://127.0.0.1:{self.port}/")
+
+        expect(page.locator('[data-pulse-section="finalized-payments"]')).to_contain_text(
+            "Stale finalized payment"
+        )
+        expect(page.locator('[data-pulse-section="verified-discovery"]')).to_contain_text(
+            "Fresh verified discovery"
+        )
+        expect(page.locator("#view-root")).to_have_attribute("data-state", "stale")
+        expect(page.locator(".stale-banner")).to_have_count(1)
+        expect(page.locator(".stale-banner")).to_contain_text("finalized payments")
         page.close()
 
     def test_navigation_query_opens_buyers_at_tablet_width(self):

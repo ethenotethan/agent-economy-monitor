@@ -10,7 +10,7 @@ use agent_economy_monitor::{
     auth::{AuthConfig, AuthState, InMemoryAuthStore, protect_router},
     query::{
         BuyerDossierReadModel, DashboardPage, Fact, GraphReadModel, ProjectionPageList,
-        ProvenanceReadModel, QueryError, QueryStore, SystemReadModel, api_router,
+        ProvenanceReadModel, PulseReadModel, QueryError, QueryStore, SystemReadModel, api_router,
     },
 };
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version, password_hash::SaltString};
@@ -42,9 +42,12 @@ fn fact() -> Fact {
 
 #[async_trait]
 impl QueryStore for CountingStore {
-    async fn pulse(&self) -> Result<Vec<Fact>, QueryError> {
+    async fn pulse(&self) -> Result<PulseReadModel, QueryError> {
         self.calls.fetch_add(1, Ordering::SeqCst);
-        Ok(vec![fact()])
+        Ok(PulseReadModel {
+            finalized_payments: vec![fact()],
+            verified_discovery: Vec::new(),
+        })
     }
 
     async fn buyers(

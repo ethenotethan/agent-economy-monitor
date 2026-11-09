@@ -44,7 +44,7 @@ h1 { margin: 10px 0 8px; font-size: clamp(42px, 6vw, 74px); line-height: .94; le
 .lede { max-width: 660px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
 .timestamp { flex: 0 0 auto; color: var(--dim); font: 500 10px/1.6 ui-monospace, monospace; text-align: right; }
 .view { min-height: 410px; }
-.state-card, .fact-card, .metric-card { border: 1px solid var(--line); background: linear-gradient(145deg, rgba(22,31,28,.92), rgba(12,18,16,.9)); border-radius: 14px; }
+.state-card, .fact-card, .metric-card, .discovery-card { border: 1px solid var(--line); background: linear-gradient(145deg, rgba(22,31,28,.92), rgba(12,18,16,.9)); border-radius: 14px; }
 .state-card { display: grid; place-items: center; min-height: 320px; padding: 48px; text-align: center; }
 .state-mark { color: var(--mint); font: 600 12px ui-monospace, monospace; letter-spacing: .12em; }
 .state-card h2 { margin: 15px 0 8px; font-size: 20px; }
@@ -58,6 +58,12 @@ h1 { margin: 10px 0 8px; font-size: clamp(42px, 6vw, 74px); line-height: .94; le
 .card-kicker { display: flex; justify-content: space-between; gap: 12px; color: var(--dim); font: 600 9px ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; }
 .metric-value { margin-top: 26px; font-size: 30px; letter-spacing: -.045em; }
 .metric-detail { margin-top: 8px; color: var(--muted); font: 500 10px ui-monospace, monospace; }
+.view > .dossier-section + .dossier-section { margin-top: 28px; }
+.discovery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.discovery-card { padding: 18px; }
+.discovery-value { margin-top: 20px; font-size: 22px; letter-spacing: -.035em; }
+.discovery-label { margin-top: 7px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.pulse-empty-note { grid-column: 1 / -1; margin: 0; padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: rgba(16,24,22,.82); }
 .fact-list { display: grid; gap: 10px; }
 .fact-card { display: grid; grid-template-columns: minmax(160px, .8fr) minmax(220px, 1.5fr) auto; align-items: center; gap: 22px; padding: 17px 20px; }
 .fact-label { font-size: 13px; font-weight: 600; }
@@ -121,7 +127,7 @@ h1 { margin: 10px 0 8px; font-size: clamp(42px, 6vw, 74px); line-height: .94; le
   .nav-link { justify-content: center; padding: 0; }
   .nav-icon { width: auto; }
   .content { padding-inline: 28px; }
-  .metric-grid, .skeletons, .classification-grid, .graph-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metric-grid, .skeletons, .classification-grid, .graph-list, .discovery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 680px) {
   .shell { display: block; }
@@ -133,7 +139,7 @@ h1 { margin: 10px 0 8px; font-size: clamp(42px, 6vw, 74px); line-height: .94; le
   .topbar { margin-bottom: 38px; }
   .hero { display: block; }
   .timestamp { margin-top: 20px; text-align: left; }
-  .metric-grid, .skeletons, .classification-grid, .graph-list { grid-template-columns: 1fr; }
+  .metric-grid, .skeletons, .classification-grid, .graph-list, .discovery-grid { grid-template-columns: 1fr; }
   .fact-card { grid-template-columns: 1fr; gap: 8px; }
   .dossier-head { display: grid; }
   .timeline-card { grid-template-columns: 1fr; }
