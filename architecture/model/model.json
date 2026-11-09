@@ -996,7 +996,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 11518
+      "line_count": 11660
     },
     {
       "declaration_count": 137,
@@ -1513,7 +1513,7 @@
       "id": "query-read-models",
       "label": "Dashboard query read models",
       "layer": "canonical",
-      "line_count": 205
+      "line_count": 234
     },
     {
       "declaration_count": 185,
@@ -1885,7 +1885,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 8171
+      "line_count": 8175
     },
     {
       "declaration_count": 95,
@@ -11797,7 +11797,7 @@
         "component": "query-read-models",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 69,
+        "line_count": 98,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -12958,7 +12958,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 567,
+        "line_count": 571,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -18228,7 +18228,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 364,
+        "line_count": 412,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -18721,7 +18721,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 170,
+        "line_count": 264,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -22085,7 +22085,7 @@
   "inventory": {
     "declarations": 1805,
     "files": 185,
-    "lines": 55580
+    "lines": 55755
   },
   "layers": [
     {
@@ -22126,7 +22126,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "03551c95bc6799619fcb2a94644e3122f4e4a2284c2df07a52f59e86e6d5c555",
+  "source_tree_sha256": "422e62d00175bfdcb5924c5739c73380f36a0327ea454f7a3982671513844914",
   "stores": {
     "count": 2,
     "items": [

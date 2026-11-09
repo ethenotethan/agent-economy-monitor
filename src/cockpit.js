@@ -176,11 +176,15 @@
       return;
     }
 
-    viewRoot.dataset.state = isStale(items) ? "stale" : "ready";
+    const staleSections = [];
+    if (payments.length && isStale(payments)) staleSections.push("finalized payments");
+    if (discovery.length && isStale(discovery)) staleSections.push("verified discovery");
+    const pulseIsStale = staleSections.length > 0;
+    viewRoot.dataset.state = pulseIsStale ? "stale" : "ready";
     viewRoot.setAttribute("aria-busy", "false");
     viewRoot.replaceChildren();
-    if (isStale(items)) {
-      const warning = element("div", "stale-banner", "STALE · newest observation is more than five minutes old");
+    if (pulseIsStale) {
+      const warning = element("div", "stale-banner", `STALE · ${staleSections.join(" and ")} newest observation is more than five minutes old`);
       warning.dataset.state = "stale";
       viewRoot.append(warning);
     }

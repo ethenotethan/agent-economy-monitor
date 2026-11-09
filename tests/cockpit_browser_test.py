@@ -247,6 +247,54 @@ class CockpitBrowserTest(unittest.TestCase):
         )
         fresh.close()
 
+    def test_fresh_discovery_cannot_hide_stale_finalized_payments(self):
+        page = self.browser.new_page(viewport={"width": 1440, "height": 900})
+        page.route(
+            "**/api/v1/pulse",
+            lambda route: route.fulfill(json={
+                "api_version": "v1",
+                "data": [{
+                    "id": "payment:stale",
+                    "kind": "pulse_metric",
+                    "label": "Stale finalized payment",
+                    "value": {
+                        "amount_atomic": "1",
+                        "asset": "USDC",
+                        "chain_scope": "base",
+                    },
+                    "observed_at": "2000-01-01T00:00:00Z",
+                    "provenance_ids": ["11111111-1111-1111-1111-111111111111"],
+                }],
+                "verified_discovery": [{
+                    "id": "discovery:fresh",
+                    "kind": "discovery_observation",
+                    "label": "Fresh verified discovery",
+                    "value": {
+                        "source_id": "fresh-source",
+                        "chain_scope": "base",
+                        "protocol": "x402",
+                        "parser_version": "x402@1",
+                        "observation_count": "1",
+                        "evidence_ids": ["evidence:fresh"],
+                    },
+                    "observed_at": "2099-01-01T00:00:00Z",
+                    "provenance_ids": ["11111111-1111-1111-1111-111111111111"],
+                }],
+            }),
+        )
+        page.goto(f"http://127.0.0.1:{self.port}/")
+
+        expect(page.locator('[data-pulse-section="finalized-payments"]')).to_contain_text(
+            "Stale finalized payment"
+        )
+        expect(page.locator('[data-pulse-section="verified-discovery"]')).to_contain_text(
+            "Fresh verified discovery"
+        )
+        expect(page.locator("#view-root")).to_have_attribute("data-state", "stale")
+        expect(page.locator(".stale-banner")).to_have_count(1)
+        expect(page.locator(".stale-banner")).to_contain_text("finalized payments")
+        page.close()
+
     def test_navigation_query_opens_buyers_at_tablet_width(self):
         page = self.browser.new_page(viewport={"width": 900, "height": 1024})
         page.goto(f"http://127.0.0.1:{self.port}/?view=buyers")
