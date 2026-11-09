@@ -3,7 +3,7 @@ use std::sync::Arc;
 use agent_economy_monitor::query::{
     BuyerDossierReadModel, ClassificationReadModel, DashboardPage, EvidenceProvenanceBinding, Fact,
     GraphReadModel, PostgresQueryStore, ProjectionPage, ProjectionPageList, ProvenanceReadModel,
-    QueryError, QueryStore, SystemReadModel, api_router,
+    PulseReadModel, QueryError, QueryStore, SystemReadModel, api_router,
 };
 use async_trait::async_trait;
 use axum::{
@@ -31,8 +31,11 @@ fn fact(id: &str, kind: &str) -> Fact {
 
 #[async_trait]
 impl QueryStore for FixtureStore {
-    async fn pulse(&self) -> Result<Vec<Fact>, QueryError> {
-        Ok(vec![fact("pulse:1", "pulse_metric")])
+    async fn pulse(&self) -> Result<PulseReadModel, QueryError> {
+        Ok(PulseReadModel {
+            finalized_payments: vec![fact("pulse:1", "pulse_metric")],
+            verified_discovery: vec![fact("discovery:1", "discovery_observation")],
+        })
     }
 
     async fn buyers(
@@ -191,6 +194,29 @@ impl QueryStore for FixtureStore {
 }
 
 #[tokio::test]
+async fn pulse_keeps_finalized_payments_separate_from_verified_discovery() {
+    let response = api_router(Arc::new(FixtureStore))
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/pulse")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body: Value =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert_eq!(body["data"][0]["kind"], "pulse_metric");
+    assert_eq!(
+        body["verified_discovery"][0]["kind"],
+        "discovery_observation"
+    );
+    assert!(body["data"].is_array(), "preserve the v1 pulse data array");
+}
+
+#[tokio::test]
 async fn list_queries_are_bounded_and_cacheable_with_provenance() {
     let app = api_router(Arc::new(FixtureStore));
 
@@ -311,6 +337,15 @@ async fn purpose_built_surface_is_documented_without_graphql_or_sql() {
         "q"
     );
     assert!(document["components"]["schemas"]["Fact"].is_object());
+    assert_eq!(
+        document["paths"]["/api/v1/pulse"]["get"]["responses"]["200"]["content"]["application/json"]
+            ["schema"]["$ref"],
+        "#/components/schemas/PulseResponse"
+    );
+    assert_eq!(
+        document["components"]["schemas"]["PulseResponse"]["required"],
+        json!(["api_version", "data", "verified_discovery"])
+    );
     assert!(
         document["paths"]
             .as_object()

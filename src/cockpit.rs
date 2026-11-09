@@ -96,7 +96,7 @@ fn Cockpit() -> impl IntoView {
                             <div>
                                 <div class="eyebrow" id="view-eyebrow-mobile">"EVIDENCE-BACKED SIGNAL"</div>
                                 <h1 id="view-title">"Pulse"</h1>
-                                <p class="lede" id="view-description">"Finalized payment activity with source-backed protocol, chain, and buyer signals."</p>
+                                <p class="lede" id="view-description">"Finalized payments and verified discovery observations, kept as separate evidence-backed signals."</p>
                             </div>
                             <div class="timestamp" id="updated-at" aria-live="polite">"Loading observations"</div>
                         </section>
@@ -124,7 +124,7 @@ fn Cockpit() -> impl IntoView {
                 </template>
                 <template data-state="empty">
                     <div class="state-card" data-state="empty">
-                        <div><div class="state-mark">"NO CANONICAL FACTS"</div><h2>"Nothing to show yet"</h2><p data-state-detail>"Collection is healthy, but no verified observations exist for this view."</p></div>
+                        <div><div class="state-mark">"NO OBSERVATIONS"</div><h2>"Nothing to show yet"</h2><p data-state-detail>"No verified facts are available for this view."</p></div>
                     </div>
                 </template>
                 <template data-state="stale">

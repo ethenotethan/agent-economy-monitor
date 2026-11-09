@@ -35,6 +35,12 @@ pub struct DashboardPage {
     pub next_cursor: Option<String>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct PulseReadModel {
+    pub finalized_payments: Vec<Fact>,
+    pub verified_discovery: Vec<Fact>,
+}
+
 impl DashboardPage {
     pub fn new(items: Vec<Fact>, next_cursor: Option<String>) -> Self {
         Self {
@@ -147,6 +153,13 @@ struct Versioned<T> {
     data: T,
 }
 
+#[derive(Clone, Debug, Serialize)]
+struct PulseResponse {
+    api_version: &'static str,
+    data: Vec<Fact>,
+    verified_discovery: Vec<Fact>,
+}
+
 #[derive(Debug)]
 pub enum QueryError {
     Invalid(String),
@@ -179,7 +192,7 @@ impl IntoResponse for QueryError {
 
 #[async_trait]
 pub trait QueryStore: Send + Sync + 'static {
-    async fn pulse(&self) -> Result<Vec<Fact>, QueryError>;
+    async fn pulse(&self) -> Result<PulseReadModel, QueryError>;
     async fn buyers(&self, after: Option<&str>, limit: usize) -> Result<DashboardPage, QueryError>;
     async fn buyer(&self, id: &str) -> Result<Option<Fact>, QueryError>;
     async fn buyer_dossier(&self, id: &str) -> Result<Option<BuyerDossierReadModel>, QueryError>;
@@ -485,11 +498,17 @@ ORDER BY claim.label, claim.claim_id
 
 #[async_trait]
 impl QueryStore for PostgresQueryStore {
-    async fn pulse(&self) -> Result<Vec<Fact>, QueryError> {
-        let sql = format!(
+    async fn pulse(&self) -> Result<PulseReadModel, QueryError> {
+        let payments_sql = format!(
             "SELECT {FACT_COLUMNS} FROM agent_economy.dashboard_pulse AS fact JOIN agent_economy.namespaces AS namespace USING (namespace_id) WHERE namespace.namespace_id = $1::text::uuid ORDER BY fact.observed_at DESC, fact.id LIMIT 168"
         );
-        self.facts(&sql, &[&self.namespace_id]).await
+        let discovery_sql = format!(
+            "SELECT {FACT_COLUMNS} FROM agent_economy.dashboard_discovery_activity AS fact JOIN agent_economy.namespaces AS namespace USING (namespace_id) WHERE namespace.namespace_id = $1::text::uuid ORDER BY fact.observed_at DESC, fact.id LIMIT 100"
+        );
+        Ok(PulseReadModel {
+            finalized_payments: self.facts(&payments_sql, &[&self.namespace_id]).await?,
+            verified_discovery: self.facts(&discovery_sql, &[&self.namespace_id]).await?,
+        })
     }
 
     async fn buyers(&self, after: Option<&str>, limit: usize) -> Result<DashboardPage, QueryError> {
@@ -758,6 +777,15 @@ async fn openapi() -> Json<Value> {
             "503": {"description": "Query store unavailable"}
         })
     };
+    let pulse_response = || {
+        json!({
+            "200": {
+                "description": "Separate finalized-payment and verified-discovery read models",
+                "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PulseResponse"}}}
+            },
+            "503": {"description": "Query store unavailable"}
+        })
+    };
     let path_parameter = |name: &str| json!({"name": name, "in": "path", "required": true, "schema": {"type": "string"}});
     let page_parameters = || {
         vec![
@@ -775,7 +803,7 @@ async fn openapi() -> Json<Value> {
         "openapi": "3.1.0",
         "info": {"title": "Agent Economy Monitor Query API", "version": "1.0.0"},
         "paths": {
-            "/api/v1/pulse": {"get": {"responses": response()}},
+            "/api/v1/pulse": {"get": {"responses": pulse_response()}},
             "/api/v1/buyers": {"get": {"parameters": page_parameters(), "responses": response()}},
             "/api/v1/buyers/{id}": {"get": {"parameters": [path_parameter("id")], "responses": response()}},
             "/api/v1/buyers/{id}/dossier": {"get": {"parameters": [path_parameter("id")], "responses": response()}},
@@ -799,6 +827,15 @@ async fn openapi() -> Json<Value> {
                     "value": {},
                     "observed_at": {"type": "string", "format": "date-time"},
                     "provenance_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "format": "uuid"}}
+                }
+            },
+            "PulseResponse": {
+                "type": "object",
+                "required": ["api_version", "data", "verified_discovery"],
+                "properties": {
+                    "api_version": {"type": "string", "const": "v1"},
+                    "data": {"type": "array", "items": {"$ref": "#/components/schemas/Fact"}},
+                    "verified_discovery": {"type": "array", "items": {"$ref": "#/components/schemas/Fact"}}
                 }
             }
         }}
@@ -831,9 +868,11 @@ fn cacheable<T: Serialize>(value: &T) -> Result<Response, QueryError> {
 }
 
 async fn pulse(State(store): State<Store>) -> Result<Response, QueryError> {
-    cacheable(&Versioned {
+    let model = store.pulse().await?;
+    cacheable(&PulseResponse {
         api_version: API_VERSION,
-        data: store.pulse().await?,
+        data: model.finalized_payments,
+        verified_discovery: model.verified_discovery,
     })
 }
 

@@ -2,7 +2,7 @@
   "use strict";
 
   const views = {
-    pulse: { title: "Pulse", eyebrow: "Market activity", description: "Finalized payment activity with source-backed protocol, chain, and buyer signals.", endpoint: "/api/v1/pulse", select: data => data.data || [] },
+    pulse: { title: "Pulse", eyebrow: "Market activity", description: "Finalized payments and verified discovery observations, kept as separate evidence-backed signals.", endpoint: "/api/v1/pulse" },
     buyers: { title: "Buyers", eyebrow: "Behavioral intelligence", description: "Chain-scoped handles and reversible clusters. A handle is not a real-world identity.", endpoint: "/api/v1/buyers", select: data => data.items || [] },
     services: { title: "Services", eyebrow: "Verified capabilities", description: "Observed endpoints, offers, accepted rails, and runtime verification state.", endpoint: "/api/v1/services", select: data => data.items || [] },
     graph: { title: "Graph", eyebrow: "Attributed relationships", description: "Buyer, service, protocol, and settlement relationships appear after a bounded entity selection." },
@@ -162,6 +162,76 @@
       list.append(card);
     }
     viewRoot.append(list);
+    const newest = items.map(item => Date.parse(item.observed_at)).filter(Number.isFinite).sort((a, b) => b - a)[0];
+    updated.textContent = newest ? `Observed ${new Date(newest).toLocaleString()}` : "Observation time unavailable";
+  }
+
+  function renderPulse(model) {
+    const payments = model.data || [];
+    const discovery = model.verified_discovery || [];
+    const items = [...payments, ...discovery];
+    if (!items.length) {
+      setState("empty", "No verified discovery observations or finalized payments are available yet.");
+      updated.textContent = "No observations";
+      return;
+    }
+
+    viewRoot.dataset.state = isStale(items) ? "stale" : "ready";
+    viewRoot.setAttribute("aria-busy", "false");
+    viewRoot.replaceChildren();
+    if (isStale(items)) {
+      const warning = element("div", "stale-banner", "STALE · newest observation is more than five minutes old");
+      warning.dataset.state = "stale";
+      viewRoot.append(warning);
+    }
+
+    const paymentGrid = element("div", "metric-grid");
+    for (const item of payments) {
+      const card = element("article", "metric-card");
+      const kicker = element("div", "card-kicker");
+      kicker.append(
+        element("span", "", item.label),
+        element("span", "", (item.value && item.value.chain_scope) || item.kind)
+      );
+      card.append(
+        kicker,
+        element("div", "metric-value", metricValue(item)),
+        element("div", "metric-detail", `${(item.value && item.value.asset) || "events"} · finalized settlements`),
+        provenanceButtons(item.provenance_ids)
+      );
+      paymentGrid.append(card);
+    }
+    if (!payments.length) {
+      paymentGrid.append(element("div", "section-note pulse-empty-note", "No finalized payments in this bounded view."));
+    }
+    const paymentSection = section("Finalized payments", `${payments.length} metrics`, paymentGrid);
+    paymentSection.dataset.pulseSection = "finalized-payments";
+    viewRoot.append(paymentSection);
+
+    const discoveryList = element("div", "discovery-grid");
+    for (const item of discovery) {
+      const value = item.value || {};
+      const count = value.observation_count || "0";
+      const card = element("article", "discovery-card");
+      card.dataset.discoveryId = item.id;
+      const kicker = element("div", "card-kicker");
+      kicker.append(
+        element("span", "", "Observed offers/resources"),
+        element("span", "", [value.protocol, value.chain_scope].filter(Boolean).join(" · "))
+      );
+      card.append(
+        kicker,
+        element("div", "discovery-value", `${count} observed offers/resources`),
+        element("div", "discovery-label", item.label),
+        element("div", "metric-detail", `${value.source_id || "source unknown"} · parser ${value.parser_version || "unknown"} · ${(value.evidence_ids || []).length} evidence object${(value.evidence_ids || []).length === 1 ? "" : "s"}`),
+        provenanceButtons(item.provenance_ids)
+      );
+      discoveryList.append(card);
+    }
+    const discoverySection = section("Verified discovery observations", `${discovery.length} source groups`, discoveryList);
+    discoverySection.dataset.pulseSection = "verified-discovery";
+    viewRoot.append(discoverySection);
+
     const newest = items.map(item => Date.parse(item.observed_at)).filter(Number.isFinite).sort((a, b) => b - a)[0];
     updated.textContent = newest ? `Observed ${new Date(newest).toLocaleString()}` : "Observation time unavailable";
   }
@@ -404,7 +474,8 @@
       if (!response.ok) throw new Error(`request failed (${response.status})`);
       const payload = await response.json();
       if (generation !== loadGeneration) return;
-      renderItems(model.select(payload));
+      if (currentView === "pulse") renderPulse(payload);
+      else renderItems(model.select(payload));
     } catch (error) {
       if (generation !== loadGeneration) return;
       setState("failure", error instanceof Error ? error.message : "The read model could not be loaded.");
