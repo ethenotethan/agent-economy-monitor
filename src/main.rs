@@ -275,11 +275,13 @@ async fn run_classify_once() -> Result<(), Box<dyn std::error::Error>> {
         .register(WorkerMode::Classify, handler)
         .run_once(WorkerMode::Classify, &lease_owner)
         .await?;
-    info!(
-        job_id = %completed.job_id,
-        output_sha256 = %completed.output_sha256,
-        "classification job completed"
-    );
+    if let Some(completed) = completed {
+        info!(
+            job_id = %completed.job_id,
+            output_sha256 = %completed.output_sha256,
+            "classification job completed"
+        );
+    }
     Ok(())
 }
 
@@ -360,11 +362,13 @@ async fn run_enrich_once() -> Result<(), Box<dyn std::error::Error>> {
         .register(WorkerMode::Enrich, handler)
         .run_once(WorkerMode::Enrich, &lease_owner)
         .await?;
-    info!(
-        job_id = %completed.job_id,
-        output_sha256 = %completed.output_sha256,
-        "buyer enrichment job completed"
-    );
+    if let Some(completed) = completed {
+        info!(
+            job_id = %completed.job_id,
+            output_sha256 = %completed.output_sha256,
+            "buyer enrichment job completed"
+        );
+    }
     Ok(())
 }
 
@@ -409,11 +413,13 @@ async fn run_reduce_once() -> Result<(), Box<dyn std::error::Error>> {
         .register(WorkerMode::Reduce, handler)
         .run_once(WorkerMode::Reduce, &lease_owner)
         .await?;
-    info!(
-        job_id = %completed.job_id,
-        output_sha256 = %completed.output_sha256,
-        "reduction job completed"
-    );
+    if let Some(completed) = completed {
+        info!(
+            job_id = %completed.job_id,
+            output_sha256 = %completed.output_sha256,
+            "reduction job completed"
+        );
+    }
     Ok(())
 }
 
@@ -543,11 +549,13 @@ async fn run_collect_once() -> Result<(), Box<dyn std::error::Error>> {
         .register(WorkerMode::Collect, handler)
         .run_once(WorkerMode::Collect, &lease_owner)
         .await?;
-    info!(
-        job_id = %completed.job_id,
-        output_sha256 = %completed.output_sha256,
-        "collection job completed"
-    );
+    if let Some(completed) = completed {
+        info!(
+            job_id = %completed.job_id,
+            output_sha256 = %completed.output_sha256,
+            "collection job completed"
+        );
+    }
     Ok(())
 }
 

@@ -195,6 +195,7 @@ async fn leased_classifier_persists_sealed_lineage_and_updates_the_promotable_re
         )
         .run_once(WorkerMode::Classify, "classify-postgres-test")
         .await
+        .expect("classifier dispatch must succeed")
         .expect("leased classifier must persist and complete its exact output");
 
     let persisted = admin
@@ -562,6 +563,7 @@ async fn leased_enricher_persists_evidence_first_history_without_inventing_proto
         )
         .run_once(WorkerMode::Enrich, "enrich-postgres-test")
         .await
+        .expect("enricher dispatch must succeed")
         .expect("leased enricher must persist evidence and complete");
 
     let before_verification = admin
@@ -827,6 +829,7 @@ async fn leased_enricher_persists_evidence_first_history_without_inventing_proto
         )
         .run_once(WorkerMode::Classify, "enrichment-classify-test")
         .await
+        .expect("classifier dispatch must succeed")
         .expect("verified enriched history must drive deterministic classification");
     let claim_count = admin
         .query_one(

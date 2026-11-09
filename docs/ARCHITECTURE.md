@@ -56,9 +56,9 @@ PostgreSQL transactional job leases own distributed record assignment. Workers c
 The Rust worker dispatcher is fail-closed: an invocation names exactly one of `collect`,
 `reduce`, `classify`, or `enrich`, validates that a real handler is registered before
 claiming work, and processes at most one job. Every claim receives a unique lease token;
-renewal and result commit require that still-live token. Unknown modes, missing handlers,
-empty queues, handler failures, and stale result commits all exit non-zero. Until a domain
-handler is explicitly registered, its process mode is intentionally unavailable rather
+renewal and result commit require that still-live token. Empty queues are successful no-ops
+for blind scheduled polling; unknown modes, missing handlers, handler failures, and stale
+result commits all exit non-zero. Until a domain handler is explicitly registered, its process mode is intentionally unavailable rather
 than reporting synthetic success.
 
 The reduce runtime authenticates with a dedicated PostgreSQL login whose namespace is bound

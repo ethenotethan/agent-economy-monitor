@@ -76,8 +76,8 @@ debug output; collectors never log endpoint URLs or JSON-RPC request bodies.
 
 The shared worker control plane uses PostgreSQL transactional leases for the explicit
 `collect`, `reduce`, `classify`, and `enrich` process modes. A run claims at most one job,
-commits an exact output digest under its live lease token, and exits non-zero for an empty
-queue, unknown mode, failed handler, or mode without a registered production handler.
+commits an exact output digest under its live lease token, treats an empty scheduled poll as
+a successful no-op, and exits non-zero for an unknown mode, failed handler, or mode without a registered production handler.
 Expired leases are safely reassigned, while retries, poison jobs, and cancellation remain
 bounded and deterministic.
 

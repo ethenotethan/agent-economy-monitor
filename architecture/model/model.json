@@ -594,7 +594,7 @@
       "id": "cloud-runtime",
       "label": "Lean Google Cloud runtime",
       "layer": "delivery",
-      "line_count": 1243
+      "line_count": 1260
     },
     {
       "declaration_count": 0,
@@ -755,7 +755,7 @@
         "X402Adapter",
         "adapters_emit_immutable_observations",
         "additive_unknown_fields_are_covered_by_the_content_address",
-        "an_empty_queue_is_not_reported_as_success",
+        "an_empty_queue_is_a_successful_no_op_for_every_worker_mode",
         "app",
         "app_with_auth",
         "approval",
@@ -994,7 +994,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 11216
+      "line_count": 11258
     },
     {
       "declaration_count": 137,
@@ -1879,7 +1879,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 8055
+      "line_count": 8063
     },
     {
       "declaration_count": 95,
@@ -2064,7 +2064,7 @@
       "id": "worker-control",
       "label": "Worker lease control plane",
       "layer": "canonical",
-      "line_count": 825
+      "line_count": 826
     },
     {
       "declaration_count": 94,
@@ -2727,7 +2727,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 645,
+            "line": 653,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/healthz\", get(status))"
@@ -2982,7 +2982,7 @@
         "origins": [
           {
             "family": "mechanical",
-            "line": 643,
+            "line": 651,
             "path": "src/main.rs",
             "rule": "rust.http-route",
             "via": ".route(\"/api/v1/status\", get(status))"
@@ -3162,7 +3162,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 648,
+            "line": 656,
             "path": "src/main.rs",
             "rule": "declared.topology",
             "via": "info!(%address, \"agent economy monitor listening\");"
@@ -11166,7 +11166,7 @@
         "component": "cloud-runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 191,
+        "line_count": 197,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -11194,7 +11194,7 @@
         "component": "cloud-runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 118,
+        "line_count": 129,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -14380,7 +14380,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 285,
+            "line": 287,
             "name": "run_enrich_once",
             "passes": [
               "rust.declaration"
@@ -14388,7 +14388,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 370,
+            "line": 374,
             "name": "run_reduce_once",
             "passes": [
               "rust.declaration"
@@ -14396,7 +14396,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 419,
+            "line": 425,
             "name": "run_verify_evidence_once",
             "passes": [
               "rust.declaration"
@@ -14404,7 +14404,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 476,
+            "line": 482,
             "name": "run_collect_once",
             "passes": [
               "rust.declaration"
@@ -14412,7 +14412,7 @@
           },
           {
             "kind": "fn",
-            "line": 553,
+            "line": 561,
             "name": "collection_rpc_transport",
             "passes": [
               "rust.declaration"
@@ -14420,7 +14420,7 @@
           },
           {
             "kind": "fn",
-            "line": 578,
+            "line": 586,
             "name": "required_collection_env",
             "passes": [
               "rust.declaration"
@@ -14428,14 +14428,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 587,
+            "line": 595,
             "name": "serve",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 651,
+        "line_count": 659,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -17292,7 +17292,7 @@
           },
           {
             "kind": "fn",
-            "line": 159,
+            "line": 158,
             "name": "fmt",
             "passes": [
               "rust.declaration"
@@ -17300,7 +17300,7 @@
           },
           {
             "kind": "fn",
-            "line": 174,
+            "line": 172,
             "name": "from",
             "passes": [
               "rust.declaration"
@@ -17308,7 +17308,7 @@
           },
           {
             "kind": "trait",
-            "line": 180,
+            "line": 178,
             "name": "WorkerHandler",
             "passes": [
               "rust.declaration"
@@ -17316,7 +17316,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 181,
+            "line": 179,
             "name": "process",
             "passes": [
               "rust.declaration"
@@ -17324,7 +17324,7 @@
           },
           {
             "kind": "trait",
-            "line": 185,
+            "line": 183,
             "name": "WorkerJobStore",
             "passes": [
               "rust.declaration"
@@ -17332,8 +17332,16 @@
           },
           {
             "kind": "async-fn",
-            "line": 186,
+            "line": 184,
             "name": "claim",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "async-fn",
+            "line": 190,
+            "name": "renew",
             "passes": [
               "rust.declaration"
             ]
@@ -17341,7 +17349,7 @@
           {
             "kind": "async-fn",
             "line": 192,
-            "name": "renew",
+            "name": "complete",
             "passes": [
               "rust.declaration"
             ]
@@ -17349,14 +17357,6 @@
           {
             "kind": "async-fn",
             "line": 194,
-            "name": "complete",
-            "passes": [
-              "rust.declaration"
-            ]
-          },
-          {
-            "kind": "async-fn",
-            "line": 196,
             "name": "fail",
             "passes": [
               "rust.declaration"
@@ -17364,7 +17364,7 @@
           },
           {
             "kind": "struct",
-            "line": 204,
+            "line": 202,
             "name": "WorkerDispatcher",
             "passes": [
               "rust.declaration"
@@ -17372,7 +17372,7 @@
           },
           {
             "kind": "fn",
-            "line": 212,
+            "line": 210,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -17380,7 +17380,7 @@
           },
           {
             "kind": "fn",
-            "line": 219,
+            "line": 217,
             "name": "register",
             "passes": [
               "rust.declaration"
@@ -17388,7 +17388,7 @@
           },
           {
             "kind": "fn",
-            "line": 224,
+            "line": 222,
             "name": "with_lease_seconds",
             "passes": [
               "rust.declaration"
@@ -17396,7 +17396,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 230,
+            "line": 228,
             "name": "run_once",
             "passes": [
               "rust.declaration"
@@ -17404,7 +17404,7 @@
           },
           {
             "kind": "struct",
-            "line": 290,
+            "line": 291,
             "name": "PostgresWorkerJobStore",
             "passes": [
               "rust.declaration"
@@ -17412,7 +17412,7 @@
           },
           {
             "kind": "fn",
-            "line": 297,
+            "line": 298,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -17420,7 +17420,7 @@
           },
           {
             "kind": "fn",
-            "line": 300,
+            "line": 301,
             "name": "from_shared",
             "passes": [
               "rust.declaration"
@@ -17428,7 +17428,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 307,
+            "line": 308,
             "name": "cancel",
             "passes": [
               "rust.declaration"
@@ -17436,7 +17436,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 334,
+            "line": 335,
             "name": "claim",
             "passes": [
               "rust.declaration"
@@ -17444,7 +17444,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 361,
+            "line": 362,
             "name": "renew",
             "passes": [
               "rust.declaration"
@@ -17452,7 +17452,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 383,
+            "line": 384,
             "name": "complete",
             "passes": [
               "rust.declaration"
@@ -17460,7 +17460,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 404,
+            "line": 405,
             "name": "fail",
             "passes": [
               "rust.declaration"
@@ -17468,7 +17468,7 @@
           },
           {
             "kind": "fn",
-            "line": 433,
+            "line": 434,
             "name": "row_to_job",
             "passes": [
               "rust.declaration"
@@ -17476,7 +17476,7 @@
           },
           {
             "kind": "fn",
-            "line": 449,
+            "line": 450,
             "name": "validate_owner",
             "passes": [
               "rust.declaration"
@@ -17484,7 +17484,7 @@
           },
           {
             "kind": "fn",
-            "line": 461,
+            "line": 462,
             "name": "validate_lease_seconds",
             "passes": [
               "rust.declaration"
@@ -17492,7 +17492,7 @@
           },
           {
             "kind": "fn",
-            "line": 468,
+            "line": 469,
             "name": "validate_hash",
             "passes": [
               "rust.declaration"
@@ -17500,14 +17500,14 @@
           },
           {
             "kind": "fn",
-            "line": 479,
+            "line": 480,
             "name": "validate_error_code",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 490,
+        "line_count": 491,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -17948,7 +17948,7 @@
           },
           {
             "kind": "struct",
-            "line": 351,
+            "line": 352,
             "name": "OnePageHistoryTransport",
             "passes": [
               "rust.declaration"
@@ -17956,7 +17956,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 356,
+            "line": 357,
             "name": "fetch",
             "passes": [
               "rust.declaration"
@@ -17964,14 +17964,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 371,
+            "line": 372,
             "name": "leased_enricher_persists_evidence_first_history_without_inventing_protocol_activity",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 841,
+        "line_count": 844,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -18066,7 +18066,7 @@
             ]
           }
         ],
-        "line_count": 164,
+        "line_count": 165,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -18119,7 +18119,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 210,
+        "line_count": 241,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -20063,7 +20063,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 162,
+            "line": 163,
             "name": "handler_failure_records_only_a_safe_code_and_returns_nonzero_semantics",
             "passes": [
               "rust.declaration"
@@ -20071,14 +20071,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 194,
-            "name": "an_empty_queue_is_not_reported_as_success",
+            "line": 195,
+            "name": "an_empty_queue_is_a_successful_no_op_for_every_worker_mode",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 206,
+        "line_count": 213,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -21444,7 +21444,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/healthz\", get(status))",
-            "line": 645,
+            "line": 653,
             "path": "src/main.rs"
           }
         ],
@@ -21682,7 +21682,7 @@
         "evidence": [
           {
             "excerpt": ".route(\"/api/v1/status\", get(status))",
-            "line": 643,
+            "line": 651,
             "path": "src/main.rs"
           }
         ],
@@ -21850,7 +21850,7 @@
         "evidence": [
           {
             "excerpt": "info!(%address, \"agent economy monitor listening\");",
-            "line": 648,
+            "line": 656,
             "path": "src/main.rs"
           }
         ],
@@ -22013,7 +22013,7 @@
   "inventory": {
     "declarations": 1802,
     "files": 182,
-    "lines": 55086
+    "lines": 55154
   },
   "layers": [
     {
@@ -22054,7 +22054,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "480e7ee007e1572390be0caab471dc2cccc5871fe768714efbc86d5a48026ccb",
+  "source_tree_sha256": "86a7b6c0e57ca1e3b00bd27fa543e4ed2d769a3efd70d1f2589e26fe840b5a0a",
   "stores": {
     "count": 2,
     "items": [
