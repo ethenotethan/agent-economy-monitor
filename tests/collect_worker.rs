@@ -224,7 +224,13 @@ fn bazaar_job_at(input_sha256: String, start_height: u64) -> LeasedJob {
 }
 
 fn bazaar_fixture() -> Vec<u8> {
-    include_bytes!("../crates/x402-adapter/tests/fixtures/bazaar-v2-heterogeneous.json").to_vec()
+    let mut fixture: serde_json::Value = serde_json::from_slice(include_bytes!(
+        "../crates/x402-adapter/tests/fixtures/bazaar-v2-heterogeneous.json"
+    ))
+    .unwrap();
+    let total = fixture["items"].as_array().unwrap().len();
+    fixture["pagination"] = serde_json::json!({"limit": 100, "offset": 0, "total": total});
+    serde_json::to_vec(&fixture).unwrap()
 }
 
 fn paginated_bazaar_fixture(offset: u64, total: u64, resources: usize) -> Vec<u8> {
@@ -539,6 +545,40 @@ async fn bazaar_crawl_rejects_total_regression_without_committing_a_partial_batc
             paginated_bazaar_fixture(0, 205, 100),
             paginated_bazaar_fixture(100, 99, 0),
         ],
+        Arc::new(Mutex::new(Vec::new())),
+    )));
+
+    let error = handler.process(&bazaar_job(digest)).await.unwrap_err();
+
+    assert_eq!(error.code(), "invalid_protocol_evidence");
+    assert!(commit_store.0.lock().unwrap().is_empty());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn bazaar_crawl_rejects_missing_pagination_without_committing_a_partial_batch() {
+    let root = std::env::temp_dir().join(format!(
+        "aem-collect-bazaar-missing-pagination-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let input_root = root.join("inputs");
+    fs::create_dir_all(&input_root).unwrap();
+    let root = fs::canonicalize(&root).unwrap();
+    let input_root = root.join("inputs");
+    let evidence_store = Arc::new(FilesystemEvidenceStore::open(root.join("evidence")).unwrap());
+    let commit_store = Arc::new(RecordingCommitStore::default());
+    let bytes = bazaar_manifest();
+    let digest = format!("{:x}", Sha256::digest(&bytes));
+    fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
+    let handler = CollectionHandler::new(
+        input_root,
+        evidence_store,
+        commit_store.clone(),
+        rpc_transport("base", 42),
+    )
+    .with_public_source_transport(Arc::new(fake_public_source(
+        [br#"{"items":[]}"#.to_vec()],
         Arc::new(Mutex::new(Vec::new())),
     )));
 

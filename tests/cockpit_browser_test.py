@@ -59,6 +59,7 @@ class CockpitBrowserTest(unittest.TestCase):
                             "verified_qualifying_resources": 31004,
                             "coverage_status": "complete",
                             "observed_at": "2099-01-01T00:00:00Z",
+                            "provenance_ids": ["11111111-1111-1111-1111-111111111111"],
                         },
                     }).encode()
                     content_type = "application/json"
@@ -201,6 +202,7 @@ class CockpitBrowserTest(unittest.TestCase):
         expect(coverage).to_contain_text("33277 / 33277")
         expect(coverage).to_contain_text("333 pages archived")
         expect(coverage).to_contain_text("31004 verified qualifying resources")
+        expect(coverage.locator("button[data-provenance-id]")).to_have_count(1)
         discovery.locator("button[data-provenance-id]").click()
         drawer = page.locator("#provenance-drawer")
         expect(drawer).to_contain_text("runtime-402:fixture")
@@ -294,6 +296,7 @@ class CockpitBrowserTest(unittest.TestCase):
                             "verified_qualifying_resources": 900,
                             "coverage_status": status,
                             "observed_at": "2099-01-01T00:00:00Z",
+                            "provenance_ids": ["11111111-1111-1111-1111-111111111111"],
                         },
                     }),
                 )

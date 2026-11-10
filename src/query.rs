@@ -52,6 +52,7 @@ pub struct CatalogCoverageReadModel {
     pub observed_at: String,
     pub last_complete_crawl: Option<String>,
     pub crawl_lag_seconds: Option<i64>,
+    pub provenance_ids: Vec<String>,
 }
 
 impl DashboardPage {
@@ -531,7 +532,7 @@ impl QueryStore for PostgresQueryStore {
         let row = self
             .client
             .query_opt(
-                "SELECT source_id, source_reported_total, resources_observed, pages_archived, verified_qualifying_resources, coverage_status, observed_at::text, last_complete_crawl::text, crawl_lag_seconds FROM agent_economy.catalog_crawl_coverage WHERE namespace_id = $1::text::uuid ORDER BY observed_at DESC, job_id DESC LIMIT 1",
+                "SELECT source_id, source_reported_total, resources_observed, pages_archived, verified_qualifying_resources, coverage_status, observed_at::text, last_complete_crawl::text, crawl_lag_seconds, provenance_ids FROM agent_economy.catalog_crawl_coverage WHERE namespace_id = $1::text::uuid ORDER BY observed_at DESC, job_id DESC LIMIT 1",
                 &[&self.namespace_id],
             )
             .await
@@ -549,6 +550,7 @@ impl QueryStore for PostgresQueryStore {
                 observed_at: row.try_get(6).map_err(|_| QueryError::Unavailable)?,
                 last_complete_crawl: row.try_get(7).map_err(|_| QueryError::Unavailable)?,
                 crawl_lag_seconds: row.try_get(8).map_err(|_| QueryError::Unavailable)?,
+                provenance_ids: row.try_get(9).map_err(|_| QueryError::Unavailable)?,
             })
         })
         .transpose()

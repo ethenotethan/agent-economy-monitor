@@ -63,6 +63,15 @@ DROP FUNCTION agent_economy.stage_catalog_crawl_batch(
 );
 DROP TABLE agent_economy.catalog_crawl_staging;
 
+CREATE OR REPLACE FUNCTION agent_economy.complete_bound_collection_job(
+    p_job_id uuid, p_lease_owner text, p_lease_token uuid, p_output_sha256 text
+)
+RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog AS $$
+    SELECT agent_economy.complete_collection_job(
+        agent_economy.bound_collection_namespace('collect'),
+        p_job_id, p_lease_owner, p_lease_token, p_output_sha256)
+$$;
+
 ALTER TABLE agent_economy.worker_jobs DROP CONSTRAINT worker_jobs_collection_admission;
 ALTER TABLE agent_economy.worker_jobs ADD CONSTRAINT worker_jobs_collection_admission CHECK (
     (mode = 'collect'

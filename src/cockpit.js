@@ -264,7 +264,8 @@
       element("div", "metric-value", coverage ? `${coverage.resources_observed} / ${coverage.source_reported_total}` : "Unknown"),
       element("div", "metric-detail", coverage
         ? `${coverageStatus.toUpperCase()} · ${coverage.pages_archived} pages archived · ${coverage.verified_qualifying_resources} verified qualifying resources`
-        : "UNKNOWN · no catalog crawl has been recorded")
+        : "UNKNOWN · no catalog crawl has been recorded"),
+      provenanceButtons(coverage && coverage.provenance_ids)
     );
     coverageGrid.append(coverageCard);
     const wrapper = section("Catalog coverage", coverageStatus.toUpperCase(), coverageGrid);

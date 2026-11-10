@@ -411,10 +411,7 @@ impl CollectionCommitStore for PostgresCollectionCommitStore {
                 .first()
                 .ok_or(CollectionError::InvalidInput)?;
             let first_page = parse_bazaar_page(&first.archived_bytes)?;
-            let reported_total = first_page
-                .pagination
-                .as_ref()
-                .map_or(first_page.items.len() as u64, |page| page.total);
+            let reported_total = first_page.pagination.total;
             let resources_observed = batch.evidence.iter().try_fold(0_u64, |count, evidence| {
                 let page = parse_bazaar_page(&evidence.archived_bytes)?;
                 count
@@ -849,8 +846,7 @@ struct BazaarPagination {
 #[derive(Deserialize)]
 struct BazaarPage {
     items: Vec<serde_json::Value>,
-    #[serde(default)]
-    pagination: Option<BazaarPagination>,
+    pagination: BazaarPagination,
 }
 
 #[derive(Clone, Copy, Deserialize)]
@@ -1106,9 +1102,7 @@ where
             parse_protocol_input(&manifest, &page_input, &archived.archived_bytes)?;
             let page = parse_bazaar_page(&archived.archived_bytes)?;
             archived_pages.push(archived);
-            let Some(pagination) = page.pagination else {
-                break;
-            };
+            let pagination = page.pagination;
             if pagination.limit != CDP_BAZAAR_PAGE_LIMIT || pagination.offset != offset {
                 return Err(CollectionError::InvalidInput);
             }
@@ -1177,13 +1171,7 @@ fn validate_replayed_bazaar_pages(evidence: &[ArchivedEvidence]) -> Result<(), C
     let mut frozen_total = None;
     for (index, archived) in evidence.iter().enumerate() {
         let page = parse_bazaar_page(&archived.archived_bytes)?;
-        let Some(pagination) = page.pagination else {
-            return if evidence.len() == 1 {
-                Ok(())
-            } else {
-                Err(CollectionError::InvalidInput)
-            };
-        };
+        let pagination = page.pagination;
         let expected_offset = u64::try_from(index)
             .map_err(|_| CollectionError::InvalidInput)?
             .checked_mul(CDP_BAZAAR_PAGE_LIMIT)

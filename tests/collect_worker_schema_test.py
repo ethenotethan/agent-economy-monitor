@@ -158,7 +158,7 @@ class CollectWorkerMigrationTest(unittest.TestCase):
         self.assertIn("p_end_height - p_start_height NOT BETWEEN 0 AND 399", up)
         self.assertIn("job.collection_start_height = p_start_height", up)
         self.assertIn(
-            "job.collection_end_height IN (p_start_height, p_end_height)", up
+            "job.collection_end_height = p_start_height", up
         )
         self.assertIn("COALESCE(pending.updated_at, job.updated_at) AS observed_at", up)
         self.assertIn("jsonb_array_length(p_observations_json) > 200000", up)
@@ -174,6 +174,29 @@ class CollectWorkerMigrationTest(unittest.TestCase):
         self.assertNotIn("p_start_height <> 0", up)
         self.assertLess(down.index("RAISE EXCEPTION"), down.index("DROP TABLE"))
         self.assertNotIn("CASCADE", down)
+
+    def test_catalog_staging_preserves_admitted_range_until_atomic_completion(self):
+        up = PAGINATION_UP.read_text()
+        stage = up.split(
+            "CREATE FUNCTION agent_economy.stage_catalog_crawl_batch", 1
+        )[1].split(
+            "CREATE OR REPLACE FUNCTION agent_economy.complete_bound_collection_job", 1
+        )[0]
+        self.assertNotIn("SET collection_end_height = p_end_height", stage)
+        self.assertIn(
+            "CREATE OR REPLACE FUNCTION agent_economy.complete_bound_collection_job",
+            up,
+        )
+        self.assertIn("pending.end_height", up)
+        self.assertIn("catalog crawl completion is not live", up)
+
+    def test_catalog_coverage_counts_promoted_observations_and_exposes_provenance(self):
+        up = PAGINATION_UP.read_text()
+        coverage = up.split("CREATE VIEW agent_economy.catalog_crawl_coverage", 1)[1]
+        self.assertIn("count(DISTINCT observation.observation_id)", coverage)
+        self.assertIn("array_agg(DISTINCT observation.provenance_id::text", coverage)
+        self.assertIn("provenance_ids", coverage)
+        self.assertNotIn("THEN crawl.resources_observed", coverage)
 
     def test_canonical_verify_requires_and_executes_split_custody(self):
         verify = (ROOT / "scripts" / "verify").read_text()

@@ -50,6 +50,7 @@ impl QueryStore for FixtureStore {
             observed_at: "2026-09-30T00:00:00Z".into(),
             last_complete_crawl: Some("2026-09-30T00:00:00Z".into()),
             crawl_lag_seconds: Some(120),
+            provenance_ids: vec!["11111111-1111-1111-1111-111111111111".into()],
         }))
     }
 
@@ -252,6 +253,10 @@ async fn catalog_coverage_exposes_explicit_complete_state_and_source_total() {
     assert_eq!(body["data"]["verified_qualifying_resources"], 31_004);
     assert_eq!(body["data"]["last_complete_crawl"], "2026-09-30T00:00:00Z");
     assert_eq!(body["data"]["crawl_lag_seconds"], 120);
+    assert_eq!(
+        body["data"]["provenance_ids"][0],
+        "11111111-1111-1111-1111-111111111111"
+    );
 }
 
 #[tokio::test]

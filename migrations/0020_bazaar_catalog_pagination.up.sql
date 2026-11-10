@@ -91,6 +91,7 @@ AS $$
 DECLARE
     bound_namespace uuid;
     staged_id uuid;
+    pending agent_economy.pending_collection_batches%ROWTYPE;
     existing agent_economy.catalog_crawl_staging%ROWTYPE;
 BEGIN
     bound_namespace := agent_economy.bound_collection_namespace('collect');
@@ -105,9 +106,7 @@ BEGIN
         RAISE EXCEPTION 'invalid catalog crawl batch';
     END IF;
 
-    UPDATE agent_economy.worker_jobs AS job
-    SET collection_end_height = p_end_height,
-        updated_at = clock_timestamp()
+    PERFORM 1 FROM agent_economy.worker_jobs AS job
     WHERE job.namespace_id = bound_namespace
       AND job.job_id = p_job_id
       AND job.mode = 'collect'
@@ -120,18 +119,60 @@ BEGIN
       AND job.collection_chain_scope = 'base'
       AND job.collection_source_id = 'cdp-x402-bazaar-base'
       AND job.collection_start_height = p_start_height
-      AND job.collection_end_height IN (p_start_height, p_end_height)
+      AND job.collection_end_height = p_start_height
       AND job.collection_acquisition_contract = 'cdp-x402-bazaar-v1'
-      AND job.collection_evidence_contract = 'evidence-store-create-read-sha256-v1';
+      AND job.collection_evidence_contract = 'evidence-store-create-read-sha256-v1'
+    FOR UPDATE;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'catalog crawl admission is not live';
     END IF;
 
-    SELECT agent_economy.stage_collection_batch(
-        p_job_id, p_lease_owner, p_lease_token, p_input_sha256, p_batch_sha256,
-        p_chain_scope, p_source_id, p_observed_at_unix_ms, p_start_height,
-        p_end_height, p_evidence_json
-    ) INTO staged_id;
+    IF p_batch_sha256 !~ '^[0-9a-f]{64}$'
+       OR jsonb_typeof(p_evidence_json) <> 'array'
+       OR EXISTS (
+         SELECT 1 FROM jsonb_array_elements(p_evidence_json) evidence(item)
+         WHERE jsonb_typeof(item) <> 'object'
+            OR (SELECT count(*) FROM jsonb_object_keys(item)) <> 7
+            OR NOT (item ?& ARRAY['evidence_id','sha256','storage_uri','storage_generation','media_type','byte_length','height'])
+            OR (item->>'evidence_id') <> 'evidence:sha256:' || (item->>'sha256')
+            OR (item->>'sha256') !~ '^[0-9a-f]{64}$'
+            OR (item->>'storage_uri') !~ ('^evidence/' || p_source_id || '/[0-9]{4}-[0-9]{2}-[0-9]{2}/sha256/' || left((item->>'sha256'),2) || '/' || (item->>'sha256') || '$')
+            OR (item->>'media_type') <> 'application/json'
+            OR (item->>'height')::bigint NOT BETWEEN p_start_height AND p_end_height
+            OR (item->>'byte_length')::bigint NOT BETWEEN 1 AND 4194304
+       ) OR (SELECT count(DISTINCT (item->>'height')::bigint)
+             FROM jsonb_array_elements(p_evidence_json) evidence(item))
+             <> p_end_height - p_start_height + 1
+    THEN
+        RAISE EXCEPTION 'invalid pending catalog crawl batch';
+    END IF;
+
+    SELECT * INTO pending
+    FROM agent_economy.pending_collection_batches AS batch
+    WHERE batch.namespace_id = bound_namespace AND batch.job_id = p_job_id
+    FOR UPDATE;
+    IF FOUND THEN
+        IF pending.input_sha256 <> p_input_sha256
+           OR pending.batch_sha256 <> p_batch_sha256
+           OR pending.chain_scope <> p_chain_scope
+           OR pending.source_id <> p_source_id
+           OR pending.observed_at_unix_ms <> p_observed_at_unix_ms
+           OR pending.start_height <> p_start_height
+           OR pending.end_height <> p_end_height
+           OR pending.evidence_json <> p_evidence_json
+        THEN
+            RAISE EXCEPTION 'changed collection staging replay';
+        END IF;
+        staged_id := pending.pending_id;
+    ELSE
+        INSERT INTO agent_economy.pending_collection_batches
+          (namespace_id, job_id, input_sha256, batch_sha256, chain_scope, source_id,
+           observed_at_unix_ms, start_height, end_height, evidence_json)
+        VALUES (bound_namespace, p_job_id, p_input_sha256, p_batch_sha256, p_chain_scope,
+                p_source_id, p_observed_at_unix_ms, p_start_height, p_end_height,
+                p_evidence_json)
+        RETURNING pending_id INTO staged_id;
+    END IF;
 
     SELECT * INTO existing
     FROM agent_economy.catalog_crawl_staging AS crawl
@@ -152,6 +193,54 @@ BEGIN
              p_resources_observed, (p_end_height - p_start_height + 1)::integer);
     END IF;
     RETURN staged_id;
+END
+$$;
+
+CREATE OR REPLACE FUNCTION agent_economy.complete_bound_collection_job(
+    p_job_id uuid, p_lease_owner text, p_lease_token uuid, p_output_sha256 text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    bound_namespace uuid;
+    pending agent_economy.pending_collection_batches%ROWTYPE;
+BEGIN
+    bound_namespace := agent_economy.bound_collection_namespace('collect');
+    SELECT batch.* INTO pending
+    FROM agent_economy.pending_collection_batches AS batch
+    JOIN agent_economy.worker_jobs AS job
+      ON job.namespace_id = batch.namespace_id AND job.job_id = batch.job_id
+    WHERE job.namespace_id = bound_namespace
+      AND job.job_id = p_job_id
+      AND job.status = 'leased'
+      AND job.lease_owner = p_lease_owner
+      AND job.lease_token = p_lease_token
+      AND job.lease_expires_at > clock_timestamp()
+      AND job.collection_acquisition_contract = 'cdp-x402-bazaar-v1'
+      AND job.collection_start_height = batch.start_height
+      AND job.collection_end_height = batch.start_height
+      AND batch.batch_sha256 = p_output_sha256
+    FOR UPDATE OF job, batch;
+    IF FOUND THEN
+        UPDATE agent_economy.worker_jobs AS job
+        SET collection_end_height = pending.end_height,
+            updated_at = clock_timestamp()
+        WHERE job.namespace_id = bound_namespace
+          AND job.job_id = p_job_id
+          AND job.status = 'leased'
+          AND job.lease_owner = p_lease_owner
+          AND job.lease_token = p_lease_token
+          AND job.collection_end_height = pending.start_height;
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'catalog crawl completion is not live';
+        END IF;
+    END IF;
+    RETURN agent_economy.complete_collection_job(
+        bound_namespace, p_job_id, p_lease_owner, p_lease_token, p_output_sha256
+    );
 END
 $$;
 
@@ -194,7 +283,8 @@ SELECT
     COALESCE(crawl.resources_observed, 0) AS resources_observed,
     COALESCE(crawl.pages_archived, 0) AS pages_archived,
     CASE WHEN pending.status = 'succeeded'
-         THEN crawl.resources_observed ELSE 0 END AS verified_qualifying_resources,
+         THEN qualified.verified_qualifying_resources ELSE 0 END
+         AS verified_qualifying_resources,
     CASE
         WHEN job.status = 'dead_letter' OR pending.status = 'dead_letter' THEN 'failed'
         WHEN pending.status IS DISTINCT FROM 'succeeded' THEN 'partial'
@@ -208,12 +298,32 @@ SELECT
              0,
              EXTRACT(EPOCH FROM clock_timestamp() - latest.last_complete_crawl)::bigint
          )
-    END AS crawl_lag_seconds
+    END AS crawl_lag_seconds,
+    CASE WHEN pending.status = 'succeeded'
+         THEN qualified.provenance_ids ELSE ARRAY[]::text[] END AS provenance_ids
 FROM agent_economy.worker_jobs AS job
 LEFT JOIN agent_economy.catalog_crawl_staging AS crawl
   ON crawl.namespace_id = job.namespace_id AND crawl.job_id = job.job_id
 LEFT JOIN agent_economy.pending_collection_batches AS pending
   ON pending.namespace_id = job.namespace_id AND pending.job_id = job.job_id
+LEFT JOIN LATERAL (
+    SELECT
+        count(DISTINCT observation.observation_id)::bigint
+            AS verified_qualifying_resources,
+        COALESCE(
+            array_agg(DISTINCT observation.provenance_id::text
+                ORDER BY observation.provenance_id::text),
+            ARRAY[]::text[]
+        ) AS provenance_ids
+    FROM agent_economy.observations AS observation
+    WHERE observation.namespace_id = job.namespace_id
+      AND observation.source_id = job.collection_source_id
+      AND EXISTS (
+          SELECT 1
+          FROM jsonb_array_elements(COALESCE(pending.evidence_json, '[]'::jsonb)) evidence(item)
+          WHERE item ->> 'evidence_id' = observation.evidence_id
+      )
+) AS qualified ON true
 LEFT JOIN LATERAL (
     SELECT max(done.updated_at) AS last_complete_crawl
     FROM agent_economy.pending_collection_batches AS done
