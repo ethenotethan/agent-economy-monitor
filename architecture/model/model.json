@@ -718,10 +718,10 @@
       "id": "collect-worker",
       "label": "Create-only evidence collection worker",
       "layer": "evidence",
-      "line_count": 3658
+      "line_count": 3697
     },
     {
-      "declaration_count": 241,
+      "declaration_count": 242,
       "declarations": [
         "CLASSIFIER_PASSWORD",
         "COLLECTOR_PASSWORD",
@@ -774,6 +774,7 @@
         "approval",
         "approval_for",
         "archive",
+        "assert_catalog_coverage_deduplicates_resources",
         "assert_catalog_stage_survives_worker_crash",
         "auth_config",
         "auth_state",
@@ -1020,7 +1021,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 12223
+      "line_count": 12413
     },
     {
       "declaration_count": 137,
@@ -1307,7 +1308,7 @@
       "line_count": 1689
     },
     {
-      "declaration_count": 14,
+      "declaration_count": 17,
       "declarations": [
         "CollectionEvidenceReader",
         "PendingBatch",
@@ -1321,6 +1322,9 @@
         "new",
         "read",
         "run_once",
+        "tests",
+        "verification_observations",
+        "verified_bazaar_offers_carry_stable_resource_identity",
         "verify_and_promote",
         "verify_and_promote_enrichment"
       ],
@@ -1337,7 +1341,7 @@
       "id": "evidence-verifier",
       "label": "Independent evidence verifier",
       "layer": "evidence",
-      "line_count": 1004
+      "line_count": 1093
     },
     {
       "declaration_count": 0,
@@ -2564,7 +2568,7 @@
         "origins": [
           {
             "family": "specified",
-            "line": 96,
+            "line": 145,
             "path": "src/verify_evidence.rs",
             "rule": "declared.topology",
             "via": "pub struct PostgresEvidenceVerifier {"
@@ -11852,7 +11856,7 @@
         "component": "collect-worker",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 107,
+        "line_count": 122,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -11866,7 +11870,7 @@
         "component": "collect-worker",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 304,
+        "line_count": 328,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -17208,11 +17212,19 @@
       {
         "citations": 1,
         "component": "evidence-verifier",
-        "declaration_count": 16,
+        "declaration_count": 19,
         "declarations": [
           {
+            "kind": "fn",
+            "line": 18,
+            "name": "verification_observations",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
             "kind": "trait",
-            "line": 17,
+            "line": 66,
             "name": "CollectionEvidenceReader",
             "passes": [
               "rust.declaration"
@@ -17220,7 +17232,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 18,
+            "line": 67,
             "name": "read",
             "passes": [
               "rust.declaration"
@@ -17228,7 +17240,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 23,
+            "line": 72,
             "name": "read",
             "passes": [
               "rust.declaration"
@@ -17236,7 +17248,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 35,
+            "line": 84,
             "name": "read",
             "passes": [
               "rust.declaration"
@@ -17244,7 +17256,7 @@
           },
           {
             "kind": "struct",
-            "line": 44,
+            "line": 93,
             "name": "PendingEvidence",
             "passes": [
               "rust.declaration"
@@ -17252,7 +17264,7 @@
           },
           {
             "kind": "struct",
-            "line": 53,
+            "line": 102,
             "name": "PendingBatch",
             "passes": [
               "rust.declaration"
@@ -17260,7 +17272,7 @@
           },
           {
             "kind": "struct",
-            "line": 68,
+            "line": 117,
             "name": "PendingEnrichmentEvidence",
             "passes": [
               "rust.declaration"
@@ -17268,7 +17280,7 @@
           },
           {
             "kind": "struct",
-            "line": 74,
+            "line": 123,
             "name": "PendingEnrichmentBatch",
             "passes": [
               "rust.declaration"
@@ -17276,7 +17288,7 @@
           },
           {
             "kind": "struct",
-            "line": 95,
+            "line": 144,
             "name": "PostgresEvidenceVerifier",
             "passes": [
               "rust.declaration"
@@ -17284,7 +17296,7 @@
           },
           {
             "kind": "fn",
-            "line": 103,
+            "line": 152,
             "name": "new",
             "passes": [
               "rust.declaration"
@@ -17292,7 +17304,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 114,
+            "line": 163,
             "name": "run_once",
             "passes": [
               "rust.declaration"
@@ -17300,7 +17312,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 142,
+            "line": 191,
             "name": "claim_enrichment",
             "passes": [
               "rust.declaration"
@@ -17308,7 +17320,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 184,
+            "line": 233,
             "name": "verify_and_promote_enrichment",
             "passes": [
               "rust.declaration"
@@ -17316,7 +17328,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 241,
+            "line": 290,
             "name": "claim",
             "passes": [
               "rust.declaration"
@@ -17324,7 +17336,7 @@
           },
           {
             "kind": "async-fn",
-            "line": 274,
+            "line": 323,
             "name": "verify_and_promote",
             "passes": [
               "rust.declaration"
@@ -17332,14 +17344,30 @@
           },
           {
             "kind": "async-fn",
-            "line": 370,
+            "line": 396,
             "name": "fail",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "mod",
+            "line": 423,
+            "name": "tests",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 427,
+            "name": "verified_bazaar_offers_carry_stable_resource_identity",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 394,
+        "line_count": 483,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -18732,7 +18760,7 @@
       {
         "citations": 0,
         "component": "delivery-gates",
-        "declaration_count": 10,
+        "declaration_count": 11,
         "declarations": [
           {
             "kind": "const",
@@ -18791,8 +18819,16 @@
             ]
           },
           {
-            "kind": "fn",
+            "kind": "async-fn",
             "line": 211,
+            "name": "assert_catalog_coverage_deduplicates_resources",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 397,
             "name": "run_collect",
             "passes": [
               "rust.declaration"
@@ -18800,7 +18836,7 @@
           },
           {
             "kind": "fn",
-            "line": 229,
+            "line": 415,
             "name": "run_verifier",
             "passes": [
               "rust.declaration"
@@ -18808,14 +18844,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 250,
+            "line": 436,
             "name": "split_process_custody_executes_every_launch_chain",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 447,
+        "line_count": 634,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -18829,7 +18865,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 214,
+        "line_count": 217,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -20633,7 +20669,7 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1831,
+        "citations": 1835,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
         "files": 62,
@@ -20665,7 +20701,7 @@
         "worker": 8
       },
       "citations": 65,
-      "declarations": 1831,
+      "declarations": 1835,
       "entities": 65,
       "entities_with_origin": 65,
       "files": 187,
@@ -21611,7 +21647,7 @@
         "evidence": [
           {
             "excerpt": "pub struct PostgresEvidenceVerifier {",
-            "line": 96,
+            "line": 145,
             "path": "src/verify_evidence.rs"
           }
         ],
@@ -22374,9 +22410,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1831,
+    "declarations": 1835,
     "files": 187,
-    "lines": 57006
+    "lines": 57324
   },
   "layers": [
     {
@@ -22417,7 +22453,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "6de8439463b9317f419317773d2a299586def4b4cbaa2cbdea024ff36d99bfe6",
+  "source_tree_sha256": "ab6d6f08ec2e5344bdf342e147bdbc7bb7043ec32186c74eaf196ca5de01e87a",
   "stores": {
     "count": 2,
     "items": [

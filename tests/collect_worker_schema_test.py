@@ -190,12 +190,15 @@ class CollectWorkerMigrationTest(unittest.TestCase):
             up,
         )
 
-    def test_catalog_coverage_counts_promoted_observations_and_exposes_provenance(self):
+    def test_catalog_coverage_counts_verified_resource_identities_and_exposes_provenance(self):
         up = PAGINATION_UP.read_text()
         coverage = up.split("CREATE VIEW agent_economy.catalog_crawl_coverage", 1)[1]
-        self.assertIn("count(DISTINCT observation.observation_id)", coverage)
+        self.assertIn("count(DISTINCT item ->> 'catalog_resource_id')", coverage)
+        self.assertIn("receipt.observations_json", coverage)
+        self.assertIn("'^sha256:[0-9a-f]{64}$'", up)
         self.assertIn("array_agg(DISTINCT observation.provenance_id::text", coverage)
         self.assertIn("provenance_ids", coverage)
+        self.assertNotIn("count(DISTINCT observation.observation_id)", coverage)
         self.assertNotIn("THEN crawl.resources_observed", coverage)
 
     def test_canonical_verify_requires_and_executes_split_custody(self):

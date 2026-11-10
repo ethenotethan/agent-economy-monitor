@@ -35,6 +35,21 @@ BEGIN
         'AND (job.collection_end_height = p_end_height OR (job.collection_acquisition_contract = ''cdp-x402-bazaar-v1'' AND job.collection_end_height = p_start_height))',
         'AND job.collection_end_height = p_end_height'
     );
+    definition := replace(
+        definition,
+        'OR (SELECT count(*) FROM jsonb_object_keys(item)) <> CASE WHEN p_source_id = ''cdp-x402-bazaar-base'' THEN 7 ELSE 6 END',
+        'OR (SELECT count(*) FROM jsonb_object_keys(item)) <> 6'
+    );
+    definition := replace(
+        definition,
+        'OR (item ->> ''parser_version'') !~ ''^[A-Za-z0-9][A-Za-z0-9_.:@/-]{0,127}$''
+            OR (p_source_id = ''cdp-x402-bazaar-base'' AND (
+                NOT item ? ''catalog_resource_id''
+                OR (item ->> ''catalog_resource_id'') !~ ''^sha256:[0-9a-f]{64}$''
+            ))
+            OR (p_source_id <> ''cdp-x402-bazaar-base'' AND item ? ''catalog_resource_id'')',
+        'OR (item ->> ''parser_version'') !~ ''^[A-Za-z0-9][A-Za-z0-9_.:@/-]{0,127}$'''
+    );
     EXECUTE definition;
 END
 $$;

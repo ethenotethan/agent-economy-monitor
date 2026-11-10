@@ -57,6 +57,21 @@ BEGIN
         'job.collection_acquisition_contract = ''cdp-x402-bazaar-v1'' AND ' ||
         'job.collection_end_height = p_start_height))'
     );
+    definition := replace(
+        definition,
+        'OR (SELECT count(*) FROM jsonb_object_keys(item)) <> 6',
+        'OR (SELECT count(*) FROM jsonb_object_keys(item)) <> CASE WHEN p_source_id = ''cdp-x402-bazaar-base'' THEN 7 ELSE 6 END'
+    );
+    definition := replace(
+        definition,
+        'OR (item ->> ''parser_version'') !~ ''^[A-Za-z0-9][A-Za-z0-9_.:@/-]{0,127}$''',
+        'OR (item ->> ''parser_version'') !~ ''^[A-Za-z0-9][A-Za-z0-9_.:@/-]{0,127}$''
+            OR (p_source_id = ''cdp-x402-bazaar-base'' AND (
+                NOT item ? ''catalog_resource_id''
+                OR (item ->> ''catalog_resource_id'') !~ ''^sha256:[0-9a-f]{64}$''
+            ))
+            OR (p_source_id <> ''cdp-x402-bazaar-base'' AND item ? ''catalog_resource_id'')'
+    );
     EXECUTE definition;
 END
 $$;
@@ -243,7 +258,7 @@ SELECT
     COALESCE(crawl.resources_observed, 0) AS resources_observed,
     COALESCE(crawl.pages_archived, 0) AS pages_archived,
     CASE WHEN pending.status = 'succeeded'
-         THEN qualified.verified_qualifying_resources ELSE 0 END
+         THEN qualified_resource.verified_qualifying_resources ELSE 0 END
          AS verified_qualifying_resources,
     CASE
         WHEN job.status = 'dead_letter' OR pending.status = 'dead_letter' THEN 'failed'
@@ -266,10 +281,19 @@ LEFT JOIN agent_economy.catalog_crawl_staging AS crawl
   ON crawl.namespace_id = job.namespace_id AND crawl.job_id = job.job_id
 LEFT JOIN agent_economy.pending_collection_batches AS pending
   ON pending.namespace_id = job.namespace_id AND pending.job_id = job.job_id
+LEFT JOIN agent_economy.collection_range_receipts AS receipt
+  ON receipt.namespace_id = job.namespace_id
+ AND receipt.chain_scope = job.collection_chain_scope
+ AND receipt.source_id = job.collection_source_id
+ AND receipt.start_height = pending.start_height
+ AND receipt.end_height = pending.end_height
+LEFT JOIN LATERAL (
+    SELECT count(DISTINCT item ->> 'catalog_resource_id')::bigint
+        AS verified_qualifying_resources
+    FROM jsonb_array_elements(COALESCE(receipt.observations_json, '[]'::jsonb)) observation(item)
+) AS qualified_resource ON true
 LEFT JOIN LATERAL (
     SELECT
-        count(DISTINCT observation.observation_id)::bigint
-            AS verified_qualifying_resources,
         COALESCE(
             array_agg(DISTINCT observation.provenance_id::text
                 ORDER BY observation.provenance_id::text),
