@@ -179,16 +179,16 @@ class CollectWorkerMigrationTest(unittest.TestCase):
         up = PAGINATION_UP.read_text()
         stage = up.split(
             "CREATE FUNCTION agent_economy.stage_catalog_crawl_batch", 1
-        )[1].split(
-            "CREATE OR REPLACE FUNCTION agent_economy.complete_bound_collection_job", 1
-        )[0]
+        )[1].split("REVOKE ALL ON FUNCTION", 1)[0]
         self.assertNotIn("SET collection_end_height = p_end_height", stage)
         self.assertIn(
+            "job.collection_end_height = p_start_height))",
+            up,
+        )
+        self.assertNotIn(
             "CREATE OR REPLACE FUNCTION agent_economy.complete_bound_collection_job",
             up,
         )
-        self.assertIn("pending.end_height", up)
-        self.assertIn("catalog crawl completion is not live", up)
 
     def test_catalog_coverage_counts_promoted_observations_and_exposes_provenance(self):
         up = PAGINATION_UP.read_text()

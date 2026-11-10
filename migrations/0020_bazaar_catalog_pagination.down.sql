@@ -17,6 +17,10 @@ BEGIN
     ) INTO STRICT definition;
     IF position('jsonb_array_length(p_observations_json) > 200000' IN definition) = 0
        OR position(') > 268435456' IN definition) = 0
+       OR position(
+           'AND (job.collection_end_height = p_end_height OR (job.collection_acquisition_contract = ''cdp-x402-bazaar-v1'' AND job.collection_end_height = p_start_height))'
+           IN definition
+       ) = 0
     THEN
         RAISE EXCEPTION 'expected pagination collection limits are absent';
     END IF;
@@ -26,6 +30,11 @@ BEGIN
         'jsonb_array_length(p_observations_json) > 50000'
     );
     definition := replace(definition, ') > 268435456', ') > 16777216');
+    definition := replace(
+        definition,
+        'AND (job.collection_end_height = p_end_height OR (job.collection_acquisition_contract = ''cdp-x402-bazaar-v1'' AND job.collection_end_height = p_start_height))',
+        'AND job.collection_end_height = p_end_height'
+    );
     EXECUTE definition;
 END
 $$;
@@ -62,15 +71,6 @@ DROP FUNCTION agent_economy.stage_catalog_crawl_batch(
     uuid,text,uuid,text,text,text,text,bigint,bigint,bigint,jsonb,bigint,bigint
 );
 DROP TABLE agent_economy.catalog_crawl_staging;
-
-CREATE OR REPLACE FUNCTION agent_economy.complete_bound_collection_job(
-    p_job_id uuid, p_lease_owner text, p_lease_token uuid, p_output_sha256 text
-)
-RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog AS $$
-    SELECT agent_economy.complete_collection_job(
-        agent_economy.bound_collection_namespace('collect'),
-        p_job_id, p_lease_owner, p_lease_token, p_output_sha256)
-$$;
 
 ALTER TABLE agent_economy.worker_jobs DROP CONSTRAINT worker_jobs_collection_admission;
 ALTER TABLE agent_economy.worker_jobs ADD CONSTRAINT worker_jobs_collection_admission CHECK (

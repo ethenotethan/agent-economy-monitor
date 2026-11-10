@@ -718,10 +718,10 @@
       "id": "collect-worker",
       "label": "Create-only evidence collection worker",
       "layer": "evidence",
-      "line_count": 3698
+      "line_count": 3658
     },
     {
-      "declaration_count": 240,
+      "declaration_count": 241,
       "declarations": [
         "CLASSIFIER_PASSWORD",
         "COLLECTOR_PASSWORD",
@@ -774,6 +774,7 @@
         "approval",
         "approval_for",
         "archive",
+        "assert_catalog_stage_survives_worker_crash",
         "auth_config",
         "auth_state",
         "bazaar_crawl_fetches_every_page_once_in_offset_order_to_the_frozen_boundary",
@@ -1019,7 +1020,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 12074
+      "line_count": 12223
     },
     {
       "declaration_count": 137,
@@ -11865,7 +11866,7 @@
         "component": "collect-worker",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 344,
+        "line_count": 304,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -18731,7 +18732,7 @@
       {
         "citations": 0,
         "component": "delivery-gates",
-        "declaration_count": 9,
+        "declaration_count": 10,
         "declarations": [
           {
             "kind": "const",
@@ -18782,8 +18783,16 @@
             ]
           },
           {
-            "kind": "fn",
+            "kind": "async-fn",
             "line": 64,
+            "name": "assert_catalog_stage_survives_worker_crash",
+            "passes": [
+              "rust.declaration"
+            ]
+          },
+          {
+            "kind": "fn",
+            "line": 211,
             "name": "run_collect",
             "passes": [
               "rust.declaration"
@@ -18791,7 +18800,7 @@
           },
           {
             "kind": "fn",
-            "line": 82,
+            "line": 229,
             "name": "run_verifier",
             "passes": [
               "rust.declaration"
@@ -18799,14 +18808,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 103,
+            "line": 250,
             "name": "split_process_custody_executes_every_launch_chain",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 298,
+        "line_count": 447,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -20624,7 +20633,7 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1830,
+        "citations": 1831,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
         "files": 62,
@@ -20656,7 +20665,7 @@
         "worker": 8
       },
       "citations": 65,
-      "declarations": 1830,
+      "declarations": 1831,
       "entities": 65,
       "entities_with_origin": 65,
       "files": 187,
@@ -22365,9 +22374,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1830,
+    "declarations": 1831,
     "files": 187,
-    "lines": 56897
+    "lines": 57006
   },
   "layers": [
     {
@@ -22408,7 +22417,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "f8b65b51ac3330d697b4e7fe1d500e107f8e7339d2edef9871cdeb3fa4ff08b3",
+  "source_tree_sha256": "6de8439463b9317f419317773d2a299586def4b4cbaa2cbdea024ff36d99bfe6",
   "stores": {
     "count": 2,
     "items": [

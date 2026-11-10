@@ -40,6 +40,7 @@ BEGIN
     ) INTO STRICT definition;
     IF position('jsonb_array_length(p_observations_json) > 50000' IN definition) = 0
        OR position(') > 16777216' IN definition) = 0
+       OR position('AND job.collection_end_height = p_end_height' IN definition) = 0
     THEN
         RAISE EXCEPTION 'expected predecessor collection limits are absent';
     END IF;
@@ -49,6 +50,13 @@ BEGIN
         'jsonb_array_length(p_observations_json) > 200000'
     );
     definition := replace(definition, ') > 16777216', ') > 268435456');
+    definition := replace(
+        definition,
+        'AND job.collection_end_height = p_end_height',
+        'AND (job.collection_end_height = p_end_height OR (' ||
+        'job.collection_acquisition_contract = ''cdp-x402-bazaar-v1'' AND ' ||
+        'job.collection_end_height = p_start_height))'
+    );
     EXECUTE definition;
 END
 $$;
@@ -193,54 +201,6 @@ BEGIN
              p_resources_observed, (p_end_height - p_start_height + 1)::integer);
     END IF;
     RETURN staged_id;
-END
-$$;
-
-CREATE OR REPLACE FUNCTION agent_economy.complete_bound_collection_job(
-    p_job_id uuid, p_lease_owner text, p_lease_token uuid, p_output_sha256 text
-)
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = pg_catalog
-AS $$
-DECLARE
-    bound_namespace uuid;
-    pending agent_economy.pending_collection_batches%ROWTYPE;
-BEGIN
-    bound_namespace := agent_economy.bound_collection_namespace('collect');
-    SELECT batch.* INTO pending
-    FROM agent_economy.pending_collection_batches AS batch
-    JOIN agent_economy.worker_jobs AS job
-      ON job.namespace_id = batch.namespace_id AND job.job_id = batch.job_id
-    WHERE job.namespace_id = bound_namespace
-      AND job.job_id = p_job_id
-      AND job.status = 'leased'
-      AND job.lease_owner = p_lease_owner
-      AND job.lease_token = p_lease_token
-      AND job.lease_expires_at > clock_timestamp()
-      AND job.collection_acquisition_contract = 'cdp-x402-bazaar-v1'
-      AND job.collection_start_height = batch.start_height
-      AND job.collection_end_height = batch.start_height
-      AND batch.batch_sha256 = p_output_sha256
-    FOR UPDATE OF job, batch;
-    IF FOUND THEN
-        UPDATE agent_economy.worker_jobs AS job
-        SET collection_end_height = pending.end_height,
-            updated_at = clock_timestamp()
-        WHERE job.namespace_id = bound_namespace
-          AND job.job_id = p_job_id
-          AND job.status = 'leased'
-          AND job.lease_owner = p_lease_owner
-          AND job.lease_token = p_lease_token
-          AND job.collection_end_height = pending.start_height;
-        IF NOT FOUND THEN
-            RAISE EXCEPTION 'catalog crawl completion is not live';
-        END IF;
-    END IF;
-    RETURN agent_economy.complete_collection_job(
-        bound_namespace, p_job_id, p_lease_owner, p_lease_token, p_output_sha256
-    );
 END
 $$;
 
