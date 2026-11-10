@@ -76,14 +76,15 @@
       ]
     },
     {
-      "description": "Namespace-bound leased collector that acquires bounded chain-bound RPC or fixed public x402 Bazaar inputs, creates immutable evidence objects, recovers backend generation through metadata-only exact-name listing, and stages a noncanonical manifest without object-body read or canonical-promotion authority.",
+      "description": "Namespace-bound leased collector that acquires bounded chain-bound RPC or complete paginated public x402 Bazaar inputs, creates immutable evidence objects, recovers backend generation through metadata-only exact-name listing, and stages a noncanonical manifest plus crawl coverage without object-body read or canonical-promotion authority.",
       "id": "collect-worker",
       "label": "Create-only evidence collection worker",
       "layer": "evidence",
       "patterns": [
         "src/collect.rs",
         "migrations/0013_collect_worker.*.sql",
-        "migrations/0018_public_source_collection.*.sql"
+        "migrations/0018_public_source_collection.*.sql",
+        "migrations/0020_bazaar_catalog_pagination.*.sql"
       ]
     },
     {
@@ -644,6 +645,7 @@
     {"authority": "mechanical", "component": "runtime", "id": "http:live-updates", "kind": "endpoint", "label": "GET /api/v1/stream", "origin": {"method": "get", "path": "src/cockpit.rs", "route": "/api/v1/stream"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:openapi", "kind": "endpoint", "label": "GET /api/v1/openapi.json", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/openapi.json"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:pulse", "kind": "endpoint", "label": "GET /api/v1/pulse", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/pulse"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:catalog-coverage", "kind": "endpoint", "label": "GET /api/v1/catalog/coverage", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/catalog/coverage"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:buyers", "kind": "endpoint", "label": "GET /api/v1/buyers", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:buyer", "kind": "endpoint", "label": "GET /api/v1/buyers/{id}", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers/{id}"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:buyer-dossier", "kind": "endpoint", "label": "GET /api/v1/buyers/{id}/dossier", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers/{id}/dossier"}, "page": "delivery"},

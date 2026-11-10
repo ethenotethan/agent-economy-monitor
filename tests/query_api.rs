@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
 use agent_economy_monitor::query::{
-    BuyerDossierReadModel, ClassificationReadModel, DashboardPage, EvidenceProvenanceBinding, Fact,
-    GraphReadModel, PostgresQueryStore, ProjectionPage, ProjectionPageList, ProvenanceReadModel,
-    PulseReadModel, QueryError, QueryStore, SystemReadModel, api_router,
+    BuyerDossierReadModel, CatalogCoverageReadModel, ClassificationReadModel, DashboardPage,
+    EvidenceProvenanceBinding, Fact, GraphReadModel, PostgresQueryStore, ProjectionPage,
+    ProjectionPageList, ProvenanceReadModel, PulseReadModel, QueryError, QueryStore,
+    SystemReadModel, api_router,
 };
 use async_trait::async_trait;
 use axum::{
@@ -36,6 +37,20 @@ impl QueryStore for FixtureStore {
             finalized_payments: vec![fact("pulse:1", "pulse_metric")],
             verified_discovery: vec![fact("discovery:1", "discovery_observation")],
         })
+    }
+
+    async fn catalog_coverage(&self) -> Result<Option<CatalogCoverageReadModel>, QueryError> {
+        Ok(Some(CatalogCoverageReadModel {
+            source_id: "cdp-x402-bazaar-base".into(),
+            source_reported_total: 33_277,
+            resources_observed: 33_277,
+            pages_archived: 333,
+            verified_qualifying_resources: 31_004,
+            coverage_status: "complete".into(),
+            observed_at: "2026-09-30T00:00:00Z".into(),
+            last_complete_crawl: Some("2026-09-30T00:00:00Z".into()),
+            crawl_lag_seconds: Some(120),
+        }))
     }
 
     async fn buyers(
@@ -217,6 +232,29 @@ async fn pulse_keeps_finalized_payments_separate_from_verified_discovery() {
 }
 
 #[tokio::test]
+async fn catalog_coverage_exposes_explicit_complete_state_and_source_total() {
+    let response = api_router(Arc::new(FixtureStore))
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/catalog/coverage")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body: Value =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert_eq!(body["data"]["coverage_status"], "complete");
+    assert_eq!(body["data"]["source_reported_total"], 33_277);
+    assert_eq!(body["data"]["pages_archived"], 333);
+    assert_eq!(body["data"]["verified_qualifying_resources"], 31_004);
+    assert_eq!(body["data"]["last_complete_crawl"], "2026-09-30T00:00:00Z");
+    assert_eq!(body["data"]["crawl_lag_seconds"], 120);
+}
+
+#[tokio::test]
 async fn list_queries_are_bounded_and_cacheable_with_provenance() {
     let app = api_router(Arc::new(FixtureStore));
 
@@ -262,6 +300,7 @@ async fn purpose_built_surface_is_documented_without_graphql_or_sql() {
     let app = api_router(Arc::new(FixtureStore));
     let paths = [
         "/api/v1/pulse",
+        "/api/v1/catalog/coverage",
         "/api/v1/buyers",
         "/api/v1/buyers/buyer:1",
         "/api/v1/buyers/buyer:1/dossier",
@@ -302,6 +341,12 @@ async fn purpose_built_surface_is_documented_without_graphql_or_sql() {
             .as_object()
             .unwrap()
             .contains_key("/api/v1/provenance/{id}")
+    );
+    assert!(
+        document["paths"]
+            .as_object()
+            .unwrap()
+            .contains_key("/api/v1/catalog/coverage")
     );
     for path in [
         "/api/v1/buyers/{id}",

@@ -1,4 +1,4 @@
-use std::{io::Read, path::PathBuf, sync::Arc};
+use std::{io::Read, path::PathBuf, sync::Arc, time::Duration};
 
 use agent_economy_adapter_api::ProtocolAdapter;
 use agent_economy_contracts::{Observation, ProtocolObservation};
@@ -33,9 +33,15 @@ const MAX_INPUTS: usize = 10_000;
 const MAX_MANIFEST_BYTES: u64 = 8 * 1024 * 1024;
 const MAX_EVIDENCE_BYTES: usize = 4 * 1024 * 1024;
 
-const MAX_OBSERVATIONS: usize = 50_000;
+const MAX_OBSERVATIONS: usize = 200_000;
 const X402_PARSER_VERSION: &str = "x402-adapter@1";
 const MPP_PARSER_VERSION: &str = "mpp-adapter@1";
+const CDP_BAZAAR_BASE_URL: &str =
+    "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources";
+const CDP_BAZAAR_PAGE_LIMIT: u64 = 100;
+const MAX_BAZAAR_PAGES: u64 = 400;
+const MAX_BAZAAR_CRAWL_BYTES: u64 = 256 * 1024 * 1024;
+const BAZAAR_REQUEST_INTERVAL_MS: u64 = 100;
 const CDP_BAZAAR_URL: &str =
     "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=0";
 
@@ -92,7 +98,7 @@ impl CdpBazaarTransport {
 #[async_trait]
 impl PublicSourceTransport for CdpBazaarTransport {
     async fn fetch(&self, url: &str) -> Result<PublicSourceResponse, CollectionError> {
-        if url != CDP_BAZAAR_URL {
+        if !valid_bazaar_url(url) {
             return Err(CollectionError::InvalidInput);
         }
         let mut response = self
@@ -399,26 +405,59 @@ impl CollectionCommitStore for PostgresCollectionCommitStore {
         )
         .map_err(|_| CollectionError::InvalidInput)?;
         let batch_sha256 = batch.evidence_manifest_sha256();
+        let catalog_metrics = if batch.source_id == "cdp-x402-bazaar-base" {
+            let first = batch
+                .evidence
+                .first()
+                .ok_or(CollectionError::InvalidInput)?;
+            let first_page = parse_bazaar_page(&first.archived_bytes)?;
+            let reported_total = first_page
+                .pagination
+                .as_ref()
+                .map_or(first_page.items.len() as u64, |page| page.total);
+            let resources_observed = batch.evidence.iter().try_fold(0_u64, |count, evidence| {
+                let page = parse_bazaar_page(&evidence.archived_bytes)?;
+                count
+                    .checked_add(page.items.len() as u64)
+                    .ok_or(CollectionError::InvalidInput)
+            })?;
+            Some((
+                i64::try_from(reported_total).map_err(|_| CollectionError::InvalidInput)?,
+                i64::try_from(resources_observed).map_err(|_| CollectionError::InvalidInput)?,
+            ))
+        } else {
+            None
+        };
+        let stage_statement = if catalog_metrics.is_some() {
+            "SELECT agent_economy.stage_catalog_crawl_batch(\
+                $1::text::uuid, $2, $3::text::uuid, $4, $5, $6, $7, \
+                $8::bigint, $9::bigint, $10::bigint, $11::text::jsonb, \
+                $12::bigint, $13::bigint)"
+        } else {
+            "SELECT agent_economy.stage_collection_batch(\
+                $1::text::uuid, $2, $3::text::uuid, $4, $5, $6, $7, \
+                $8::bigint, $9::bigint, $10::bigint, $11::text::jsonb)"
+        };
         let client = self.client.lock().await;
+        let mut parameters: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = vec![
+            &job.job_id,
+            &job.lease_owner,
+            &job.lease_token,
+            &job.input_sha256,
+            &batch_sha256,
+            &batch.chain,
+            &batch.source_id,
+            &batch.observed_at_unix_ms,
+            &start_height,
+            &end_height,
+            &evidence_json,
+        ];
+        if let Some((reported_total, resources_observed)) = &catalog_metrics {
+            parameters.push(reported_total);
+            parameters.push(resources_observed);
+        }
         client
-            .query_one(
-                "SELECT agent_economy.stage_collection_batch(\
-                    $1::text::uuid, $2, $3::text::uuid, $4, $5, $6, $7, \
-                    $8::bigint, $9::bigint, $10::bigint, $11::text::jsonb)",
-                &[
-                    &job.job_id,
-                    &job.lease_owner,
-                    &job.lease_token,
-                    &job.input_sha256,
-                    &batch_sha256,
-                    &batch.chain,
-                    &batch.source_id,
-                    &batch.observed_at_unix_ms,
-                    &start_height,
-                    &end_height,
-                    &evidence_json,
-                ],
-            )
+            .query_one(stage_statement, &parameters)
             .await
             .map_err(|error| {
                 tracing::error!(
@@ -799,6 +838,21 @@ struct ManifestInput {
     evidence_base64: String,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BazaarPagination {
+    limit: u64,
+    offset: u64,
+    total: u64,
+}
+
+#[derive(Deserialize)]
+struct BazaarPage {
+    items: Vec<serde_json::Value>,
+    #[serde(default)]
+    pagination: Option<BazaarPagination>,
+}
+
 #[derive(Clone, Copy, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum InputKind {
@@ -975,8 +1029,7 @@ where
     ) -> Result<CollectionBatch, CollectionError> {
         if manifest.source_id != "cdp-x402-bazaar-base"
             || manifest.chain != "base"
-            || manifest.start_height != 0
-            || manifest.end_height != 0
+            || manifest.end_height != manifest.start_height
             || manifest.inputs.len() != 1
         {
             return Err(CollectionError::InvalidInput);
@@ -989,48 +1042,173 @@ where
         {
             return Err(CollectionError::InvalidInput);
         }
-        let response = self.public_source_transport.fetch(&input.context).await?;
-        let provenance = EvidenceProvenance::new(
-            "public-http-source-v1",
-            &format!("cdp-x402-bazaar:offset:0:height:{}", input.height),
-            [
-                ("chain", manifest.chain.clone()),
-                ("height", input.height.to_string()),
-                ("input-kind", "x402_bazaar".to_owned()),
-                ("provider", "cdp-bazaar".to_owned()),
-                ("source", manifest.source_id.clone()),
-            ],
-        )
-        .map_err(|_| CollectionError::InvalidInput)?;
-        let context = EvidenceContext::new(&manifest.source_id, &manifest.observed_date)
-            .map_err(|_| CollectionError::InvalidInput)?
-            .with_provenance(provenance);
-        let receipt = self
-            .evidence_store
-            .archive_verified(&context, &response.body)
-            .await?;
-        let archived = ArchivedEvidence {
-            evidence_id: format!("evidence:sha256:{}", receipt.object.sha256()),
-            sha256: receipt.object.sha256(),
-            storage_uri: receipt.object.name().to_owned(),
-            storage_generation: receipt.generation,
-            media_type: "application/json".to_owned(),
-            byte_length: response.body.len() as u64,
-            height: input.height,
-            verified: true,
-            archived_bytes: response.body,
-        };
-        parse_protocol_input(&manifest, input, &archived.archived_bytes)?;
+        let mut archived_pages = Vec::new();
+        let mut archived_bytes = 0_u64;
+        let mut offset = 0_u64;
+        let mut frozen_total = None;
+        loop {
+            let page_index =
+                u64::try_from(archived_pages.len()).map_err(|_| CollectionError::InvalidInput)?;
+            if page_index >= MAX_BAZAAR_PAGES {
+                return Err(CollectionError::InvalidInput);
+            }
+            let evidence_height = manifest
+                .start_height
+                .checked_add(page_index)
+                .ok_or(CollectionError::InvalidInput)?;
+            let url = bazaar_url(offset);
+            let response = self.public_source_transport.fetch(&url).await?;
+            archived_bytes = archived_bytes
+                .checked_add(
+                    u64::try_from(response.body.len())
+                        .map_err(|_| CollectionError::InvalidInput)?,
+                )
+                .ok_or(CollectionError::InvalidInput)?;
+            if archived_bytes > MAX_BAZAAR_CRAWL_BYTES {
+                return Err(CollectionError::InvalidInput);
+            }
+            let provenance = EvidenceProvenance::new(
+                "public-http-source-v1",
+                &format!("cdp-x402-bazaar:offset:{offset}:page:{page_index}"),
+                [
+                    ("chain", manifest.chain.clone()),
+                    ("height", evidence_height.to_string()),
+                    ("input-kind", "x402_bazaar".to_owned()),
+                    ("provider", "cdp-bazaar".to_owned()),
+                    ("source", manifest.source_id.clone()),
+                ],
+            )
+            .map_err(|_| CollectionError::InvalidInput)?;
+            let context = EvidenceContext::new(&manifest.source_id, &manifest.observed_date)
+                .map_err(|_| CollectionError::InvalidInput)?
+                .with_provenance(provenance);
+            let receipt = self
+                .evidence_store
+                .archive_verified(&context, &response.body)
+                .await?;
+            let archived = ArchivedEvidence {
+                evidence_id: format!("evidence:sha256:{}", receipt.object.sha256()),
+                sha256: receipt.object.sha256(),
+                storage_uri: receipt.object.name().to_owned(),
+                storage_generation: receipt.generation,
+                media_type: "application/json".to_owned(),
+                byte_length: response.body.len() as u64,
+                height: evidence_height,
+                verified: true,
+                archived_bytes: response.body,
+            };
+            let page_input = ManifestInput {
+                height: evidence_height,
+                kind: InputKind::X402Bazaar,
+                context: url,
+                evidence_base64: String::new(),
+            };
+            parse_protocol_input(&manifest, &page_input, &archived.archived_bytes)?;
+            let page = parse_bazaar_page(&archived.archived_bytes)?;
+            archived_pages.push(archived);
+            let Some(pagination) = page.pagination else {
+                break;
+            };
+            if pagination.limit != CDP_BAZAAR_PAGE_LIMIT || pagination.offset != offset {
+                return Err(CollectionError::InvalidInput);
+            }
+            let boundary = *frozen_total.get_or_insert(pagination.total);
+            if pagination.total < boundary || boundary > MAX_BAZAAR_PAGES * CDP_BAZAAR_PAGE_LIMIT {
+                return Err(CollectionError::InvalidInput);
+            }
+            let item_count =
+                u64::try_from(page.items.len()).map_err(|_| CollectionError::InvalidInput)?;
+            if item_count > CDP_BAZAAR_PAGE_LIMIT
+                || (offset < boundary && item_count == 0)
+                || (item_count < CDP_BAZAAR_PAGE_LIMIT
+                    && offset.saturating_add(item_count) < boundary)
+            {
+                return Err(CollectionError::InvalidInput);
+            }
+            if offset.saturating_add(item_count) >= boundary {
+                break;
+            }
+            offset = offset
+                .checked_add(CDP_BAZAAR_PAGE_LIMIT)
+                .ok_or(CollectionError::InvalidInput)?;
+            tokio::time::sleep(Duration::from_millis(BAZAAR_REQUEST_INTERVAL_MS)).await;
+        }
+        let end_height = manifest
+            .start_height
+            .checked_add(
+                u64::try_from(archived_pages.len().saturating_sub(1))
+                    .map_err(|_| CollectionError::InvalidInput)?,
+            )
+            .ok_or(CollectionError::InvalidInput)?;
         Ok(CollectionBatch {
             chain: manifest.chain,
             source_id: manifest.source_id,
             observed_at_unix_ms: manifest.observed_at_unix_ms,
             start_height: manifest.start_height,
-            end_height: manifest.end_height,
-            evidence: vec![archived],
+            end_height,
+            evidence: archived_pages,
             observations: Vec::new(),
         })
     }
+}
+
+fn bazaar_url(offset: u64) -> String {
+    format!("{CDP_BAZAAR_BASE_URL}?limit={CDP_BAZAAR_PAGE_LIMIT}&offset={offset}")
+}
+
+fn valid_bazaar_url(url: &str) -> bool {
+    let prefix = format!("{CDP_BAZAAR_BASE_URL}?limit={CDP_BAZAAR_PAGE_LIMIT}&offset=");
+    let Some(offset) = url.strip_prefix(&prefix) else {
+        return false;
+    };
+    !offset.is_empty()
+        && (offset == "0" || !offset.starts_with('0'))
+        && offset.bytes().all(|byte| byte.is_ascii_digit())
+        && offset
+            .parse::<u64>()
+            .is_ok_and(|value| value % CDP_BAZAAR_PAGE_LIMIT == 0)
+}
+
+fn parse_bazaar_page(bytes: &[u8]) -> Result<BazaarPage, CollectionError> {
+    serde_json::from_slice(bytes).map_err(|_| CollectionError::InvalidInput)
+}
+
+fn validate_replayed_bazaar_pages(evidence: &[ArchivedEvidence]) -> Result<(), CollectionError> {
+    let mut frozen_total = None;
+    for (index, archived) in evidence.iter().enumerate() {
+        let page = parse_bazaar_page(&archived.archived_bytes)?;
+        let Some(pagination) = page.pagination else {
+            return if evidence.len() == 1 {
+                Ok(())
+            } else {
+                Err(CollectionError::InvalidInput)
+            };
+        };
+        let expected_offset = u64::try_from(index)
+            .map_err(|_| CollectionError::InvalidInput)?
+            .checked_mul(CDP_BAZAAR_PAGE_LIMIT)
+            .ok_or(CollectionError::InvalidInput)?;
+        if pagination.limit != CDP_BAZAAR_PAGE_LIMIT || pagination.offset != expected_offset {
+            return Err(CollectionError::InvalidInput);
+        }
+        let boundary = *frozen_total.get_or_insert(pagination.total);
+        let item_count =
+            u64::try_from(page.items.len()).map_err(|_| CollectionError::InvalidInput)?;
+        if pagination.total < boundary
+            || boundary > MAX_BAZAAR_PAGES * CDP_BAZAAR_PAGE_LIMIT
+            || item_count > CDP_BAZAAR_PAGE_LIMIT
+            || (expected_offset < boundary && item_count == 0)
+            || (item_count < CDP_BAZAAR_PAGE_LIMIT
+                && expected_offset.saturating_add(item_count) < boundary)
+        {
+            return Err(CollectionError::InvalidInput);
+        }
+        let reaches_boundary = expected_offset.saturating_add(item_count) >= boundary;
+        if reaches_boundary != (index + 1 == evidence.len()) {
+            return Err(CollectionError::InvalidInput);
+        }
+    }
+    Ok(())
 }
 
 pub fn verify_replayed_evidence(
@@ -1090,6 +1268,9 @@ fn verify_evidence(
         return Err(CollectionError::InvalidInput);
     }
     let is_bazaar = source_id == "cdp-x402-bazaar-base";
+    if is_bazaar {
+        validate_replayed_bazaar_pages(&evidence)?;
+    }
     let manifest = Manifest {
         schema_version: 1,
         chain: chain.clone(),
@@ -1106,7 +1287,7 @@ fn verify_evidence(
                 InputKind::ChainTransfer
             },
             context: if is_bazaar {
-                CDP_BAZAAR_URL.to_owned()
+                bazaar_url(0)
             } else {
                 "readback".to_owned()
             },
@@ -1124,10 +1305,18 @@ fn verify_evidence(
                 Vec::new()
             }
         } else if archived.media_type == "application/json" && is_bazaar {
+            let page_index = archived
+                .height
+                .checked_sub(start_height)
+                .ok_or(CollectionError::InvalidInput)?;
             vec![ManifestInput {
                 height: archived.height,
                 kind: InputKind::X402Bazaar,
-                context: CDP_BAZAAR_URL.to_owned(),
+                context: bazaar_url(
+                    page_index
+                        .checked_mul(CDP_BAZAAR_PAGE_LIMIT)
+                        .ok_or(CollectionError::InvalidInput)?,
+                ),
                 evidence_base64: String::new(),
             }]
         } else {
