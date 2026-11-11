@@ -285,7 +285,7 @@ async fn assert_catalog_coverage_deduplicates_resources(admin: &Client) {
         .execute(
             "INSERT INTO agent_economy.catalog_crawl_staging( \
              namespace_id,job_id,source_reported_total,resources_observed,pages_archived) \
-             VALUES ($1::text::uuid,$2::text::uuid,1,1,1)",
+             VALUES ($1::text::uuid,$2::text::uuid,2,2,1)",
             &[&namespace_id, &job_id],
         )
         .await
@@ -379,19 +379,24 @@ async fn assert_catalog_coverage_deduplicates_resources(admin: &Client) {
         .await
         .unwrap();
 
-    let coverage: i64 = admin
+    let coverage = admin
         .query_one(
-            "SELECT verified_qualifying_resources \
+            "SELECT verified_qualifying_resources, resources_observed \
              FROM agent_economy.catalog_crawl_coverage \
              WHERE namespace_id=$1::text::uuid AND job_id=$2::text::uuid",
             &[&namespace_id, &job_id],
         )
         .await
-        .unwrap()
-        .get(0);
+        .unwrap();
     assert_eq!(
-        coverage, 1,
+        coverage.get::<_, i64>(0),
+        1,
         "multiple exact offers for one Bazaar resource were overcounted"
+    );
+    assert_eq!(
+        coverage.get::<_, i64>(1),
+        2,
+        "unsupported Bazaar resources must stay observed but never verified"
     );
 }
 

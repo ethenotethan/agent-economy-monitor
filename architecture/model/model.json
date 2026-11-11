@@ -1021,7 +1021,7 @@
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 12413
+      "line_count": 12418
     },
     {
       "declaration_count": 137,
@@ -18828,7 +18828,7 @@
           },
           {
             "kind": "fn",
-            "line": 397,
+            "line": 402,
             "name": "run_collect",
             "passes": [
               "rust.declaration"
@@ -18836,7 +18836,7 @@
           },
           {
             "kind": "fn",
-            "line": 415,
+            "line": 420,
             "name": "run_verifier",
             "passes": [
               "rust.declaration"
@@ -18844,14 +18844,14 @@
           },
           {
             "kind": "async-fn",
-            "line": 436,
+            "line": 441,
             "name": "split_process_custody_executes_every_launch_chain",
             "passes": [
               "rust.declaration"
             ]
           }
         ],
-        "line_count": 634,
+        "line_count": 639,
         "mapped_declarations": 0,
         "passes": [
           "rust.declaration"
@@ -22412,7 +22412,7 @@
   "inventory": {
     "declarations": 1835,
     "files": 187,
-    "lines": 57324
+    "lines": 57329
   },
   "layers": [
     {
@@ -22453,7 +22453,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "ab6d6f08ec2e5344bdf342e147bdbc7bb7043ec32186c74eaf196ca5de01e87a",
+  "source_tree_sha256": "f8785d0993758ab11f44e7a22de16329fb10e6b21823d85f1373b64777fb2367",
   "stores": {
     "count": 2,
     "items": [
