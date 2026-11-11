@@ -48,8 +48,29 @@ class CockpitBrowserTest(unittest.TestCase):
                         "verified_discovery": [discovery],
                     }).encode()
                     content_type = "application/json"
+                elif path == "/api/v1/catalog/coverage":
+                    body = json.dumps({
+                        "api_version": "v1",
+                        "data": {
+                            "source_id": "cdp-x402-bazaar-base",
+                            "source_reported_total": 33277,
+                            "resources_observed": 33277,
+                            "pages_archived": 333,
+                            "verified_qualifying_resources": 31004,
+                            "coverage_status": "complete",
+                            "observed_at": "2099-01-01T00:00:00Z",
+                            "provenance_ids": ["11111111-1111-1111-1111-111111111111"],
+                        },
+                    }).encode()
+                    content_type = "application/json"
                 elif path == "/api/v1/buyers":
                     body = json.dumps({"api_version": "v1", "items": [self.fact("buyer:fixture", "buyer", "Buyer fixture")], "next_cursor": None}).encode()
+                    content_type = "application/json"
+                elif path == "/api/v1/services":
+                    body = json.dumps({"api_version": "v1", "items": [self.fact("service:fixture", "service", "Service fixture")], "next_cursor": None}).encode()
+                    content_type = "application/json"
+                elif path == "/api/v1/system":
+                    body = json.dumps({"api_version": "v1", "data": {"facts": [self.fact("system:fixture", "system", "System fixture")]}}).encode()
                     content_type = "application/json"
                 elif path == "/api/v1/buyers/buyer%3Afixture/dossier":
                     buyer = self.fact("buyer:fixture", "buyer", "Buyer fixture")
@@ -176,6 +197,12 @@ class CockpitBrowserTest(unittest.TestCase):
         expect(discovery).to_contain_text("cdp-x402-bazaar-base")
         expect(discovery).not_to_contain_text("buyer")
         expect(discovery.locator("button[data-provenance-id]")).to_have_count(1)
+        coverage = page.locator('[data-pulse-section="catalog-coverage"]')
+        expect(coverage).to_contain_text("COMPLETE")
+        expect(coverage).to_contain_text("33277 / 33277")
+        expect(coverage).to_contain_text("333 pages archived")
+        expect(coverage).to_contain_text("31004 verified qualifying resources")
+        expect(coverage.locator("button[data-provenance-id]")).to_have_count(1)
         discovery.locator("button[data-provenance-id]").click()
         drawer = page.locator("#provenance-drawer")
         expect(drawer).to_contain_text("runtime-402:fixture")
@@ -204,6 +231,7 @@ class CockpitBrowserTest(unittest.TestCase):
                 "verified_discovery": [],
             }),
         )
+        empty.route("**/api/v1/catalog/coverage", lambda route: route.fulfill(status=404))
         empty.goto(f"http://127.0.0.1:{self.port}/")
         expect(empty.locator("#view-root")).to_have_attribute("data-state", "empty")
         expect(empty.locator("#view-root")).to_contain_text(
@@ -246,6 +274,37 @@ class CockpitBrowserTest(unittest.TestCase):
             "No finalized payments"
         )
         fresh.close()
+
+    def test_partial_stale_and_failed_catalog_crawls_are_visible_across_product_surfaces(self):
+        cases = [
+            ("services", "partial", "PARTIAL"),
+            ("system", "stale", "STALE"),
+            ("pulse", "failed", "FAILED"),
+        ]
+        for view, status, label in cases:
+            with self.subTest(view=view, status=status):
+                page = self.browser.new_page(viewport={"width": 1440, "height": 900})
+                page.route(
+                    "**/api/v1/catalog/coverage",
+                    lambda route, _request, status=status: route.fulfill(json={
+                        "api_version": "v1",
+                        "data": {
+                            "source_id": "cdp-x402-bazaar-base",
+                            "source_reported_total": 33277,
+                            "resources_observed": 1200,
+                            "pages_archived": 12,
+                            "verified_qualifying_resources": 900,
+                            "coverage_status": status,
+                            "observed_at": "2099-01-01T00:00:00Z",
+                            "provenance_ids": ["11111111-1111-1111-1111-111111111111"],
+                        },
+                    }),
+                )
+                page.goto(f"http://127.0.0.1:{self.port}/?view={view}")
+                coverage = page.locator("[data-catalog-coverage]")
+                expect(coverage).to_contain_text(label)
+                expect(coverage).to_contain_text("1200 / 33277")
+                page.close()
 
     def test_fresh_discovery_cannot_hide_stale_finalized_payments(self):
         page = self.browser.new_page(viewport={"width": 1440, "height": 900})

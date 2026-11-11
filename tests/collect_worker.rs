@@ -35,7 +35,7 @@ struct FakeRpcTransport {
 }
 
 struct FakePublicSourceTransport {
-    response: PublicSourceResponse,
+    responses: Mutex<VecDeque<PublicSourceResponse>>,
     requests: Arc<Mutex<Vec<String>>>,
 }
 
@@ -43,7 +43,11 @@ struct FakePublicSourceTransport {
 impl PublicSourceTransport for FakePublicSourceTransport {
     async fn fetch(&self, url: &str) -> Result<PublicSourceResponse, CollectionError> {
         self.requests.lock().unwrap().push(url.to_owned());
-        Ok(self.response.clone())
+        self.responses
+            .lock()
+            .unwrap()
+            .pop_front()
+            .ok_or(CollectionError::EvidenceUnavailable)
     }
 }
 
@@ -181,16 +185,20 @@ fn manifest(chain: &str, protocol_kind: &str, protocol_payload: &[u8]) -> Vec<u8
 }
 
 fn bazaar_manifest() -> Vec<u8> {
+    bazaar_manifest_at(0)
+}
+
+fn bazaar_manifest_at(start_height: u64) -> Vec<u8> {
     serde_json::to_vec(&serde_json::json!({
         "schema_version": 1,
         "chain": "base",
         "source_id": "cdp-x402-bazaar-base",
         "observed_at_unix_ms": 1790986800000_i64,
         "observed_date": "2026-10-03",
-        "start_height": 0,
-        "end_height": 0,
+        "start_height": start_height,
+        "end_height": start_height,
         "inputs": [{
-            "height": 0,
+            "height": start_height,
             "kind": "x402_bazaar",
             "context": "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=0"
         }]
@@ -199,12 +207,16 @@ fn bazaar_manifest() -> Vec<u8> {
 }
 
 fn bazaar_job(input_sha256: String) -> LeasedJob {
+    bazaar_job_at(input_sha256, 0)
+}
+
+fn bazaar_job_at(input_sha256: String, start_height: u64) -> LeasedJob {
     let mut job = leased_job(input_sha256);
     job.collection_admission = Some(CollectionAdmission {
         chain_scope: "base".into(),
         source_id: "cdp-x402-bazaar-base".into(),
-        start_height: 0,
-        end_height: 0,
+        start_height,
+        end_height: start_height,
         acquisition_contract: "cdp-x402-bazaar-v1".into(),
         evidence_contract: "evidence-store-create-read-sha256-v1".into(),
     });
@@ -212,7 +224,52 @@ fn bazaar_job(input_sha256: String) -> LeasedJob {
 }
 
 fn bazaar_fixture() -> Vec<u8> {
-    include_bytes!("../crates/x402-adapter/tests/fixtures/bazaar-v2-heterogeneous.json").to_vec()
+    let mut fixture: serde_json::Value = serde_json::from_slice(include_bytes!(
+        "../crates/x402-adapter/tests/fixtures/bazaar-v2-heterogeneous.json"
+    ))
+    .unwrap();
+    let total = fixture["items"].as_array().unwrap().len();
+    fixture["pagination"] = serde_json::json!({"limit": 100, "offset": 0, "total": total});
+    serde_json::to_vec(&fixture).unwrap()
+}
+
+fn paginated_bazaar_fixture(offset: u64, total: u64, resources: usize) -> Vec<u8> {
+    let items = (0..resources)
+        .map(|index| {
+            serde_json::json!({
+                "resource": format!("https://merchant.example/{offset}-{index}"),
+                "x402Version": 2,
+                "accepts": [{
+                    "scheme": "exact",
+                    "network": "eip155:8453",
+                    "amount": "1000",
+                    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                    "payTo": "0x1111111111111111111111111111111111111111",
+                    "extra": {"name": "USD Coin"}
+                }]
+            })
+        })
+        .collect::<Vec<_>>();
+    serde_json::to_vec(&serde_json::json!({
+        "items": items,
+        "pagination": {"limit": 100, "offset": offset, "total": total}
+    }))
+    .unwrap()
+}
+
+fn fake_public_source(
+    bodies: impl IntoIterator<Item = Vec<u8>>,
+    requests: Arc<Mutex<Vec<String>>>,
+) -> FakePublicSourceTransport {
+    FakePublicSourceTransport {
+        responses: Mutex::new(
+            bodies
+                .into_iter()
+                .map(|body| PublicSourceResponse::try_new(200, body).unwrap())
+                .collect(),
+        ),
+        requests,
+    }
 }
 
 fn rpc_transport(chain: &str, reported_height: u64) -> FakeRpcTransport {
@@ -290,10 +347,10 @@ async fn genuine_public_bazaar_evidence_is_archived_then_replayed_into_an_observ
         commit_store.clone(),
         rpc_transport("base", 42),
     )
-    .with_public_source_transport(Arc::new(FakePublicSourceTransport {
-        response: PublicSourceResponse::try_new(200, bazaar_fixture()).unwrap(),
-        requests: Arc::clone(&source_requests),
-    }));
+    .with_public_source_transport(Arc::new(fake_public_source(
+        [bazaar_fixture(), bazaar_fixture()],
+        Arc::clone(&source_requests),
+    )));
 
     handler.process(&bazaar_job(digest.clone())).await.unwrap();
     handler.process(&bazaar_job(digest)).await.unwrap();
@@ -346,7 +403,194 @@ async fn genuine_public_bazaar_evidence_is_archived_then_replayed_into_an_observ
 }
 
 #[tokio::test]
-async fn public_bazaar_page_coordinate_must_match_the_fixed_source_request() {
+async fn bazaar_crawl_fetches_every_page_once_in_offset_order_to_the_frozen_boundary() {
+    let root =
+        std::env::temp_dir().join(format!("aem-collect-bazaar-pages-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&root);
+    let input_root = root.join("inputs");
+    fs::create_dir_all(&input_root).unwrap();
+    let root = fs::canonicalize(&root).unwrap();
+    let input_root = root.join("inputs");
+    let evidence_store = Arc::new(FilesystemEvidenceStore::open(root.join("evidence")).unwrap());
+    let commit_store = Arc::new(RecordingCommitStore::default());
+    let bytes = bazaar_manifest();
+    let digest = format!("{:x}", Sha256::digest(&bytes));
+    fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
+    let requests = Arc::new(Mutex::new(Vec::new()));
+    let handler = CollectionHandler::new(
+        input_root,
+        evidence_store,
+        commit_store.clone(),
+        rpc_transport("base", 42),
+    )
+    .with_public_source_transport(Arc::new(fake_public_source(
+        [
+            paginated_bazaar_fixture(0, 205, 100),
+            paginated_bazaar_fixture(100, 305, 100),
+            paginated_bazaar_fixture(200, 305, 5),
+        ],
+        Arc::clone(&requests),
+    )));
+
+    handler
+        .process(&bazaar_job(digest))
+        .await
+        .unwrap_or_else(|error| panic!("{error:?}; requests={:?}", requests.lock().unwrap()));
+
+    assert_eq!(
+        requests.lock().unwrap().as_slice(),
+        [
+            "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=0",
+            "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=100",
+            "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=200",
+        ]
+    );
+    let batches = commit_store.0.lock().unwrap();
+    assert_eq!(batches[0].evidence().len(), 3);
+    assert_eq!(batches[0].start_height(), 0);
+    assert_eq!(batches[0].end_height(), 2);
+    assert_eq!(
+        batches[0]
+            .evidence()
+            .iter()
+            .map(ArchivedEvidence::height)
+            .collect::<Vec<_>>(),
+        vec![0, 1, 2]
+    );
+    drop(batches);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn recurring_bazaar_crawl_uses_the_durable_cursor_range_without_skipping_source_offsets() {
+    let root = std::env::temp_dir().join(format!(
+        "aem-collect-bazaar-recurring-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let input_root = root.join("inputs");
+    fs::create_dir_all(&input_root).unwrap();
+    let root = fs::canonicalize(&root).unwrap();
+    let input_root = root.join("inputs");
+    let evidence_store = Arc::new(FilesystemEvidenceStore::open(root.join("evidence")).unwrap());
+    let commit_store = Arc::new(RecordingCommitStore::default());
+    let bytes = bazaar_manifest_at(3);
+    let digest = format!("{:x}", Sha256::digest(&bytes));
+    fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
+    let requests = Arc::new(Mutex::new(Vec::new()));
+    let handler = CollectionHandler::new(
+        input_root,
+        evidence_store,
+        commit_store.clone(),
+        rpc_transport("base", 42),
+    )
+    .with_public_source_transport(Arc::new(fake_public_source(
+        [
+            paginated_bazaar_fixture(0, 205, 100),
+            paginated_bazaar_fixture(100, 205, 100),
+            paginated_bazaar_fixture(200, 205, 5),
+        ],
+        Arc::clone(&requests),
+    )));
+
+    handler.process(&bazaar_job_at(digest, 3)).await.unwrap();
+
+    assert_eq!(
+        requests.lock().unwrap().as_slice(),
+        [
+            "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=0",
+            "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=100",
+            "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=200",
+        ]
+    );
+    let batches = commit_store.0.lock().unwrap();
+    assert_eq!(batches[0].start_height(), 3);
+    assert_eq!(batches[0].end_height(), 5);
+    assert_eq!(
+        batches[0]
+            .evidence()
+            .iter()
+            .map(ArchivedEvidence::height)
+            .collect::<Vec<_>>(),
+        vec![3, 4, 5]
+    );
+    drop(batches);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn bazaar_crawl_rejects_total_regression_without_committing_a_partial_batch() {
+    let root = std::env::temp_dir().join(format!(
+        "aem-collect-bazaar-regression-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let input_root = root.join("inputs");
+    fs::create_dir_all(&input_root).unwrap();
+    let root = fs::canonicalize(&root).unwrap();
+    let input_root = root.join("inputs");
+    let evidence_store = Arc::new(FilesystemEvidenceStore::open(root.join("evidence")).unwrap());
+    let commit_store = Arc::new(RecordingCommitStore::default());
+    let bytes = bazaar_manifest();
+    let digest = format!("{:x}", Sha256::digest(&bytes));
+    fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
+    let handler = CollectionHandler::new(
+        input_root,
+        evidence_store,
+        commit_store.clone(),
+        rpc_transport("base", 42),
+    )
+    .with_public_source_transport(Arc::new(fake_public_source(
+        [
+            paginated_bazaar_fixture(0, 205, 100),
+            paginated_bazaar_fixture(100, 99, 0),
+        ],
+        Arc::new(Mutex::new(Vec::new())),
+    )));
+
+    let error = handler.process(&bazaar_job(digest)).await.unwrap_err();
+
+    assert_eq!(error.code(), "invalid_protocol_evidence");
+    assert!(commit_store.0.lock().unwrap().is_empty());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn bazaar_crawl_rejects_missing_pagination_without_committing_a_partial_batch() {
+    let root = std::env::temp_dir().join(format!(
+        "aem-collect-bazaar-missing-pagination-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&root);
+    let input_root = root.join("inputs");
+    fs::create_dir_all(&input_root).unwrap();
+    let root = fs::canonicalize(&root).unwrap();
+    let input_root = root.join("inputs");
+    let evidence_store = Arc::new(FilesystemEvidenceStore::open(root.join("evidence")).unwrap());
+    let commit_store = Arc::new(RecordingCommitStore::default());
+    let bytes = bazaar_manifest();
+    let digest = format!("{:x}", Sha256::digest(&bytes));
+    fs::write(input_root.join(format!("{digest}.json")), bytes).unwrap();
+    let handler = CollectionHandler::new(
+        input_root,
+        evidence_store,
+        commit_store.clone(),
+        rpc_transport("base", 42),
+    )
+    .with_public_source_transport(Arc::new(fake_public_source(
+        [br#"{"items":[]}"#.to_vec()],
+        Arc::new(Mutex::new(Vec::new())),
+    )));
+
+    let error = handler.process(&bazaar_job(digest)).await.unwrap_err();
+
+    assert_eq!(error.code(), "invalid_protocol_evidence");
+    assert!(commit_store.0.lock().unwrap().is_empty());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn durable_cursor_height_does_not_shift_the_source_page_coordinate() {
     let root = std::env::temp_dir().join(format!(
         "aem-collect-bazaar-coordinate-{}",
         std::process::id()
@@ -368,19 +612,28 @@ async fn public_bazaar_page_coordinate_must_match_the_fixed_source_request() {
     let mut job = bazaar_job(digest);
     job.collection_admission.as_mut().unwrap().start_height = 42;
     job.collection_admission.as_mut().unwrap().end_height = 42;
+    let requests = Arc::new(Mutex::new(Vec::new()));
     let handler = CollectionHandler::new(
         input_root,
         evidence_store,
         commit_store.clone(),
         rpc_transport("base", 42),
     )
-    .with_public_source_transport(Arc::new(FakePublicSourceTransport {
-        response: PublicSourceResponse::try_new(200, bazaar_fixture()).unwrap(),
-        requests: Arc::new(Mutex::new(Vec::new())),
-    }));
+    .with_public_source_transport(Arc::new(fake_public_source(
+        [bazaar_fixture()],
+        Arc::clone(&requests),
+    )));
 
-    assert!(handler.process(&job).await.is_err());
-    assert!(commit_store.0.lock().unwrap().is_empty());
+    handler.process(&job).await.unwrap();
+
+    assert_eq!(
+        requests.lock().unwrap().as_slice(),
+        ["https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=0"]
+    );
+    let batches = commit_store.0.lock().unwrap();
+    assert_eq!(batches[0].start_height(), 42);
+    assert_eq!(batches[0].evidence()[0].height(), 42);
+    drop(batches);
     fs::remove_dir_all(root).unwrap();
 }
 
@@ -403,11 +656,10 @@ async fn malformed_explicit_attribution_fails_before_cursor_or_observation_commi
         commit_store.clone(),
         rpc_transport("base", 42),
     )
-    .with_public_source_transport(Arc::new(FakePublicSourceTransport {
-        response: PublicSourceResponse::try_new(200, br#"{"items":[{"accepts":"bad"}]}"#.to_vec())
-            .unwrap(),
-        requests: Arc::new(Mutex::new(Vec::new())),
-    }));
+    .with_public_source_transport(Arc::new(fake_public_source(
+        [br#"{"items":[{"accepts":"bad"}]}"#.to_vec()],
+        Arc::new(Mutex::new(Vec::new())),
+    )));
 
     assert!(handler.process(&bazaar_job(digest)).await.is_err());
     assert!(commit_store.0.lock().unwrap().is_empty());

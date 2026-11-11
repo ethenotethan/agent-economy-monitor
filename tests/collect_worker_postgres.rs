@@ -62,6 +62,344 @@ async fn connect(database_url: &str) -> Client {
     client
 }
 
+async fn assert_catalog_stage_survives_worker_crash(admin: &Client, collector: &Client) {
+    let run_key = u64::from(std::process::id()) * 10 + 9;
+    let namespace_id = format!("00000000-0000-0000-0000-{run_key:012}");
+    let job_id = format!("00000000-0000-0000-0001-{run_key:012}");
+    let input_sha = "1".repeat(64);
+    let batch_sha = "2".repeat(64);
+    let evidence = serde_json::json!([
+        {
+            "evidence_id": format!("evidence:sha256:{}", "3".repeat(64)),
+            "sha256": "3".repeat(64),
+            "storage_uri": format!("evidence/cdp-x402-bazaar-base/2026-11-11/sha256/33/{}", "3".repeat(64)),
+            "storage_generation": "1", "media_type": "application/json",
+            "byte_length": 1, "height": 0
+        },
+        {
+            "evidence_id": format!("evidence:sha256:{}", "4".repeat(64)),
+            "sha256": "4".repeat(64),
+            "storage_uri": format!("evidence/cdp-x402-bazaar-base/2026-11-11/sha256/44/{}", "4".repeat(64)),
+            "storage_generation": "1", "media_type": "application/json",
+            "byte_length": 1, "height": 1
+        }
+    ])
+    .to_string();
+    admin
+        .execute(
+            "INSERT INTO agent_economy.namespaces(namespace_id,namespace_kind,namespace_key) \
+             VALUES ($1::text::uuid,'tenant',$2)",
+            &[
+                &namespace_id,
+                &format!("catalog-crash-{}", std::process::id()),
+            ],
+        )
+        .await
+        .unwrap();
+    admin
+        .execute(
+            "INSERT INTO agent_economy.collection_runtime_namespaces(login_name,namespace_id,purpose) \
+             VALUES ('agent_economy_collector_runtime',$1::text::uuid,'collect')",
+            &[&namespace_id],
+        )
+        .await
+        .unwrap();
+    admin
+        .execute(
+            "INSERT INTO agent_economy.worker_jobs( \
+             namespace_id,job_id,mode,job_kind,idempotency_key,input_sha256, \
+             collection_chain_scope,collection_source_id,collection_start_height, \
+             collection_end_height,collection_acquisition_contract,collection_evidence_contract) \
+             VALUES ($1::text::uuid,$2::text::uuid,'collect','chain-protocol-range',$3,$4, \
+             'base','cdp-x402-bazaar-base',0,0,'cdp-x402-bazaar-v1', \
+             'evidence-store-create-read-sha256-v1')",
+            &[
+                &namespace_id,
+                &job_id,
+                &format!("catalog-crash-{run_key}"),
+                &input_sha,
+            ],
+        )
+        .await
+        .unwrap();
+
+    let first = collector
+        .query_one(
+            "SELECT lease_token::text FROM agent_economy.claim_bound_collection_job('catalog-crash-first',60)",
+            &[],
+        )
+        .await
+        .unwrap();
+    let first_token: String = first.get(0);
+    collector
+        .query_one(
+            "SELECT agent_economy.stage_catalog_crawl_batch( \
+             $1::text::uuid,'catalog-crash-first',$2::text::uuid,$3,$4,'base', \
+             'cdp-x402-bazaar-base',1794355200000,0,1,$5::text::jsonb,1,1)",
+            &[&job_id, &first_token, &input_sha, &batch_sha, &evidence],
+        )
+        .await
+        .unwrap();
+    let staged_end: i64 = admin
+        .query_one(
+            "SELECT collection_end_height FROM agent_economy.worker_jobs \
+             WHERE namespace_id=$1::text::uuid AND job_id=$2::text::uuid",
+            &[&namespace_id, &job_id],
+        )
+        .await
+        .unwrap()
+        .get(0);
+    assert_eq!(staged_end, 0, "staging changed the admitted job range");
+
+    admin
+        .execute(
+            "UPDATE agent_economy.worker_jobs SET lease_expires_at=clock_timestamp()-interval '1 second' \
+             WHERE namespace_id=$1::text::uuid AND job_id=$2::text::uuid",
+            &[&namespace_id, &job_id],
+        )
+        .await
+        .unwrap();
+    let retry = collector
+        .query_one(
+            "SELECT lease_token::text FROM agent_economy.claim_bound_collection_job('catalog-crash-retry',60)",
+            &[],
+        )
+        .await
+        .unwrap();
+    let retry_token: String = retry.get(0);
+    collector
+        .query_one(
+            "SELECT agent_economy.stage_catalog_crawl_batch( \
+             $1::text::uuid,'catalog-crash-retry',$2::text::uuid,$3,$4,'base', \
+             'cdp-x402-bazaar-base',1794355200000,0,1,$5::text::jsonb,1,1)",
+            &[&job_id, &retry_token, &input_sha, &batch_sha, &evidence],
+        )
+        .await
+        .unwrap();
+    let completed: bool = collector
+        .query_one(
+            "SELECT agent_economy.complete_bound_collection_job( \
+             $1::text::uuid,'catalog-crash-retry',$2::text::uuid,$3)",
+            &[&job_id, &retry_token, &batch_sha],
+        )
+        .await
+        .unwrap()
+        .get(0);
+    assert!(completed);
+    let completed_job = admin
+        .query_one(
+            "SELECT status,collection_end_height FROM agent_economy.worker_jobs \
+             WHERE namespace_id=$1::text::uuid AND job_id=$2::text::uuid",
+            &[&namespace_id, &job_id],
+        )
+        .await
+        .unwrap();
+    assert_eq!(completed_job.get::<_, String>(0), "succeeded");
+    assert_eq!(
+        completed_job.get::<_, i64>(1),
+        0,
+        "completion changed the admitted job range"
+    );
+    admin
+        .execute(
+            "DELETE FROM agent_economy.collection_runtime_namespaces WHERE namespace_id=$1::text::uuid",
+            &[&namespace_id],
+        )
+        .await
+        .unwrap();
+}
+
+async fn assert_catalog_coverage_deduplicates_resources(admin: &Client) {
+    let run_key = u64::from(std::process::id()) * 10 + 8;
+    let namespace_id = format!("00000000-0000-0000-0000-{run_key:012}");
+    let job_id = format!("00000000-0000-0000-0001-{run_key:012}");
+    let first_provenance = format!("00000000-0000-0000-0002-{run_key:012}");
+    let second_provenance = format!("00000000-0000-0000-0003-{run_key:012}");
+    let input_sha = "1".repeat(64);
+    let batch_sha = "2".repeat(64);
+    let evidence_sha = "3".repeat(64);
+    let evidence_id = format!("evidence:sha256:{evidence_sha}");
+    let storage_uri = format!("evidence/cdp-x402-bazaar-base/2026-11-11/sha256/33/{evidence_sha}");
+    let evidence = serde_json::json!([{
+        "evidence_id": evidence_id,
+        "sha256": evidence_sha,
+        "storage_uri": storage_uri,
+        "storage_generation": "1",
+        "media_type": "application/json",
+        "byte_length": 1,
+        "height": 0
+    }]);
+    let resource_id = format!("sha256:{}", "c".repeat(64));
+    let observations = serde_json::json!([
+        {
+            "observation_id": format!("sha256:{}", "a".repeat(64)),
+            "protocol": "x402",
+            "evidence_id": evidence_id,
+            "observation_hash": "d".repeat(64),
+            "parser_version": "x402-adapter@1",
+            "height": 0,
+            "catalog_resource_id": resource_id
+        },
+        {
+            "observation_id": format!("sha256:{}", "b".repeat(64)),
+            "protocol": "x402",
+            "evidence_id": evidence_id,
+            "observation_hash": "e".repeat(64),
+            "parser_version": "x402-adapter@1",
+            "height": 0,
+            "catalog_resource_id": resource_id
+        }
+    ]);
+
+    admin
+        .execute(
+            "INSERT INTO agent_economy.namespaces(namespace_id,namespace_kind,namespace_key) \
+             VALUES ($1::text::uuid,'tenant',$2)",
+            &[
+                &namespace_id,
+                &format!("catalog-coverage-{}", std::process::id()),
+            ],
+        )
+        .await
+        .unwrap();
+    admin
+        .execute(
+            "INSERT INTO agent_economy.worker_jobs( \
+             namespace_id,job_id,mode,job_kind,idempotency_key,input_sha256,output_sha256,status, \
+             collection_chain_scope,collection_source_id,collection_start_height,collection_end_height, \
+             collection_acquisition_contract,collection_evidence_contract) \
+             VALUES ($1::text::uuid,$2::text::uuid,'collect','chain-protocol-range',$3,$4,$5,'succeeded', \
+             'base','cdp-x402-bazaar-base',0,0,'cdp-x402-bazaar-v1', \
+             'evidence-store-create-read-sha256-v1')",
+            &[
+                &namespace_id,
+                &job_id,
+                &format!("catalog-coverage-{run_key}"),
+                &input_sha,
+                &batch_sha,
+            ],
+        )
+        .await
+        .unwrap();
+    admin
+        .execute(
+            "INSERT INTO agent_economy.catalog_crawl_staging( \
+             namespace_id,job_id,source_reported_total,resources_observed,pages_archived) \
+             VALUES ($1::text::uuid,$2::text::uuid,2,2,1)",
+            &[&namespace_id, &job_id],
+        )
+        .await
+        .unwrap();
+    admin
+        .execute(
+            "INSERT INTO agent_economy.pending_collection_batches( \
+             namespace_id,job_id,input_sha256,batch_sha256,chain_scope,source_id, \
+             observed_at_unix_ms,start_height,end_height,evidence_json,status,verifier_result_sha256) \
+             VALUES ($1::text::uuid,$2::text::uuid,$3,$4,'base','cdp-x402-bazaar-base', \
+             1794355200000,0,0,$5::text::jsonb,'succeeded',$6)",
+            &[
+                &namespace_id,
+                &job_id,
+                &input_sha,
+                &batch_sha,
+                &evidence.to_string(),
+                &"f".repeat(64),
+            ],
+        )
+        .await
+        .unwrap();
+    admin
+        .execute(
+            "INSERT INTO agent_economy.evidence_objects( \
+             namespace_id,evidence_id,sha256,storage_uri,media_type,byte_length,observed_at) \
+             VALUES ($1::text::uuid,$2,$3,$4,'application/json',1, \
+             to_timestamp(1794355200000 / 1000.0))",
+            &[&namespace_id, &evidence_id, &evidence_sha, &storage_uri],
+        )
+        .await
+        .unwrap();
+    for (observation_id, provenance_id, observation_hash) in [
+        (
+            format!("sha256:{}", "a".repeat(64)),
+            first_provenance,
+            "d".repeat(64),
+        ),
+        (
+            format!("sha256:{}", "b".repeat(64)),
+            second_provenance,
+            "e".repeat(64),
+        ),
+    ] {
+        admin
+            .execute(
+                "INSERT INTO agent_economy.provenance_records( \
+                 namespace_id,provenance_id,source_id,observed_at,parser_version,provider, \
+                 chain_scope,block_reference,evidence_id) \
+                 VALUES ($1::text::uuid,$2::text::uuid,'cdp-x402-bazaar-base', \
+                 to_timestamp(1794355200000 / 1000.0),'x402-adapter@1','cdp-bazaar', \
+                 'base','0',$3)",
+                &[&namespace_id, &provenance_id, &evidence_id],
+            )
+            .await
+            .unwrap();
+        admin
+            .execute(
+                "INSERT INTO agent_economy.observations( \
+                 namespace_id,chain_scope,source_id,observation_id,observed_at,parser_version, \
+                 protocol,evidence_id,provenance_id,observation_hash) \
+                 VALUES ($1::text::uuid,'base','cdp-x402-bazaar-base',$2, \
+                 to_timestamp(1794355200000 / 1000.0),'x402-adapter@1','x402',$3, \
+                 $4::text::uuid,$5)",
+                &[
+                    &namespace_id,
+                    &observation_id,
+                    &evidence_id,
+                    &provenance_id,
+                    &observation_hash,
+                ],
+            )
+            .await
+            .unwrap();
+    }
+    admin
+        .execute(
+            "INSERT INTO agent_economy.collection_range_receipts( \
+             namespace_id,chain_scope,source_id,start_height,end_height,input_sha256,batch_sha256, \
+             evidence_json,observations_json,evidence_count,observation_count) \
+             VALUES ($1::text::uuid,'base','cdp-x402-bazaar-base',0,0,$2,$3, \
+             $4::text::jsonb,$5::text::jsonb,1,2)",
+            &[
+                &namespace_id,
+                &input_sha,
+                &batch_sha,
+                &evidence.to_string(),
+                &observations.to_string(),
+            ],
+        )
+        .await
+        .unwrap();
+
+    let coverage = admin
+        .query_one(
+            "SELECT verified_qualifying_resources, resources_observed \
+             FROM agent_economy.catalog_crawl_coverage \
+             WHERE namespace_id=$1::text::uuid AND job_id=$2::text::uuid",
+            &[&namespace_id, &job_id],
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        coverage.get::<_, i64>(0),
+        1,
+        "multiple exact offers for one Bazaar resource were overcounted"
+    );
+    assert_eq!(
+        coverage.get::<_, i64>(1),
+        2,
+        "unsupported Bazaar resources must stay observed but never verified"
+    );
+}
+
 fn run_collect(
     collector_database_url: &str,
     root: &std::path::Path,
@@ -286,6 +624,9 @@ async fn split_process_custody_executes_every_launch_chain() {
             .await
             .unwrap();
     }
+
+    assert_catalog_stage_survives_worker_crash(&admin, &collector).await;
+    assert_catalog_coverage_deduplicates_resources(&admin).await;
 
     fs::remove_dir_all(root).unwrap();
     admin

@@ -141,13 +141,17 @@ and request payloads are neither logged nor retained as fixtures.
 
 Generic chain blocks are settlement evidence, not x402 or MPP attribution evidence. The
 collector therefore ignores protocol-shaped fields embedded in ordinary RPC results. An
-owner-admitted `cdp-x402-bazaar-v1` job may instead fetch the single fixed Coinbase CDP x402
-Bazaar discovery URL. The transport permits HTTPS only, follows no redirects, applies bounded
-time and body limits, and archives the exact response before the verifier parses it. The source
-page index is the monotonic collection coordinate; empty snapshots are successful no-ops,
-duplicate bytes resolve to the same content-addressed object, and malformed snapshots fail closed.
+owner-admitted `cdp-x402-bazaar-v1` job may instead walk the Coinbase CDP x402 Bazaar from
+offset zero to the source total frozen from its first page. The transport permits HTTPS only,
+follows no redirects, applies per-page and whole-crawl time, page-count, and byte limits, and
+archives every exact response before the verifier parses it. Durable evidence coordinates advance
+monotonically across recurring crawls while each source traversal restarts at offset zero. Empty
+snapshots are successful no-ops, duplicate bytes resolve to the same content-addressed object,
+and malformed, regressing, or incomplete pagination fails closed without committing a partial batch.
 The PostgreSQL admission, staged custody, readback verification, canonical observation commit,
-and provenance boundaries are the same ones used by RPC collection.
+and provenance boundaries are the same ones used by RPC collection. Crawl coverage preserves the
+source-reported total, archived page/resource counts, verified qualifying count, latest complete
+crawl, lag, and explicit complete/partial/stale/failed status for the product read model.
 
 ### Settlement attribution
 

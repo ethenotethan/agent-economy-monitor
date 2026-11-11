@@ -97,7 +97,7 @@
     return button;
   }
 
-  function renderItems(items) {
+  function renderItems(items, coverageModel) {
     if (!items.length) {
       setState("empty");
       updated.textContent = "No observations";
@@ -113,6 +113,7 @@
       warning.textContent = "STALE · newest observation is more than five minutes old";
       viewRoot.append(warning);
     }
+    if (coverageModel) viewRoot.append(catalogCoverageSection(coverageModel));
     const list = document.createElement("div");
     list.className = currentView === "pulse" ? "metric-grid" : "fact-list";
     for (const item of items) {
@@ -166,11 +167,12 @@
     updated.textContent = newest ? `Observed ${new Date(newest).toLocaleString()}` : "Observation time unavailable";
   }
 
-  function renderPulse(model) {
+  function renderPulse(model, coverageModel) {
     const payments = model.data || [];
     const discovery = model.verified_discovery || [];
     const items = [...payments, ...discovery];
-    if (!items.length) {
+    const coverage = coverageModel && coverageModel.data;
+    if (!items.length && !coverage) {
       setState("empty", "No verified discovery observations or finalized payments are available yet.");
       updated.textContent = "No observations";
       return;
@@ -236,6 +238,10 @@
     discoverySection.dataset.pulseSection = "verified-discovery";
     viewRoot.append(discoverySection);
 
+    const coverageSection = catalogCoverageSection(coverage);
+    coverageSection.dataset.pulseSection = "catalog-coverage";
+    viewRoot.append(coverageSection);
+
     const newest = items.map(item => Date.parse(item.observed_at)).filter(Number.isFinite).sort((a, b) => b - a)[0];
     updated.textContent = newest ? `Observed ${new Date(newest).toLocaleString()}` : "Observation time unavailable";
   }
@@ -245,6 +251,25 @@
     const heading = element("div", "section-heading");
     heading.append(element("h2", "", titleText), element("span", "section-count", countText));
     wrapper.append(heading, content);
+    return wrapper;
+  }
+
+  function catalogCoverageSection(coverage) {
+    const coverageGrid = element("div", "metric-grid");
+    const coverageCard = element("article", "metric-card");
+    const coverageStatus = coverage ? coverage.coverage_status : "unknown";
+    coverageCard.dataset.coverageStatus = coverageStatus;
+    coverageCard.append(
+      element("div", "card-kicker", "Public Bazaar catalog coverage"),
+      element("div", "metric-value", coverage ? `${coverage.resources_observed} / ${coverage.source_reported_total}` : "Unknown"),
+      element("div", "metric-detail", coverage
+        ? `${coverageStatus.toUpperCase()} · ${coverage.pages_archived} pages archived · ${coverage.verified_qualifying_resources} verified qualifying resources`
+        : "UNKNOWN · no catalog crawl has been recorded"),
+      provenanceButtons(coverage && coverage.provenance_ids)
+    );
+    coverageGrid.append(coverageCard);
+    const wrapper = section("Catalog coverage", coverageStatus.toUpperCase(), coverageGrid);
+    wrapper.dataset.catalogCoverage = coverageStatus;
     return wrapper;
   }
 
@@ -478,8 +503,16 @@
       if (!response.ok) throw new Error(`request failed (${response.status})`);
       const payload = await response.json();
       if (generation !== loadGeneration) return;
-      if (currentView === "pulse") renderPulse(payload);
-      else renderItems(model.select(payload));
+      let coveragePayload = null;
+      if (["pulse", "services", "system"].includes(currentView)) {
+        const coverageResponse = await fetch("/api/v1/catalog/coverage", { headers: { Accept: "application/json" }, credentials: "same-origin" });
+        coveragePayload = coverageResponse.ok ? await coverageResponse.json() : null;
+        if (generation !== loadGeneration) return;
+      }
+      if (currentView === "pulse") {
+        renderPulse(payload, coveragePayload);
+      }
+      else renderItems(model.select(payload), coveragePayload && coveragePayload.data);
     } catch (error) {
       if (generation !== loadGeneration) return;
       setState("failure", error instanceof Error ? error.message : "The read model could not be loaded.");

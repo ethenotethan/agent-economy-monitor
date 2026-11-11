@@ -10,6 +10,8 @@ BOUNDARY_UP = ROOT / "migrations" / "0015_collection_runtime_boundary.up.sql"
 BOUNDARY_DOWN = ROOT / "migrations" / "0015_collection_runtime_boundary.down.sql"
 PUBLIC_SOURCE_UP = ROOT / "migrations" / "0018_public_source_collection.up.sql"
 PUBLIC_SOURCE_DOWN = ROOT / "migrations" / "0018_public_source_collection.down.sql"
+PAGINATION_UP = ROOT / "migrations" / "0020_bazaar_catalog_pagination.up.sql"
+PAGINATION_DOWN = ROOT / "migrations" / "0020_bazaar_catalog_pagination.down.sql"
 
 
 class CollectWorkerMigrationTest(unittest.TestCase):
@@ -144,6 +146,60 @@ class CollectWorkerMigrationTest(unittest.TestCase):
         self.assertIn("collection_chain_scope IN ('ethereum', 'base', 'solana', 'tempo')", down)
         self.assertIn("collection_source_id = 'alchemy-' || collection_chain_scope", down)
         self.assertNotIn("CASCADE", down)
+
+    def test_bazaar_pagination_uses_monotonic_crawl_ranges_for_recurring_snapshots(self):
+        up = PAGINATION_UP.read_text()
+        down = PAGINATION_DOWN.read_text()
+        self.assertIn(
+            "collection_end_height - collection_start_height BETWEEN 0 AND 399",
+            up,
+        )
+        self.assertIn("p_start_height < 0", up)
+        self.assertIn("p_end_height - p_start_height NOT BETWEEN 0 AND 399", up)
+        self.assertIn("job.collection_start_height = p_start_height", up)
+        self.assertIn(
+            "job.collection_end_height = p_start_height", up
+        )
+        self.assertIn("COALESCE(pending.updated_at, job.updated_at) AS observed_at", up)
+        self.assertIn("jsonb_array_length(p_observations_json) > 200000", up)
+        self.assertIn(") > 268435456", up)
+        self.assertIn("expected predecessor collection limits are absent", up)
+        self.assertIn("expected predecessor collector routine allowlist is absent", up)
+        self.assertIn(
+            "agent_economy.stage_catalog_crawl_batch(uuid,text,uuid,text,text,text,text,bigint,bigint,bigint,jsonb,bigint,bigint)",
+            up,
+        )
+        self.assertIn("expected pagination collector routine allowlist is absent", down)
+        self.assertNotIn("collection_start_height = 0", up)
+        self.assertNotIn("p_start_height <> 0", up)
+        self.assertLess(down.index("RAISE EXCEPTION"), down.index("DROP TABLE"))
+        self.assertNotIn("CASCADE", down)
+
+    def test_catalog_staging_preserves_admitted_range_until_atomic_completion(self):
+        up = PAGINATION_UP.read_text()
+        stage = up.split(
+            "CREATE FUNCTION agent_economy.stage_catalog_crawl_batch", 1
+        )[1].split("REVOKE ALL ON FUNCTION", 1)[0]
+        self.assertNotIn("SET collection_end_height = p_end_height", stage)
+        self.assertIn(
+            "job.collection_end_height = p_start_height))",
+            up,
+        )
+        self.assertNotIn(
+            "CREATE OR REPLACE FUNCTION agent_economy.complete_bound_collection_job",
+            up,
+        )
+
+    def test_catalog_coverage_counts_verified_resource_identities_and_exposes_provenance(self):
+        up = PAGINATION_UP.read_text()
+        coverage = up.split("CREATE VIEW agent_economy.catalog_crawl_coverage", 1)[1]
+        self.assertIn("count(DISTINCT item ->> 'catalog_resource_id')", coverage)
+        self.assertIn("receipt.observations_json", coverage)
+        self.assertIn("'^sha256:[0-9a-f]{64}$'", up)
+        self.assertIn("array_agg(DISTINCT observation.provenance_id::text", coverage)
+        self.assertIn("provenance_ids", coverage)
+        self.assertNotIn("count(DISTINCT observation.observation_id)", coverage)
+        self.assertNotIn("THEN crawl.resources_observed", coverage)
 
     def test_canonical_verify_requires_and_executes_split_custody(self):
         verify = (ROOT / "scripts" / "verify").read_text()

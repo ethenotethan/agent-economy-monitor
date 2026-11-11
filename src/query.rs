@@ -41,6 +41,20 @@ pub struct PulseReadModel {
     pub verified_discovery: Vec<Fact>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct CatalogCoverageReadModel {
+    pub source_id: String,
+    pub source_reported_total: i64,
+    pub resources_observed: i64,
+    pub pages_archived: i32,
+    pub verified_qualifying_resources: i64,
+    pub coverage_status: String,
+    pub observed_at: String,
+    pub last_complete_crawl: Option<String>,
+    pub crawl_lag_seconds: Option<i64>,
+    pub provenance_ids: Vec<String>,
+}
+
 impl DashboardPage {
     pub fn new(items: Vec<Fact>, next_cursor: Option<String>) -> Self {
         Self {
@@ -193,6 +207,9 @@ impl IntoResponse for QueryError {
 #[async_trait]
 pub trait QueryStore: Send + Sync + 'static {
     async fn pulse(&self) -> Result<PulseReadModel, QueryError>;
+    async fn catalog_coverage(&self) -> Result<Option<CatalogCoverageReadModel>, QueryError> {
+        Ok(None)
+    }
     async fn buyers(&self, after: Option<&str>, limit: usize) -> Result<DashboardPage, QueryError>;
     async fn buyer(&self, id: &str) -> Result<Option<Fact>, QueryError>;
     async fn buyer_dossier(&self, id: &str) -> Result<Option<BuyerDossierReadModel>, QueryError>;
@@ -511,6 +528,34 @@ impl QueryStore for PostgresQueryStore {
         })
     }
 
+    async fn catalog_coverage(&self) -> Result<Option<CatalogCoverageReadModel>, QueryError> {
+        let row = self
+            .client
+            .query_opt(
+                "SELECT source_id, source_reported_total, resources_observed, pages_archived, verified_qualifying_resources, coverage_status, observed_at::text, last_complete_crawl::text, crawl_lag_seconds, provenance_ids FROM agent_economy.catalog_crawl_coverage WHERE namespace_id = $1::text::uuid ORDER BY observed_at DESC, job_id DESC LIMIT 1",
+                &[&self.namespace_id],
+            )
+            .await
+            .map_err(|_| QueryError::Unavailable)?;
+        row.map(|row| {
+            Ok(CatalogCoverageReadModel {
+                source_id: row.try_get(0).map_err(|_| QueryError::Unavailable)?,
+                source_reported_total: row.try_get(1).map_err(|_| QueryError::Unavailable)?,
+                resources_observed: row.try_get(2).map_err(|_| QueryError::Unavailable)?,
+                pages_archived: row.try_get(3).map_err(|_| QueryError::Unavailable)?,
+                verified_qualifying_resources: row
+                    .try_get(4)
+                    .map_err(|_| QueryError::Unavailable)?,
+                coverage_status: row.try_get(5).map_err(|_| QueryError::Unavailable)?,
+                observed_at: row.try_get(6).map_err(|_| QueryError::Unavailable)?,
+                last_complete_crawl: row.try_get(7).map_err(|_| QueryError::Unavailable)?,
+                crawl_lag_seconds: row.try_get(8).map_err(|_| QueryError::Unavailable)?,
+                provenance_ids: row.try_get(9).map_err(|_| QueryError::Unavailable)?,
+            })
+        })
+        .transpose()
+    }
+
     async fn buyers(&self, after: Option<&str>, limit: usize) -> Result<DashboardPage, QueryError> {
         self.fact_page("buyer", after, limit).await
     }
@@ -751,6 +796,7 @@ pub fn api_router(store: Store) -> Router {
     Router::new()
         .route("/api/v1/openapi.json", get(openapi))
         .route("/api/v1/pulse", get(pulse))
+        .route("/api/v1/catalog/coverage", get(catalog_coverage))
         .route("/api/v1/buyers", get(buyers))
         .route("/api/v1/buyers/{id}", get(buyer))
         .route("/api/v1/buyers/{id}/dossier", get(buyer_dossier))
@@ -804,6 +850,7 @@ async fn openapi() -> Json<Value> {
         "info": {"title": "Agent Economy Monitor Query API", "version": "1.0.0"},
         "paths": {
             "/api/v1/pulse": {"get": {"responses": pulse_response()}},
+            "/api/v1/catalog/coverage": {"get": {"responses": response()}},
             "/api/v1/buyers": {"get": {"parameters": page_parameters(), "responses": response()}},
             "/api/v1/buyers/{id}": {"get": {"parameters": [path_parameter("id")], "responses": response()}},
             "/api/v1/buyers/{id}/dossier": {"get": {"parameters": [path_parameter("id")], "responses": response()}},
@@ -873,6 +920,17 @@ async fn pulse(State(store): State<Store>) -> Result<Response, QueryError> {
         api_version: API_VERSION,
         data: model.finalized_payments,
         verified_discovery: model.verified_discovery,
+    })
+}
+
+async fn catalog_coverage(State(store): State<Store>) -> Result<Response, QueryError> {
+    let data = store
+        .catalog_coverage()
+        .await?
+        .ok_or(QueryError::NotFound)?;
+    cacheable(&Versioned {
+        api_version: API_VERSION,
+        data,
     })
 }
 

@@ -87,11 +87,14 @@ inclusive source coordinate, acquisition contract, and evidence-verification con
 handler rejects any request that diverges from those admitted coordinates. RPC jobs acquire every
 height through a chain-bound allowlist of official/public HTTPS endpoints and write each exact
 encoded response through the create-only evidence adapter. A separately admitted
-`cdp-x402-bazaar-v1` job fetches only the fixed Coinbase CDP x402 Bazaar URL, disables redirects,
-bounds response time and size, and archives the exact public snapshot before parsing it. Generic
+`cdp-x402-bazaar-v1` job walks the Coinbase CDP x402 Bazaar from offset zero to a frozen
+source-reported boundary, disables redirects, bounds every response and the complete crawl, and
+archives each exact page before parsing it. Recurring jobs use monotonic evidence coordinates while
+source offsets restart at zero, so complete snapshots remain replayable without skipping pages. Generic
 block JSON never supplies protocol observations. The collector stages only immutable object
 identity, digest, size, media type, and source coordinate; it has no evidence-read authority and
-cannot advance canonical cursors or write observations.
+cannot advance canonical cursors or write observations. The dashboard reports complete, partial,
+stale, and failed crawl coverage separately from verified qualifying resources.
 
 Run one leased collection job with `COLLECTOR_DATABASE_URL`, `COLLECTION_INPUT_ROOT`, and exactly
 one create-only evidence backend set, then execute `cargo run -- collect`: use

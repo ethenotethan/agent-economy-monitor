@@ -1,17 +1,66 @@
 use std::sync::Arc;
 
+use agent_economy_contracts::ProtocolObservation;
 use agent_economy_evidence_store::{
     EvidenceObject, EvidenceStore, FilesystemEvidenceStore, GcsEvidenceStore, GcsObjectClient,
     ReadReceipt,
 };
 use async_trait::async_trait;
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
 use tokio_postgres::Client;
 
-use crate::collect::{ArchivedEvidence, CollectionError, verify_replayed_evidence};
+use crate::collect::{
+    ArchivedEvidence, CollectionBatch, CollectionError, verify_replayed_evidence,
+};
+
+fn verification_observations(batch: &CollectionBatch) -> Result<Vec<Value>, CollectionError> {
+    let mut observations = batch
+        .observations()
+        .iter()
+        .map(|item| {
+            let mut value = json!({
+                "observation_id": item.id(),
+                "protocol": item.protocol(),
+                "evidence_id": item.evidence_id(),
+                "observation_hash": item.observation_hash(),
+                "parser_version": item.observation().provenance().parser_version(),
+                "height": item.height(),
+            });
+            if batch.source_id() == "cdp-x402-bazaar-base" {
+                let resource = match item.observation().protocol() {
+                    ProtocolObservation::X402(observation)
+                        if !observation.resource().is_empty() =>
+                    {
+                        observation.resource().to_owned()
+                    }
+                    _ => return Err(CollectionError::InvalidInput),
+                };
+                value
+                    .as_object_mut()
+                    .ok_or(CollectionError::InvalidInput)?
+                    .insert(
+                        "catalog_resource_id".into(),
+                        Value::String(format!("sha256:{:x}", Sha256::digest(resource.as_bytes()))),
+                    );
+            }
+            Ok(value)
+        })
+        .collect::<Result<Vec<_>, CollectionError>>()?;
+    observations.sort_by_key(|item| {
+        (
+            item["height"].as_u64().unwrap_or_default(),
+            item["protocol"].as_str().unwrap_or_default().to_owned(),
+            item["observation_id"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned(),
+        )
+    });
+    Ok(observations)
+}
 
 #[async_trait]
 pub trait CollectionEvidenceReader: Send + Sync {
@@ -315,30 +364,7 @@ impl PostgresEvidenceVerifier {
         if batch.evidence_manifest_sha256() != pending.batch_sha256 {
             return Err(CollectionError::InvalidInput);
         }
-        let mut observations = batch
-            .observations()
-            .iter()
-            .map(|item| {
-                json!({
-                    "observation_id": item.id(),
-                    "protocol": item.protocol(),
-                    "evidence_id": item.evidence_id(),
-                    "observation_hash": item.observation_hash(),
-                    "parser_version": item.observation().provenance().parser_version(),
-                    "height": item.height(),
-                })
-            })
-            .collect::<Vec<_>>();
-        observations.sort_by_key(|item| {
-            (
-                item["height"].as_u64().unwrap_or_default(),
-                item["protocol"].as_str().unwrap_or_default().to_owned(),
-                item["observation_id"]
-                    .as_str()
-                    .unwrap_or_default()
-                    .to_owned(),
-            )
-        });
+        let observations = verification_observations(&batch)?;
         let observations_json =
             serde_json::to_string(&observations).map_err(|_| CollectionError::InvalidInput)?;
         let result = json!({
@@ -390,5 +416,68 @@ impl PostgresEvidenceVerifier {
             .await
             .map_err(|_| CollectionError::CommitUnavailable)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verified_bazaar_offers_carry_stable_resource_identity() {
+        let fixture = serde_json::json!({
+            "items": [{
+                "resource": "https://merchant.example/shared",
+                "x402Version": 2,
+                "accepts": [
+                    {
+                        "scheme": "exact", "network": "eip155:1", "amount": "1000",
+                        "asset": "USDC", "payTo": "0x1111111111111111111111111111111111111111"
+                    },
+                    {
+                        "scheme": "exact", "network": "eip155:10", "amount": "1000",
+                        "asset": "USDC", "payTo": "0x1111111111111111111111111111111111111111"
+                    }
+                ]
+            }],
+            "pagination": {"limit": 100, "offset": 0, "total": 1}
+        });
+        let bytes = serde_json::to_vec(&fixture).unwrap();
+        let sha256 = format!("{:x}", Sha256::digest(&bytes));
+        let evidence = ArchivedEvidence::from_verified_readback(
+            format!(
+                "evidence/cdp-x402-bazaar-base/2026-10-03/sha256/{}/{sha256}",
+                &sha256[..2]
+            ),
+            sha256,
+            "application/json".into(),
+            0,
+            bytes,
+        )
+        .unwrap();
+        let batch = verify_replayed_evidence(
+            "base".into(),
+            "cdp-x402-bazaar-base".into(),
+            1_790_986_800_000,
+            0,
+            0,
+            vec![evidence],
+        )
+        .unwrap();
+
+        let observations = verification_observations(&batch).unwrap();
+
+        let resource_ids = observations
+            .iter()
+            .map(|item| item["catalog_resource_id"].as_str().unwrap())
+            .collect::<std::collections::BTreeSet<_>>();
+
+        assert_eq!(resource_ids.len(), 1);
+        assert!(observations.len() > resource_ids.len());
+        assert!(
+            observations[0]["catalog_resource_id"]
+                .as_str()
+                .is_some_and(|value| value.starts_with("sha256:"))
+        );
     }
 }
