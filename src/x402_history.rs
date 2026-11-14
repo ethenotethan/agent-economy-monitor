@@ -394,6 +394,22 @@ fn reject_duplicate_json_members(bytes: &[u8]) -> Result<(), HistoryError> {
         .map_err(|_| HistoryError::InvalidRpcEvidence)
 }
 
+fn json_rpc_success_response(value: &Value) -> Result<(&str, &Value), HistoryError> {
+    let object = value.as_object().ok_or(HistoryError::InvalidRpcEvidence)?;
+    let id = object
+        .get("id")
+        .and_then(Value::as_str)
+        .filter(|id| !id.is_empty() && id.len() <= 128)
+        .ok_or(HistoryError::InvalidRpcEvidence)?;
+    if object.get("jsonrpc").and_then(Value::as_str) != Some("2.0")
+        || !object.contains_key("result")
+        || object.contains_key("error")
+    {
+        return Err(HistoryError::InvalidRpcEvidence);
+    }
+    Ok((id, &object["result"]))
+}
+
 fn verify_evm(
     registry: &FacilitatorRegistry,
     entries: &[&FacilitatorEntry],
@@ -408,14 +424,8 @@ fn verify_evm(
     let by_id = responses
         .iter()
         .map(|response| {
-            let id = response
-                .get("id")
-                .and_then(Value::as_str)
-                .ok_or(HistoryError::InvalidRpcEvidence)?;
-            if response.get("error").is_some() {
-                return Err(HistoryError::InvalidRpcEvidence);
-            }
-            Ok((id, response.get("result").unwrap_or(&Value::Null)))
+            let (id, result) = json_rpc_success_response(response)?;
+            Ok((id, result))
         })
         .collect::<Result<BTreeMap<_, _>, HistoryError>>()?;
     let block = by_id
@@ -540,10 +550,11 @@ fn verify_solana(
     source_coordinate: u64,
     value: &Value,
 ) -> Result<Vec<VerifiedFacilitatorPayment>, HistoryError> {
-    let block = value
-        .get("result")
-        .and_then(Value::as_object)
-        .ok_or(HistoryError::InvalidRpcEvidence)?;
+    let (id, result) = json_rpc_success_response(value)?;
+    if id != "block" {
+        return Err(HistoryError::InvalidRpcEvidence);
+    }
+    let block = result.as_object().ok_or(HistoryError::InvalidRpcEvidence)?;
     block
         .get("blockHeight")
         .and_then(Value::as_u64)

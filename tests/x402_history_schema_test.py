@@ -65,6 +65,10 @@ class X402HistoryBackfillMigrationContractTest(unittest.TestCase):
         self.assertLess(down.index("LOCK TABLE"), down.index("IF EXISTS"))
         self.assertNotIn("CASCADE", down)
         self.assertNotIn("x402_history_support_role", down)
+        self.assertIn(
+            "CREATE OR REPLACE FUNCTION agent_economy.fail_pending_collection_batch",
+            down,
+        )
         self.assertTrue(down.rstrip().endswith("COMMIT;"))
 
     def test_canonical_gate_executes_the_real_x402_rollback_and_reapply(self):

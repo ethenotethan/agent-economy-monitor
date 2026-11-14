@@ -18,6 +18,27 @@ BEGIN
 END
 $$;
 
+CREATE OR REPLACE FUNCTION agent_economy.fail_pending_collection_batch(
+    p_pending_id uuid, p_verifier_owner text, p_verifier_token uuid,
+    p_error_code text, p_retryable boolean
+)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog AS $$
+DECLARE bound_namespace uuid;
+BEGIN
+  bound_namespace := agent_economy.bound_collection_namespace('verify-evidence');
+  UPDATE agent_economy.pending_collection_batches batch SET
+    status=CASE WHEN p_retryable AND batch.attempt_count < batch.max_attempts THEN 'retryable' ELSE 'dead_letter' END,
+    scheduled_for=clock_timestamp()+interval '30 seconds', verifier_owner=NULL,
+    verifier_token=NULL, verifier_expires_at=NULL, last_error_code=p_error_code,
+    updated_at=clock_timestamp()
+  WHERE batch.namespace_id=bound_namespace AND batch.pending_id=p_pending_id
+    AND batch.status='verifying' AND batch.verifier_owner=p_verifier_owner
+    AND batch.verifier_token=p_verifier_token AND batch.verifier_expires_at>clock_timestamp()
+    AND p_error_code ~ '^[a-z0-9_]{1,64}$';
+  RETURN FOUND;
+END
+$$;
+
 DROP VIEW agent_economy.x402_history_coverage;
 DROP TRIGGER bind_pending_collection_registry ON agent_economy.pending_collection_batches;
 DROP FUNCTION agent_economy.bind_pending_collection_registry();

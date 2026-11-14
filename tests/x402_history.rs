@@ -208,6 +208,21 @@ fn solana_payment_requires_registered_facilitator_signature_and_finalized_transf
     );
     assert_eq!(payments[0].amount_atomic(), "250000");
     assert_eq!(payments[0].facilitator_id(), "payai");
+
+    let contradictory_envelope = String::from_utf8(response.to_vec()).unwrap().replace(
+        "\"jsonrpc\":\"2.0\",\"id\":\"block\",\"result\":",
+        "\"jsonrpc\":\"2.0\",\"id\":\"block\",\"error\":{\"code\":-32000,\"message\":\"failed\"},\"result\":",
+    );
+    assert_eq!(
+        verify_facilitator_rpc_evidence(
+            &registry,
+            "solana",
+            &evidence_id('e'),
+            350_000_001,
+            contradictory_envelope.as_bytes(),
+        ),
+        Err(HistoryError::InvalidRpcEvidence)
+    );
 }
 
 #[test]

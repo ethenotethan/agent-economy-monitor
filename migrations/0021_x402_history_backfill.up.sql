@@ -152,6 +152,9 @@ CREATE FUNCTION agent_economy.admit_x402_history_source(
 )
 RETURNS boolean
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog AS $$
+DECLARE
+    ethereum_provenance_id uuid;
+    tempo_provenance_id uuid;
 BEGIN
     IF p_chain_scope NOT IN ('base', 'solana')
        OR p_source_id <> 'x402-facilitator-' || p_chain_scope
@@ -172,6 +175,44 @@ BEGIN
     THEN
         RAISE EXCEPTION 'invalid x402 history source admission';
     END IF;
+    SELECT provenance.provenance_id INTO ethereum_provenance_id
+    FROM agent_economy.provenance_records provenance
+    WHERE provenance.namespace_id = p_namespace_id
+      AND provenance.source_id = 'x402-facilitator-registry'
+      AND provenance.chain_scope = 'ethereum'
+    ORDER BY provenance.created_at, provenance.provenance_id
+    LIMIT 1;
+    IF ethereum_provenance_id IS NULL THEN
+        INSERT INTO agent_economy.provenance_records (
+            namespace_id, provenance_id, source_id, observed_at,
+            parser_version, provider, chain_scope, evidence_id)
+        SELECT p_namespace_id, gen_random_uuid(), 'x402-facilitator-registry',
+            provenance.observed_at, provenance.parser_version, provenance.provider,
+            'ethereum', provenance.evidence_id
+        FROM agent_economy.provenance_records provenance
+        WHERE provenance.namespace_id = p_namespace_id
+          AND provenance.provenance_id = p_provenance_id
+        RETURNING provenance_id INTO ethereum_provenance_id;
+    END IF;
+    SELECT provenance.provenance_id INTO tempo_provenance_id
+    FROM agent_economy.provenance_records provenance
+    WHERE provenance.namespace_id = p_namespace_id
+      AND provenance.source_id = 'x402-facilitator-registry'
+      AND provenance.chain_scope = 'tempo'
+    ORDER BY provenance.created_at, provenance.provenance_id
+    LIMIT 1;
+    IF tempo_provenance_id IS NULL THEN
+        INSERT INTO agent_economy.provenance_records (
+            namespace_id, provenance_id, source_id, observed_at,
+            parser_version, provider, chain_scope, evidence_id)
+        SELECT p_namespace_id, gen_random_uuid(), 'x402-facilitator-registry',
+            provenance.observed_at, provenance.parser_version, provenance.provider,
+            'tempo', provenance.evidence_id
+        FROM agent_economy.provenance_records provenance
+        WHERE provenance.namespace_id = p_namespace_id
+          AND provenance.provenance_id = p_provenance_id
+        RETURNING provenance_id INTO tempo_provenance_id;
+    END IF;
     INSERT INTO agent_economy.x402_history_sources (
         namespace_id, source_id, chain_scope, source_kind,
         earliest_available_coordinate, earliest_available_at, retention_limit,
@@ -189,10 +230,10 @@ BEGIN
     VALUES
         (p_namespace_id, 'x402-facilitator-registry', 'ethereum', 'unavailable',
          'not-available', 'not-applicable', 'unavailable',
-         'no-admitted-x402-facilitator-registry', false, p_provenance_id),
+         'no-admitted-x402-facilitator-registry', false, ethereum_provenance_id),
         (p_namespace_id, 'x402-facilitator-registry', 'tempo', 'unavailable',
          'not-available', 'not-applicable', 'unavailable',
-         'mpp-is-a-separate-protocol-series', false, p_provenance_id)
+         'mpp-is-a-separate-protocol-series', false, tempo_provenance_id)
     ON CONFLICT DO NOTHING;
     INSERT INTO agent_economy.x402_history_plans (
         namespace_id, source_id, chain_scope, frozen_upper_coordinate,
@@ -363,6 +404,84 @@ CREATE TABLE agent_economy.x402_history_ranges (
     ),
     CHECK ((state = 'failed' AND failure_code IS NOT NULL) OR state <> 'failed')
 );
+
+CREATE OR REPLACE FUNCTION agent_economy.fail_pending_collection_batch(
+    p_pending_id uuid, p_verifier_owner text, p_verifier_token uuid,
+    p_error_code text, p_retryable boolean
+)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog AS $$
+DECLARE
+    bound_namespace uuid;
+    pending agent_economy.pending_collection_batches%ROWTYPE;
+    next_status text;
+BEGIN
+    bound_namespace := agent_economy.bound_collection_namespace('verify-evidence');
+    SELECT * INTO pending
+    FROM agent_economy.pending_collection_batches batch
+    WHERE batch.namespace_id = bound_namespace
+      AND batch.pending_id = p_pending_id
+      AND batch.status = 'verifying'
+      AND batch.verifier_owner = p_verifier_owner
+      AND batch.verifier_token = p_verifier_token
+      AND batch.verifier_expires_at > clock_timestamp()
+      AND p_error_code ~ '^[a-z0-9_]{1,64}$'
+    FOR UPDATE;
+    IF NOT FOUND THEN RETURN false; END IF;
+
+    next_status := CASE
+        WHEN p_retryable AND pending.attempt_count < pending.max_attempts
+        THEN 'retryable' ELSE 'dead_letter' END;
+    UPDATE agent_economy.pending_collection_batches SET
+        status = next_status,
+        scheduled_for = clock_timestamp() + interval '30 seconds',
+        verifier_owner = NULL, verifier_token = NULL, verifier_expires_at = NULL,
+        last_error_code = p_error_code, updated_at = clock_timestamp()
+    WHERE pending_id = pending.pending_id;
+
+    IF pending.source_id = 'x402-facilitator-' || pending.chain_scope THEN
+        INSERT INTO agent_economy.x402_history_ranges (
+            namespace_id, source_id, chain_scope, range_id,
+            earliest_available_coordinate, frozen_upper_coordinate,
+            indexed_through_coordinate, source_total, archived_records, parsed_records,
+            verified_transactions, duplicate_observations, conflicting_observations,
+            gap_count, state, failure_code, evidence_manifest_sha256, observed_at)
+        SELECT pending.namespace_id, pending.source_id, pending.chain_scope, gen_random_uuid(),
+            source.earliest_available_coordinate, plan.frozen_upper_coordinate,
+            prior.indexed_through_coordinate,
+            plan.frozen_upper_coordinate - source.earliest_available_coordinate + 1,
+            COALESCE(prior.archived_records, 0), COALESCE(prior.parsed_records, 0),
+            COALESCE(prior.verified_transactions, 0),
+            COALESCE(prior.duplicate_observations, 0),
+            COALESCE(prior.conflicting_observations, 0),
+            1, CASE WHEN next_status = 'retryable' THEN 'partial' ELSE 'failed' END,
+            p_error_code, pending.batch_sha256,
+            to_timestamp(pending.observed_at_unix_ms / 1000.0)
+        FROM agent_economy.x402_history_sources source
+        JOIN LATERAL (
+            SELECT candidate.frozen_upper_coordinate
+            FROM agent_economy.x402_history_plans candidate
+            WHERE candidate.namespace_id = source.namespace_id
+              AND candidate.source_id = source.source_id
+              AND candidate.chain_scope = source.chain_scope
+            ORDER BY candidate.frozen_upper_coordinate DESC
+            LIMIT 1
+        ) plan ON true
+        LEFT JOIN LATERAL (
+            SELECT candidate.*
+            FROM agent_economy.x402_history_ranges candidate
+            WHERE candidate.namespace_id = source.namespace_id
+              AND candidate.source_id = source.source_id
+              AND candidate.chain_scope = source.chain_scope
+            ORDER BY candidate.observed_at DESC, candidate.created_at DESC
+            LIMIT 1
+        ) prior ON true
+        WHERE source.namespace_id = pending.namespace_id
+          AND source.source_id = pending.source_id
+          AND source.chain_scope = pending.chain_scope;
+    END IF;
+    RETURN true;
+END
+$$;
 
 CREATE TABLE agent_economy.x402_payment_observations (
     namespace_id uuid NOT NULL,
