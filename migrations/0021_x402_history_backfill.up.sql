@@ -1,5 +1,17 @@
 BEGIN;
 
+ALTER TABLE agent_economy.worker_jobs
+    ADD COLUMN collection_registry_version text,
+    ADD COLUMN collection_registry_sha256 text;
+ALTER TABLE agent_economy.pending_collection_batches
+    ADD COLUMN registry_version text,
+    ADD COLUMN registry_sha256 text,
+    ADD CONSTRAINT pending_collection_registry_binding CHECK (
+        (registry_version IS NULL AND registry_sha256 IS NULL)
+        OR (registry_version IS NOT NULL AND registry_version <> ''
+            AND registry_sha256 ~ '^[0-9a-f]{64}$')
+    );
+
 ALTER TABLE agent_economy.worker_jobs DROP CONSTRAINT worker_jobs_collection_admission;
 ALTER TABLE agent_economy.worker_jobs ADD CONSTRAINT worker_jobs_collection_admission CHECK (
     (mode = 'collect'
@@ -18,8 +30,13 @@ ALTER TABLE agent_economy.worker_jobs ADD CONSTRAINT worker_jobs_collection_admi
                 AND collection_end_height - collection_start_height BETWEEN 0 AND 399)
             OR (collection_acquisition_contract = 'facilitator-rpc-block-v1'
                 AND collection_chain_scope IN ('base', 'solana')
-                AND collection_source_id = 'x402-facilitator-' || collection_chain_scope)
+                AND collection_source_id = 'x402-facilitator-' || collection_chain_scope
+                AND collection_registry_version IS NOT NULL
+                AND collection_registry_version <> ''
+                AND collection_registry_sha256 ~ '^[0-9a-f]{64}$')
         )
+        AND (collection_acquisition_contract = 'facilitator-rpc-block-v1'
+             OR (collection_registry_version IS NULL AND collection_registry_sha256 IS NULL))
         AND collection_evidence_contract = 'evidence-store-create-read-sha256-v1')
     OR (mode <> 'collect'
         AND collection_chain_scope IS NULL
@@ -27,7 +44,9 @@ ALTER TABLE agent_economy.worker_jobs ADD CONSTRAINT worker_jobs_collection_admi
         AND collection_start_height IS NULL
         AND collection_end_height IS NULL
         AND collection_acquisition_contract IS NULL
-        AND collection_evidence_contract IS NULL)
+        AND collection_evidence_contract IS NULL
+        AND collection_registry_version IS NULL
+        AND collection_registry_sha256 IS NULL)
 );
 
 DO $$
@@ -54,7 +73,7 @@ BEGIN
     definition := replace(
         definition,
         'CASE WHEN p_source_id = ''cdp-x402-bazaar-base'' THEN 7 ELSE 6 END',
-        'CASE WHEN p_source_id = ''cdp-x402-bazaar-base'' THEN 7 WHEN p_source_id = ''x402-facilitator-'' || p_chain_scope THEN 22 ELSE 6 END'
+        'CASE WHEN p_source_id = ''cdp-x402-bazaar-base'' THEN 7 WHEN p_source_id = ''x402-facilitator-'' || p_chain_scope THEN 23 ELSE 6 END'
     );
     definition := replace(
         definition,
@@ -65,7 +84,7 @@ BEGIN
                 ''payer_handle_value'',''recipient_handle'',''asset'',''amount_atomic'',
                 ''settled_at_unix_seconds'',''finality'',''explicit_attribution_digest'',
                 ''facilitator_id'',''facilitator_address'',''facilitator_active'',
-                ''registry_version'',''attribution_class'',''rpc_verification_evidence_id''
+                ''registry_version'',''registry_sha256'',''attribution_class'',''rpc_verification_evidence_id''
             ])'
     );
     EXECUTE definition;
@@ -209,12 +228,18 @@ BEGIN
     END IF;
     WITH authority AS (
         SELECT source.earliest_available_coordinate AS earliest,
-               max(plan.frozen_upper_coordinate) AS frozen
+               plan.frozen_upper_coordinate AS frozen,
+               plan.registry_version, plan.registry_sha256
         FROM agent_economy.x402_history_sources source
-        JOIN agent_economy.x402_history_plans plan USING (namespace_id, source_id, chain_scope)
+        JOIN LATERAL (
+            SELECT candidate.* FROM agent_economy.x402_history_plans candidate
+            WHERE candidate.namespace_id = source.namespace_id
+              AND candidate.source_id = source.source_id
+              AND candidate.chain_scope = source.chain_scope
+            ORDER BY candidate.frozen_upper_coordinate DESC LIMIT 1
+        ) plan ON true
         WHERE source.namespace_id = p_namespace_id AND source.source_id = p_source_id
           AND source.chain_scope = p_chain_scope
-        GROUP BY source.earliest_available_coordinate
     ), ordered AS (
         SELECT (item->>'start')::bigint AS start_height,
                (item->>'end')::bigint AS end_height,
@@ -229,12 +254,14 @@ BEGIN
     INSERT INTO agent_economy.worker_jobs (
         namespace_id, job_id, mode, job_kind, idempotency_key, input_sha256,
         collection_chain_scope, collection_source_id, collection_start_height,
-        collection_end_height, collection_acquisition_contract, collection_evidence_contract)
+        collection_end_height, collection_acquisition_contract, collection_evidence_contract,
+        collection_registry_version, collection_registry_sha256)
     SELECT p_namespace_id, gen_random_uuid(), 'collect', 'chain-protocol-range',
         p_source_id || ':' || start_height || ':' || end_height,
         input_sha256, p_chain_scope, p_source_id, start_height, end_height,
-        'facilitator-rpc-block-v1', 'evidence-store-create-read-sha256-v1'
-    FROM qualified
+        'facilitator-rpc-block-v1', 'evidence-store-create-read-sha256-v1',
+        authority.registry_version, authority.registry_sha256
+    FROM qualified CROSS JOIN authority
     ON CONFLICT (namespace_id, idempotency_key) DO NOTHING;
     GET DIAGNOSTICS planned = ROW_COUNT;
     IF jsonb_array_length(p_jobs) > 0 AND planned = 0 AND NOT EXISTS (
@@ -246,6 +273,22 @@ BEGIN
     RETURN planned;
 END
 $$;
+
+CREATE FUNCTION agent_economy.bind_pending_collection_registry()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog AS $$
+BEGIN
+    SELECT job.collection_registry_version, job.collection_registry_sha256
+    INTO NEW.registry_version, NEW.registry_sha256
+    FROM agent_economy.worker_jobs job
+    WHERE job.namespace_id = NEW.namespace_id AND job.job_id = NEW.job_id;
+    RETURN NEW;
+END
+$$;
+
+CREATE TRIGGER bind_pending_collection_registry
+BEFORE INSERT ON agent_economy.pending_collection_batches
+FOR EACH ROW EXECUTE FUNCTION agent_economy.bind_pending_collection_registry();
 
 CREATE TABLE agent_economy.x402_history_ranges (
     namespace_id uuid NOT NULL,
@@ -311,6 +354,8 @@ CREATE TABLE agent_economy.x402_payment_observations (
     explicit_attribution_digest text NOT NULL CHECK (explicit_attribution_digest ~ '^[0-9a-f]{64}$'),
     evidence_id text NOT NULL,
     rpc_verification_evidence_id text NOT NULL,
+    registry_version text NOT NULL CHECK (registry_version <> ''),
+    registry_sha256 text NOT NULL CHECK (registry_sha256 ~ '^[0-9a-f]{64}$'),
     provenance_id uuid NOT NULL,
     parser_version text NOT NULL CHECK (parser_version <> ''),
     created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
@@ -480,8 +525,14 @@ BEGIN
             WHERE plan.namespace_id = bound_namespace
               AND plan.source_id = pending.source_id
               AND plan.chain_scope = pending.chain_scope
+              AND pending.registry_version = plan.registry_version
+              AND pending.registry_sha256 = plan.registry_sha256
+        ) OR EXISTS (
+            SELECT 1 FROM jsonb_array_elements(p_observations_json) input(item)
+            WHERE item ->> 'registry_version' IS DISTINCT FROM pending.registry_version
+               OR item ->> 'registry_sha256' IS DISTINCT FROM pending.registry_sha256
         ) THEN
-            RAISE EXCEPTION 'x402 history source was not admitted before collection';
+            RAISE EXCEPTION 'x402 history registry binding does not match admission';
         END IF;
 
         INSERT INTO agent_economy.buyer_handles (
@@ -502,7 +553,8 @@ BEGIN
             namespace_id, source_id, chain_scope, observation_id, source_coordinate,
             transaction_reference, settlement_position, payer_handle_id, recipient_handle,
             asset, amount_atomic, settled_at, finality, explicit_attribution_digest,
-            evidence_id, rpc_verification_evidence_id, provenance_id, parser_version)
+            evidence_id, rpc_verification_evidence_id, registry_version, registry_sha256,
+            provenance_id, parser_version)
         SELECT bound_namespace, pending.source_id, pending.chain_scope,
             item ->> 'observation_id', (item ->> 'height')::bigint,
             item ->> 'transaction_reference', (item ->> 'settlement_position')::bigint,
@@ -511,6 +563,7 @@ BEGIN
             to_timestamp((item ->> 'settled_at_unix_seconds')::bigint),
             item ->> 'finality', item ->> 'explicit_attribution_digest',
             item ->> 'evidence_id', item ->> 'rpc_verification_evidence_id',
+            item ->> 'registry_version', item ->> 'registry_sha256',
             observation.provenance_id, item ->> 'parser_version'
         FROM jsonb_array_elements(p_observations_json) input(item)
         JOIN agent_economy.observations observation
@@ -680,6 +733,8 @@ REVOKE ALL ON FUNCTION agent_economy.admit_x402_history_source(
 REVOKE ALL ON FUNCTION agent_economy.plan_x402_history_jobs(uuid, text, text, jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION agent_economy.reconcile_x402_history_range(
     uuid, text, text, bigint, bigint) FROM PUBLIC;
+REVOKE ALL ON FUNCTION agent_economy.bind_pending_collection_registry() FROM PUBLIC;
+
 
 GRANT EXECUTE ON FUNCTION agent_economy.admit_x402_history_source(
     uuid, text, text, bigint, timestamptz, bigint, text, text, bigint, bigint, uuid)

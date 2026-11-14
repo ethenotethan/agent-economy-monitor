@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 UP = ROOT / "migrations" / "0021_x402_history_backfill.up.sql"
 DOWN = ROOT / "migrations" / "0021_x402_history_backfill.down.sql"
+VERIFY = ROOT / "scripts" / "verify"
 
 
 class X402HistoryBackfillMigrationContractTest(unittest.TestCase):
@@ -37,6 +38,11 @@ class X402HistoryBackfillMigrationContractTest(unittest.TestCase):
         self.assertIn("CREATE FUNCTION agent_economy.admit_x402_history_source", up)
         self.assertIn("CREATE FUNCTION agent_economy.plan_x402_history_jobs", up)
         self.assertIn("CREATE FUNCTION agent_economy.reconcile_x402_history_range", up)
+        self.assertIn("collection_registry_version", up)
+        self.assertIn("collection_registry_sha256", up)
+        self.assertIn("pending.registry_version = plan.registry_version", up)
+        self.assertIn("pending.registry_sha256 = plan.registry_sha256", up)
+        self.assertIn("item ->> 'registry_sha256' IS DISTINCT FROM pending.registry_sha256", up)
         self.assertIn("INSERT INTO agent_economy.canonical_events", up)
         self.assertIn("INSERT INTO agent_economy.settlements", up)
         self.assertIn("INSERT INTO agent_economy.x402_settlement_observation_links", up)
@@ -54,7 +60,17 @@ class X402HistoryBackfillMigrationContractTest(unittest.TestCase):
         self.assertIn("cannot roll back x402 history with retained observations", down)
         self.assertLess(down.index("LOCK TABLE"), down.index("IF EXISTS"))
         self.assertNotIn("CASCADE", down)
+        self.assertNotIn("x402_history_support_role", down)
         self.assertTrue(down.rstrip().endswith("COMMIT;"))
+
+    def test_canonical_gate_executes_the_real_x402_rollback_and_reapply(self):
+        verify = VERIFY.read_text(encoding="utf-8")
+
+        rollback = 'psql "$AEM_COLLECT_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0021_x402_history_backfill.down.sql'
+        reapply = 'psql "$AEM_COLLECT_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0021_x402_history_backfill.up.sql'
+        self.assertIn(rollback, verify)
+        self.assertIn(reapply, verify)
+        self.assertLess(verify.index(rollback), verify.index(reapply))
 
 
 if __name__ == "__main__":

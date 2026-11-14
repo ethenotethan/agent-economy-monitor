@@ -1,5 +1,6 @@
 use agent_economy_monitor::x402_history::{
-    FacilitatorRegistry, HistoryError, plan_history_ranges, verify_facilitator_rpc_evidence,
+    FacilitatorRegistry, HistoryError, parse_admitted_registry, plan_history_ranges,
+    verify_facilitator_rpc_evidence,
 };
 
 const REGISTRY: &str = r#"{
@@ -27,6 +28,12 @@ fn versioned_registry_preserves_supported_entries_and_explicit_chain_gaps() {
         registry.version(),
         "x402scan-5732bb83c8c4290f413f24318a838e3fee4ed2bf"
     );
+    assert_eq!(
+        registry.sha256(),
+        "fdb7f26b78b7320c2fcc0cc0a581ea50a3cb9b3cbc11b616060f022d29cbac90"
+    );
+    let reformatted = FacilitatorRegistry::parse(format!("\n{REGISTRY}").as_bytes()).unwrap();
+    assert_ne!(registry.sha256(), reformatted.sha256());
     assert_eq!(registry.entries_for_chain("base").len(), 1);
     assert_eq!(registry.entries_for_chain("solana").len(), 1);
     assert_eq!(
@@ -37,6 +44,24 @@ fn versioned_registry_preserves_supported_entries_and_explicit_chain_gaps() {
         registry.unavailable_reason("tempo"),
         Some("mpp-is-a-separate-protocol-series")
     );
+}
+
+#[test]
+fn admitted_registry_rejects_changed_bytes_even_when_version_is_unchanged() {
+    let admitted = FacilitatorRegistry::parse(REGISTRY.as_bytes()).unwrap();
+    assert!(
+        parse_admitted_registry(REGISTRY.as_bytes(), admitted.version(), admitted.sha256()).is_ok()
+    );
+
+    let changed_bytes = format!("\n{REGISTRY}");
+    assert!(matches!(
+        parse_admitted_registry(
+            changed_bytes.as_bytes(),
+            admitted.version(),
+            admitted.sha256(),
+        ),
+        Err(HistoryError::InvalidRegistry)
+    ));
 }
 
 #[test]

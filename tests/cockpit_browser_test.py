@@ -260,12 +260,57 @@ class CockpitBrowserTest(unittest.TestCase):
             }),
         )
         empty.route("**/api/v1/catalog/coverage", lambda route: route.fulfill(status=404))
+        empty.route("**/api/v1/x402/history/coverage", lambda route: route.fulfill(status=404))
         empty.goto(f"http://127.0.0.1:{self.port}/")
         expect(empty.locator("#view-root")).to_have_attribute("data-state", "empty")
         expect(empty.locator("#view-root")).to_contain_text(
             "No verified discovery observations or finalized payments"
         )
         empty.close()
+
+        history_only = self.browser.new_page(viewport={"width": 1440, "height": 900})
+        history_only.route(
+            "**/api/v1/pulse",
+            lambda route: route.fulfill(json={
+                "api_version": "v1",
+                "data": [],
+                "verified_discovery": [],
+            }),
+        )
+        history_only.route(
+            "**/api/v1/catalog/coverage", lambda route: route.fulfill(status=404)
+        )
+        history_only.route(
+            "**/api/v1/x402/history/coverage",
+            lambda route: route.fulfill(json={
+                "api_version": "v1",
+                "data": [{
+                    "source_id": "x402-facilitator-base",
+                    "chain_scope": "base",
+                    "frozen_upper_coordinate": 41,
+                    "indexed_through_coordinate": 41,
+                    "retention_limit": "archival-rpc-provider-dependent",
+                    "source_total": 41,
+                    "archived_records": 41,
+                    "verified_transactions": 39,
+                    "duplicate_observations": 2,
+                    "conflicting_observations": 0,
+                    "gap_count": 0,
+                    "coverage_state": "source-complete",
+                    "failure_code": None,
+                    "provenance_id": "11111111-1111-1111-1111-111111111111",
+                }],
+            }),
+        )
+        history_only.goto(f"http://127.0.0.1:{self.port}/")
+        expect(history_only.locator("#view-root")).to_have_attribute("data-state", "ready")
+        expect(history_only.locator('[data-pulse-section="transaction-coverage"]')).to_contain_text(
+            "Historical transaction coverage"
+        )
+        expect(history_only.locator('[data-pulse-section="transaction-coverage"]')).to_contain_text(
+            "SOURCE-COMPLETE"
+        )
+        history_only.close()
 
         failed = self.browser.new_page(viewport={"width": 1440, "height": 900})
         failed.route("**/api/v1/pulse", lambda route: route.fulfill(status=503, body=""))

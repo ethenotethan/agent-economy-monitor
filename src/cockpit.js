@@ -172,7 +172,7 @@
     const discovery = model.verified_discovery || [];
     const items = [...payments, ...discovery];
     const coverage = coverageModel && coverageModel.data;
-    if (!items.length && !coverage) {
+    if (!items.length && !coverage && !(transactionCoverageModel && transactionCoverageModel.data && transactionCoverageModel.data.length)) {
       setState("empty", "No verified discovery observations or finalized payments are available yet.");
       updated.textContent = "No observations";
       return;

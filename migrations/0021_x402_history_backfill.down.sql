@@ -19,6 +19,8 @@ END
 $$;
 
 DROP VIEW agent_economy.x402_history_coverage;
+DROP TRIGGER bind_pending_collection_registry ON agent_economy.pending_collection_batches;
+DROP FUNCTION agent_economy.bind_pending_collection_registry();
 DROP FUNCTION agent_economy.reconcile_x402_history_range(uuid,text,text,bigint,bigint);
 DROP FUNCTION agent_economy.plan_x402_history_jobs(uuid,text,text,jsonb);
 DROP FUNCTION agent_economy.admit_x402_history_source(uuid,text,text,bigint,timestamptz,bigint,text,text,bigint,bigint,uuid);
@@ -37,6 +39,39 @@ DROP TABLE agent_economy.x402_payment_observations;
 DROP TABLE agent_economy.x402_history_ranges;
 DROP TABLE agent_economy.x402_history_plans;
 DROP TABLE agent_economy.x402_history_sources;
-DROP TYPE agent_economy.x402_history_support_role;
+
+ALTER TABLE agent_economy.worker_jobs DROP CONSTRAINT worker_jobs_collection_admission;
+ALTER TABLE agent_economy.worker_jobs ADD CONSTRAINT worker_jobs_collection_admission CHECK (
+    (mode = 'collect'
+        AND collection_chain_scope IS NOT NULL
+        AND collection_source_id IS NOT NULL
+        AND collection_start_height >= 0
+        AND collection_end_height >= collection_start_height
+        AND collection_end_height - collection_start_height + 1 <= 10000
+        AND (
+            (collection_acquisition_contract = 'alchemy-rpc-block-v1'
+                AND collection_chain_scope IN ('ethereum', 'base', 'solana', 'tempo')
+                AND collection_source_id = 'alchemy-' || collection_chain_scope)
+            OR (collection_acquisition_contract = 'cdp-x402-bazaar-v1'
+                AND collection_chain_scope = 'base'
+                AND collection_source_id = 'cdp-x402-bazaar-base'
+                AND collection_end_height - collection_start_height BETWEEN 0 AND 399)
+        )
+        AND collection_evidence_contract = 'evidence-store-create-read-sha256-v1')
+    OR (mode <> 'collect'
+        AND collection_chain_scope IS NULL
+        AND collection_source_id IS NULL
+        AND collection_start_height IS NULL
+        AND collection_end_height IS NULL
+        AND collection_acquisition_contract IS NULL
+        AND collection_evidence_contract IS NULL)
+);
+ALTER TABLE agent_economy.pending_collection_batches
+    DROP CONSTRAINT pending_collection_registry_binding,
+    DROP COLUMN registry_version,
+    DROP COLUMN registry_sha256;
+ALTER TABLE agent_economy.worker_jobs
+    DROP COLUMN collection_registry_version,
+    DROP COLUMN collection_registry_sha256;
 
 COMMIT;

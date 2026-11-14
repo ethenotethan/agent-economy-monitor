@@ -59,6 +59,8 @@ pub struct FacilitatorRegistry {
     registry_version: String,
     entries: Vec<FacilitatorEntry>,
     unavailable: Vec<UnavailableChain>,
+    #[serde(skip)]
+    sha256: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -84,7 +86,7 @@ impl FacilitatorRegistry {
         if bytes.is_empty() || bytes.len() > MAX_REGISTRY_BYTES {
             return Err(HistoryError::InvalidRegistry);
         }
-        let registry: Self =
+        let mut registry: Self =
             serde_json::from_slice(bytes).map_err(|_| HistoryError::InvalidRegistry)?;
         if registry.schema_version != 1
             || !valid_version(&registry.registry_version)
@@ -123,11 +125,16 @@ impl FacilitatorRegistry {
                 return Err(HistoryError::InvalidRegistry);
             }
         }
+        registry.sha256 = format!("{:x}", Sha256::digest(bytes));
         Ok(registry)
     }
 
     pub fn version(&self) -> &str {
         &self.registry_version
+    }
+
+    pub fn sha256(&self) -> &str {
+        &self.sha256
     }
 
     pub fn entries_for_chain(&self, chain: &str) -> Vec<&FacilitatorEntry> {
@@ -145,6 +152,18 @@ impl FacilitatorRegistry {
     }
 }
 
+pub fn parse_admitted_registry(
+    bytes: &[u8],
+    expected_version: &str,
+    expected_sha256: &str,
+) -> Result<FacilitatorRegistry, HistoryError> {
+    let registry = FacilitatorRegistry::parse(bytes)?;
+    if registry.version() != expected_version || registry.sha256() != expected_sha256 {
+        return Err(HistoryError::InvalidRegistry);
+    }
+    Ok(registry)
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct VerifiedFacilitatorPayment {
     chain: String,
@@ -152,6 +171,7 @@ pub struct VerifiedFacilitatorPayment {
     facilitator_address: String,
     facilitator_active: bool,
     registry_version: String,
+    registry_sha256: String,
     source_coordinate: u64,
     transaction_reference: String,
     settlement_position: u64,
@@ -225,6 +245,7 @@ impl VerifiedFacilitatorPayment {
             "facilitator_address": self.facilitator_address,
             "facilitator_active": self.facilitator_active,
             "registry_version": self.registry_version,
+            "registry_sha256": self.registry_sha256,
             "attribution_class": self.attribution_class,
             "rpc_verification_evidence_id": self.evidence_id,
         })
@@ -657,6 +678,7 @@ fn payment(
         facilitator_address: entry.address.clone(),
         facilitator_active: entry.active,
         registry_version: registry.registry_version.clone(),
+        registry_sha256: registry.sha256.clone(),
         source_coordinate,
         transaction_reference: transaction_reference.to_owned(),
         settlement_position,

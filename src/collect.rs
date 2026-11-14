@@ -27,6 +27,7 @@ use crate::worker::{
     CollectionAdmission, HandlerFailure, JobResult, LeasedJob, WorkerHandler, WorkerJobStore,
     WorkerMode, WorkerStoreError,
 };
+use crate::x402_history::FacilitatorRegistry;
 
 const MAX_RANGE_HEIGHTS: u64 = 10_000;
 const MAX_INPUTS: usize = 10_000;
@@ -44,6 +45,7 @@ const MAX_BAZAAR_CRAWL_BYTES: u64 = 256 * 1024 * 1024;
 const BAZAAR_REQUEST_INTERVAL_MS: u64 = 100;
 const CDP_BAZAAR_URL: &str =
     "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=0";
+const FACILITATOR_REGISTRY: &[u8] = include_bytes!("../data/x402_facilitators.json");
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CollectionError {
@@ -1031,6 +1033,9 @@ where
         &self,
         manifest: Manifest,
     ) -> Result<CollectionBatch, CollectionError> {
+        let registry = FacilitatorRegistry::parse(FACILITATOR_REGISTRY)
+            .map_err(|_| CollectionError::InvalidInput)?;
+        let registry_binding = format!("{}:sha256:{}", registry.version(), registry.sha256());
         if !matches!(manifest.chain.as_str(), "base" | "solana")
             || manifest.source_id != format!("x402-facilitator-{}", manifest.chain)
             || manifest.inputs.len()
@@ -1038,7 +1043,7 @@ where
                     .map_err(|_| CollectionError::InvalidInput)?
             || manifest.inputs.iter().any(|input| {
                 !matches!(input.kind, InputKind::X402FacilitatorBlock)
-                    || input.context != "x402scan-registry-5732bb83"
+                    || input.context != registry_binding
                     || !input.evidence_base64.is_empty()
             })
         {
@@ -1398,7 +1403,7 @@ fn verify_evidence(
             vec![ManifestInput {
                 height: archived.height,
                 kind: InputKind::X402FacilitatorBlock,
-                context: "x402scan-registry-5732bb83".to_owned(),
+                context: "x402scan-5732bb83c8c4290f413f24318a838e3fee4ed2bf:sha256:fcc4907070b96322fbc652a6833d90339c694d4453eac020e823e962b4dce21f".to_owned(),
                 evidence_base64: String::new(),
             }]
         } else {
