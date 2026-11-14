@@ -289,6 +289,7 @@
         element("div", "metric-value", state.toUpperCase()),
         element("div", "metric-detail", `${row.verified_transactions || 0} verified · ${row.duplicate_observations || 0} duplicates · ${row.conflicting_observations || 0} conflicts · ${row.gap_count || 0} gaps`),
         element("div", "metric-detail", `Retention: ${row.retention_limit || "unknown"} · indexed ${row.indexed_through_coordinate ?? "unknown"} / ${row.frozen_upper_coordinate ?? "unknown"}`),
+        ...(row.failure_code ? [element("div", "metric-detail", `Gap: ${row.failure_code}`)] : []),
         provenanceButtons(row.provenance_id ? [row.provenance_id] : [])
       );
       coverageGrid.append(card);

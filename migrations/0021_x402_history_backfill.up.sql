@@ -95,14 +95,20 @@ CREATE TABLE agent_economy.x402_history_sources (
     namespace_id uuid NOT NULL REFERENCES agent_economy.namespaces (namespace_id),
     source_id text NOT NULL CHECK (source_id ~ '^[a-z0-9][a-z0-9_.-]{1,62}[a-z0-9]$'),
     chain_scope text NOT NULL CHECK (chain_scope ~ '^[a-z0-9][a-z0-9_.-]{1,62}[a-z0-9]$'),
-    source_kind text NOT NULL CHECK (source_kind IN ('facilitator_index', 'protocol_explicit_chain_index')),
+    source_kind text NOT NULL CHECK (source_kind IN ('facilitator_index', 'protocol_explicit_chain_index', 'unavailable')),
     earliest_available_coordinate bigint CHECK (earliest_available_coordinate >= 0),
     earliest_available_at timestamptz,
     retention_limit text NOT NULL CHECK (retention_limit <> ''),
     pagination_semantics text NOT NULL CHECK (pagination_semantics <> ''),
     attribution_strength text NOT NULL CHECK (
-        attribution_strength IN ('signed_payment_attestation_plus_rpc', 'protocol_explicit_chain_evidence')
+        attribution_strength IN (
+            'signed_payment_attestation_plus_rpc',
+            'protocol_explicit_chain_evidence',
+            'known_facilitator_onchain',
+            'unavailable'
+        )
     ),
+    unavailability_reason text,
     chain_exhaustive boolean NOT NULL DEFAULT false,
     admitted_provenance_id uuid NOT NULL,
     admitted_at timestamptz NOT NULL DEFAULT clock_timestamp(),
@@ -110,6 +116,15 @@ CREATE TABLE agent_economy.x402_history_sources (
     FOREIGN KEY (namespace_id, admitted_provenance_id)
         REFERENCES agent_economy.provenance_records (namespace_id, provenance_id),
     CHECK (num_nonnulls(earliest_available_coordinate, earliest_available_at) IN (0, 2)),
+    CHECK (
+        (source_kind = 'unavailable'
+            AND earliest_available_coordinate IS NULL
+            AND earliest_available_at IS NULL
+            AND attribution_strength = 'unavailable'
+            AND unavailability_reason IS NOT NULL
+            AND unavailability_reason <> '')
+        OR (source_kind <> 'unavailable' AND unavailability_reason IS NULL)
+    ),
     CHECK (NOT chain_exhaustive OR source_kind = 'protocol_explicit_chain_index')
 );
 
@@ -164,8 +179,20 @@ BEGIN
         admitted_provenance_id)
     VALUES (p_namespace_id, p_source_id, p_chain_scope, 'facilitator_index',
         p_earliest_coordinate, p_earliest_at, 'archival-rpc-provider-dependent',
-        'inclusive-finalized-coordinate-range', 'protocol_explicit_chain_evidence',
+        'inclusive-finalized-coordinate-range', 'known_facilitator_onchain',
         false, p_provenance_id)
+    ON CONFLICT DO NOTHING;
+    INSERT INTO agent_economy.x402_history_sources (
+        namespace_id, source_id, chain_scope, source_kind,
+        retention_limit, pagination_semantics, attribution_strength,
+        unavailability_reason, chain_exhaustive, admitted_provenance_id)
+    VALUES
+        (p_namespace_id, 'x402-facilitator-registry', 'ethereum', 'unavailable',
+         'not-available', 'not-applicable', 'unavailable',
+         'no-admitted-x402-facilitator-registry', false, p_provenance_id),
+        (p_namespace_id, 'x402-facilitator-registry', 'tempo', 'unavailable',
+         'not-available', 'not-applicable', 'unavailable',
+         'mpp-is-a-separate-protocol-series', false, p_provenance_id)
     ON CONFLICT DO NOTHING;
     INSERT INTO agent_economy.x402_history_plans (
         namespace_id, source_id, chain_scope, frozen_upper_coordinate,
@@ -699,14 +726,18 @@ SELECT
     COALESCE(range.verified_transactions, 0) AS verified_transactions,
     COALESCE(range.duplicate_observations, 0) AS duplicate_observations,
     COALESCE(range.conflicting_observations, 0) AS conflicting_observations,
-    COALESCE(range.gap_count, 0) AS gap_count,
+    CASE WHEN source.source_kind = 'unavailable' THEN 1
+         ELSE COALESCE(range.gap_count, 0) END AS gap_count,
     CASE
+        WHEN source.source_kind = 'unavailable' THEN 'unknown'
         WHEN range.state = 'source-complete' AND source.chain_exhaustive THEN 'chain-complete'
         ELSE COALESCE(range.state, 'unknown')
     END AS coverage_state,
-    range.failure_code,
-    range.observed_at,
+    COALESCE(range.failure_code, source.unavailability_reason) AS failure_code,
+    CASE WHEN source.source_kind = 'unavailable' THEN source.admitted_at
+         ELSE range.observed_at END AS observed_at,
     CASE
+        WHEN source.source_kind = 'unavailable' THEN NULL
         WHEN range.observed_at IS NULL THEN NULL
         ELSE GREATEST(0, EXTRACT(EPOCH FROM clock_timestamp() - range.observed_at)::bigint)
     END AS lag_seconds,

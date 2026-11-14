@@ -66,22 +66,53 @@ class CockpitBrowserTest(unittest.TestCase):
                 elif path == "/api/v1/x402/history/coverage":
                     body = json.dumps({
                         "api_version": "v1",
-                        "data": [{
-                            "source_id": "naven-x402-base",
-                            "chain_scope": "base",
-                            "frozen_upper_coordinate": 41,
-                            "indexed_through_coordinate": 41,
-                            "retention_limit": "provider-retained-window-unknown",
-                            "source_total": 41,
-                            "archived_records": 41,
-                            "verified_transactions": 39,
-                            "duplicate_observations": 2,
-                            "conflicting_observations": 0,
-                            "gap_count": 0,
-                            "coverage_state": "source-complete",
-                            "failure_code": None,
-                            "provenance_id": "11111111-1111-1111-1111-111111111111",
-                        }],
+                        "data": [
+                            {
+                                "source_id": "naven-x402-base",
+                                "chain_scope": "base",
+                                "frozen_upper_coordinate": 41,
+                                "indexed_through_coordinate": 41,
+                                "retention_limit": "provider-retained-window-unknown",
+                                "attribution_strength": "known_facilitator_onchain",
+                                "source_total": 41,
+                                "archived_records": 41,
+                                "verified_transactions": 39,
+                                "duplicate_observations": 2,
+                                "conflicting_observations": 0,
+                                "gap_count": 0,
+                                "coverage_state": "source-complete",
+                                "failure_code": None,
+                                "provenance_id": "11111111-1111-1111-1111-111111111111",
+                            },
+                            {
+                                "source_id": "x402-facilitator-registry",
+                                "chain_scope": "ethereum",
+                                "retention_limit": "not-available",
+                                "attribution_strength": "unavailable",
+                                "archived_records": 0,
+                                "verified_transactions": 0,
+                                "duplicate_observations": 0,
+                                "conflicting_observations": 0,
+                                "gap_count": 1,
+                                "coverage_state": "unknown",
+                                "failure_code": "no-admitted-x402-facilitator-registry",
+                                "provenance_id": "11111111-1111-1111-1111-111111111111",
+                            },
+                            {
+                                "source_id": "x402-facilitator-registry",
+                                "chain_scope": "tempo",
+                                "retention_limit": "not-available",
+                                "attribution_strength": "unavailable",
+                                "archived_records": 0,
+                                "verified_transactions": 0,
+                                "duplicate_observations": 0,
+                                "conflicting_observations": 0,
+                                "gap_count": 1,
+                                "coverage_state": "unknown",
+                                "failure_code": "mpp-is-a-separate-protocol-series",
+                                "provenance_id": "11111111-1111-1111-1111-111111111111",
+                            },
+                        ],
                     }).encode()
                     content_type = "application/json"
                 elif path == "/api/v1/buyers":
@@ -231,6 +262,10 @@ class CockpitBrowserTest(unittest.TestCase):
         expect(history).to_contain_text("2 duplicates")
         expect(history).to_contain_text("0 gaps")
         expect(history).to_contain_text("provider-retained-window-unknown")
+        expect(history).to_contain_text("ETHEREUM")
+        expect(history).to_contain_text("no-admitted-x402-facilitator-registry")
+        expect(history).to_contain_text("TEMPO")
+        expect(history).to_contain_text("mpp-is-a-separate-protocol-series")
         discovery.locator("button[data-provenance-id]").click()
         drawer = page.locator("#provenance-drawer")
         expect(drawer).to_contain_text("runtime-402:fixture")

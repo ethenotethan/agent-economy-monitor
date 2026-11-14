@@ -778,10 +778,10 @@
       "id": "collect-worker",
       "label": "Create-only evidence collection worker",
       "layer": "evidence",
-      "line_count": 6696
+      "line_count": 6727
     },
     {
-      "declaration_count": 252,
+      "declaration_count": 253,
       "declarations": [
         "CLASSIFIER_PASSWORD",
         "COLLECTOR_PASSWORD",
@@ -829,6 +829,7 @@
         "X402Adapter",
         "adapters_emit_immutable_observations",
         "additive_unknown_fields_are_covered_by_the_content_address",
+        "admitted_registry_exposes_honest_attribution_and_unavailable_chain_gaps",
         "admitted_registry_rejects_changed_bytes_even_when_version_is_unchanged",
         "an_empty_queue_is_not_reported_as_success",
         "app",
@@ -1038,7 +1039,7 @@
       ],
       "description": "Repository and CI gates that defend behavior and architecture independently.",
       "external": false,
-      "file_count": 49,
+      "file_count": 50,
       "files": [
         ".github/workflows/ci.yml",
         ".github/workflows/pages.yml",
@@ -1088,12 +1089,13 @@
         "tests/worker_jobs_schema_test.py",
         "tests/worker_postgres.rs",
         "tests/x402_history.rs",
+        "tests/x402_history_coverage_postgres.rs",
         "tests/x402_history_schema_test.py"
       ],
       "id": "delivery-gates",
       "label": "Delivery gates",
       "layer": "governance",
-      "line_count": 12862
+      "line_count": 12983
     },
     {
       "declaration_count": 137,
@@ -1995,7 +1997,7 @@
       "id": "runtime",
       "label": "Runtime",
       "layer": "delivery",
-      "line_count": 8369
+      "line_count": 8370
     },
     {
       "declaration_count": 95,
@@ -12069,7 +12071,7 @@
         "component": "collect-worker",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 746,
+        "line_count": 777,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -13230,7 +13232,7 @@
         "component": "runtime",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 636,
+        "line_count": 637,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -19171,7 +19173,7 @@
         "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 544,
+        "line_count": 579,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -21476,9 +21478,32 @@
       {
         "citations": 0,
         "component": "delivery-gates",
+        "declaration_count": 1,
+        "declarations": [
+          {
+            "kind": "async-fn",
+            "line": 11,
+            "name": "admitted_registry_exposes_honest_attribution_and_unavailable_chain_gaps",
+            "passes": [
+              "rust.declaration"
+            ]
+          }
+        ],
+        "line_count": 82,
+        "mapped_declarations": 0,
+        "passes": [
+          "rust.declaration"
+        ],
+        "path": "tests/x402_history_coverage_postgres.rs",
+        "semantic_citations": 0,
+        "touched": false
+      },
+      {
+        "citations": 0,
+        "component": "delivery-gates",
         "declaration_count": 0,
         "declarations": [],
-        "line_count": 77,
+        "line_count": 81,
         "mapped_declarations": 0,
         "passes": [
           "declared.topology"
@@ -21504,10 +21529,10 @@
         "id": "declared.topology"
       },
       {
-        "citations": 1915,
+        "citations": 1916,
         "class": "mechanical",
         "description": "Rust item declarations extracted with source lines.",
-        "files": 64,
+        "files": 65,
         "id": "rust.declaration"
       },
       {
@@ -21536,15 +21561,15 @@
         "worker": 8
       },
       "citations": 66,
-      "declarations": 1915,
+      "declarations": 1916,
       "entities": 66,
       "entities_with_origin": 66,
-      "files": 194,
+      "files": 195,
       "mapped_declarations": 0,
       "passes": 4,
       "semantic_citations": 0,
       "touched_files": 31,
-      "untouched_files": 163
+      "untouched_files": 164
     }
   },
   "interplay": {
@@ -23259,9 +23284,9 @@
     "triggers": []
   },
   "inventory": {
-    "declarations": 1915,
-    "files": 194,
-    "lines": 61053
+    "declarations": 1916,
+    "files": 195,
+    "lines": 61206
   },
   "layers": [
     {
@@ -23302,7 +23327,7 @@
   ],
   "repository": "ethenotethan/agent-economy-monitor",
   "schema_version": "1.0.0",
-  "source_tree_sha256": "20fe620f47308f6b273d5cbc2f0e64169efb8f49716cc07194a971a5870a8401",
+  "source_tree_sha256": "214683c7bebcbec2d21f94495f572d7c388d9035c8dde9b5137822b8f833ccfe",
   "stores": {
     "count": 2,
     "items": [
