@@ -697,6 +697,30 @@ async fn malformed_solana_block_cannot_advance_cursor() {
     assert_eq!(cursors.checkpoint, Some(CursorCheckpoint::new(44, 0)));
 }
 
+#[test]
+fn facilitator_base_request_binds_block_receipts_and_finalized_head() {
+    let request = AlchemyRequest::facilitator_block(Chain::Base, 39_000_000).unwrap();
+    let calls = request.body().as_array().unwrap();
+
+    assert_eq!(calls.len(), 3);
+    assert_eq!(calls[0]["method"], "eth_getBlockByNumber");
+    assert_eq!(calls[0]["params"], serde_json::json!(["0x25317c0", true]));
+    assert_eq!(calls[1]["method"], "eth_getBlockReceipts");
+    assert_eq!(calls[1]["params"], serde_json::json!(["0x25317c0"]));
+    assert_eq!(calls[2]["method"], "eth_getBlockByNumber");
+    assert_eq!(calls[2]["params"], serde_json::json!(["finalized", false]));
+}
+
+#[test]
+fn facilitator_solana_request_uses_finalized_transaction_details() {
+    let request = AlchemyRequest::facilitator_block(Chain::Solana, 350_000_000).unwrap();
+
+    assert_eq!(request.body()["method"], "getBlock");
+    assert_eq!(request.body()["params"][0], 350_000_000_u64);
+    assert_eq!(request.body()["params"][1]["commitment"], "finalized");
+    assert_eq!(request.body()["params"][1]["transactionDetails"], "full");
+}
+
 impl fmt::Display for FakeTransport {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("fake")

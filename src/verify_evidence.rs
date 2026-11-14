@@ -15,6 +15,9 @@ use tokio_postgres::Client;
 use crate::collect::{
     ArchivedEvidence, CollectionBatch, CollectionError, verify_replayed_evidence,
 };
+use crate::x402_history::{FacilitatorRegistry, verify_facilitator_rpc_evidence};
+
+const FACILITATOR_REGISTRY: &[u8] = include_bytes!("../data/x402_facilitators.json");
 
 fn verification_observations(batch: &CollectionBatch) -> Result<Vec<Value>, CollectionError> {
     let mut observations = batch
@@ -353,6 +356,29 @@ impl PostgresEvidenceVerifier {
                 readback.bytes,
             )?);
         }
+        let facilitator_source = pending.source_id == format!("x402-facilitator-{}", pending.chain);
+        let payment_observations = if facilitator_source {
+            let registry = FacilitatorRegistry::parse(FACILITATOR_REGISTRY)
+                .map_err(|_| CollectionError::InvalidInput)?;
+            let mut observations = Vec::new();
+            for item in &verified {
+                observations.extend(
+                    verify_facilitator_rpc_evidence(
+                        &registry,
+                        &pending.chain,
+                        item.evidence_id(),
+                        item.height(),
+                        item.archived_bytes(),
+                    )
+                    .map_err(|_| CollectionError::InvalidInput)?
+                    .into_iter()
+                    .map(|payment| payment.verification_observation()),
+                );
+            }
+            Some(observations)
+        } else {
+            None
+        };
         let batch = verify_replayed_evidence(
             pending.chain.clone(),
             pending.source_id.clone(),
@@ -364,7 +390,10 @@ impl PostgresEvidenceVerifier {
         if batch.evidence_manifest_sha256() != pending.batch_sha256 {
             return Err(CollectionError::InvalidInput);
         }
-        let observations = verification_observations(&batch)?;
+        let observations = match payment_observations {
+            Some(observations) => observations,
+            None => verification_observations(&batch)?,
+        };
         let observations_json =
             serde_json::to_string(&observations).map_err(|_| CollectionError::InvalidInput)?;
         let result = json!({

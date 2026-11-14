@@ -167,7 +167,7 @@
     updated.textContent = newest ? `Observed ${new Date(newest).toLocaleString()}` : "Observation time unavailable";
   }
 
-  function renderPulse(model, coverageModel) {
+  function renderPulse(model, coverageModel, transactionCoverageModel) {
     const payments = model.data || [];
     const discovery = model.verified_discovery || [];
     const items = [...payments, ...discovery];
@@ -242,6 +242,10 @@
     coverageSection.dataset.pulseSection = "catalog-coverage";
     viewRoot.append(coverageSection);
 
+    const transactionCoverage = transactionCoverageSection(transactionCoverageModel && transactionCoverageModel.data);
+    transactionCoverage.dataset.pulseSection = "transaction-coverage";
+    viewRoot.append(transactionCoverage);
+
     const newest = items.map(item => Date.parse(item.observed_at)).filter(Number.isFinite).sort((a, b) => b - a)[0];
     updated.textContent = newest ? `Observed ${new Date(newest).toLocaleString()}` : "Observation time unavailable";
   }
@@ -271,6 +275,28 @@
     const wrapper = section("Catalog coverage", coverageStatus.toUpperCase(), coverageGrid);
     wrapper.dataset.catalogCoverage = coverageStatus;
     return wrapper;
+  }
+
+  function transactionCoverageSection(rows) {
+    const coverageRows = Array.isArray(rows) ? rows : [];
+    const coverageGrid = element("div", "metric-grid");
+    for (const row of coverageRows) {
+      const card = element("article", "metric-card");
+      const state = row.coverage_state || "unknown";
+      card.dataset.coverageStatus = state;
+      card.append(
+        element("div", "card-kicker", `${String(row.chain_scope || "unknown").toUpperCase()} · ${row.source_id || "source unknown"}`),
+        element("div", "metric-value", state.toUpperCase()),
+        element("div", "metric-detail", `${row.verified_transactions || 0} verified · ${row.duplicate_observations || 0} duplicates · ${row.conflicting_observations || 0} conflicts · ${row.gap_count || 0} gaps`),
+        element("div", "metric-detail", `Retention: ${row.retention_limit || "unknown"} · indexed ${row.indexed_through_coordinate ?? "unknown"} / ${row.frozen_upper_coordinate ?? "unknown"}`),
+        provenanceButtons(row.provenance_id ? [row.provenance_id] : [])
+      );
+      coverageGrid.append(card);
+    }
+    if (!coverageRows.length) {
+      coverageGrid.append(element("div", "section-note", "No historical x402 source has reported coverage yet."));
+    }
+    return section("Historical transaction coverage", `${coverageRows.length} chain sources`, coverageGrid);
   }
 
   function activateView(name) {
@@ -504,13 +530,19 @@
       const payload = await response.json();
       if (generation !== loadGeneration) return;
       let coveragePayload = null;
+      let transactionCoveragePayload = null;
       if (["pulse", "services", "system"].includes(currentView)) {
         const coverageResponse = await fetch("/api/v1/catalog/coverage", { headers: { Accept: "application/json" }, credentials: "same-origin" });
         coveragePayload = coverageResponse.ok ? await coverageResponse.json() : null;
         if (generation !== loadGeneration) return;
       }
       if (currentView === "pulse") {
-        renderPulse(payload, coveragePayload);
+        const transactionCoverageResponse = await fetch("/api/v1/x402/history/coverage", { headers: { Accept: "application/json" }, credentials: "same-origin" });
+        transactionCoveragePayload = transactionCoverageResponse.ok ? await transactionCoverageResponse.json() : null;
+        if (generation !== loadGeneration) return;
+      }
+      if (currentView === "pulse") {
+        renderPulse(payload, coveragePayload, transactionCoveragePayload);
       }
       else renderItems(model.select(payload), coveragePayload && coveragePayload.data);
     } catch (error) {

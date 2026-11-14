@@ -156,6 +156,29 @@ impl AlchemyRequest {
         }
     }
 
+    pub fn facilitator_block(chain: Chain, height: u64) -> Result<Self, CollectorError> {
+        if chain.is_solana() {
+            return Ok(Self::block(chain, height));
+        }
+        if chain != Chain::Base {
+            return Err(CollectorError::InvalidConfiguration);
+        }
+        let encoded_height = format!("0x{height:x}");
+        Ok(Self {
+            chain,
+            requested_height: height,
+            body: json!([
+                {"jsonrpc":"2.0","id":"block","method":"eth_getBlockByNumber","params":[encoded_height,true]},
+                {"jsonrpc":"2.0","id":"receipts","method":"eth_getBlockReceipts","params":[encoded_height]},
+                {"jsonrpc":"2.0","id":"finalized","method":"eth_getBlockByNumber","params":["finalized",false]}
+            ]),
+        })
+    }
+
+    pub const fn body(&self) -> &Value {
+        &self.body
+    }
+
     pub fn method(&self) -> &'static str {
         if self.chain.is_solana() {
             "getBlock"
@@ -364,6 +387,14 @@ pub trait RpcTransport: Send {
         chain: Chain,
         height: u64,
     ) -> impl std::future::Future<Output = Result<RawRpcResponse, CollectorError>> + Send;
+
+    fn fetch_facilitator_block(
+        &mut self,
+        chain: Chain,
+        height: u64,
+    ) -> impl std::future::Future<Output = Result<RawRpcResponse, CollectorError>> + Send {
+        self.fetch_block(chain, height)
+    }
 }
 
 impl RpcTransport for AlchemyTransport {
@@ -410,6 +441,44 @@ impl RpcTransport for AlchemyTransport {
         }
         Ok(RawRpcResponse::try_new(status, bytes)?
             .with_optional_retry_after(retry_after_milliseconds))
+    }
+
+    async fn fetch_facilitator_block(
+        &mut self,
+        chain: Chain,
+        height: u64,
+    ) -> Result<RawRpcResponse, CollectorError> {
+        let endpoint = self
+            .endpoints
+            .get(&chain)
+            .ok_or(CollectorError::MissingEndpoint)?;
+        let request = AlchemyRequest::facilitator_block(chain, height)?;
+        let mut response = self
+            .client
+            .post(endpoint.expose())
+            .json(request.body())
+            .send()
+            .await
+            .map_err(|_| CollectorError::Transport)?;
+        let status = response.status().as_u16();
+        if response
+            .content_length()
+            .is_some_and(|length| length > MAX_RPC_RESPONSE_BYTES as u64)
+        {
+            return Err(CollectorError::ResponseTooLarge);
+        }
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response
+            .chunk()
+            .await
+            .map_err(|_| CollectorError::Transport)?
+        {
+            if bytes.len().saturating_add(chunk.len()) > MAX_RPC_RESPONSE_BYTES {
+                return Err(CollectorError::ResponseTooLarge);
+            }
+            bytes.extend_from_slice(&chunk);
+        }
+        RawRpcResponse::try_new(status, bytes)
     }
 }
 

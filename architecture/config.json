@@ -82,9 +82,12 @@
       "layer": "evidence",
       "patterns": [
         "src/collect.rs",
+        "src/x402_history.rs",
+        "data/x402_facilitators.json",
         "migrations/0013_collect_worker.*.sql",
         "migrations/0018_public_source_collection.*.sql",
-        "migrations/0020_bazaar_catalog_pagination.*.sql"
+        "migrations/0020_bazaar_catalog_pagination.*.sql",
+        "migrations/0021_x402_history_backfill.*.sql"
       ]
     },
     {
@@ -564,6 +567,7 @@
     "crates/**/*.proto",
     "crates/**/*.rs",
     "crates/**/*.sql",
+    "data/*.json",
     "deploy/**/*.hcl",
     "deploy/**/*.md",
     "deploy/**/*.tf",
@@ -646,6 +650,7 @@
     {"authority": "mechanical", "component": "runtime", "id": "http:openapi", "kind": "endpoint", "label": "GET /api/v1/openapi.json", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/openapi.json"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:pulse", "kind": "endpoint", "label": "GET /api/v1/pulse", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/pulse"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:catalog-coverage", "kind": "endpoint", "label": "GET /api/v1/catalog/coverage", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/catalog/coverage"}, "page": "delivery"},
+    {"authority": "mechanical", "component": "runtime", "id": "http:x402-history-coverage", "kind": "endpoint", "label": "GET /api/v1/x402/history/coverage", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/x402/history/coverage"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:buyers", "kind": "endpoint", "label": "GET /api/v1/buyers", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:buyer", "kind": "endpoint", "label": "GET /api/v1/buyers/{id}", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers/{id}"}, "page": "delivery"},
     {"authority": "mechanical", "component": "runtime", "id": "http:buyer-dossier", "kind": "endpoint", "label": "GET /api/v1/buyers/{id}/dossier", "origin": {"method": "get", "path": "src/query.rs", "route": "/api/v1/buyers/{id}/dossier"}, "page": "delivery"},

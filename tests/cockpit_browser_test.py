@@ -63,6 +63,27 @@ class CockpitBrowserTest(unittest.TestCase):
                         },
                     }).encode()
                     content_type = "application/json"
+                elif path == "/api/v1/x402/history/coverage":
+                    body = json.dumps({
+                        "api_version": "v1",
+                        "data": [{
+                            "source_id": "naven-x402-base",
+                            "chain_scope": "base",
+                            "frozen_upper_coordinate": 41,
+                            "indexed_through_coordinate": 41,
+                            "retention_limit": "provider-retained-window-unknown",
+                            "source_total": 41,
+                            "archived_records": 41,
+                            "verified_transactions": 39,
+                            "duplicate_observations": 2,
+                            "conflicting_observations": 0,
+                            "gap_count": 0,
+                            "coverage_state": "source-complete",
+                            "failure_code": None,
+                            "provenance_id": "11111111-1111-1111-1111-111111111111",
+                        }],
+                    }).encode()
+                    content_type = "application/json"
                 elif path == "/api/v1/buyers":
                     body = json.dumps({"api_version": "v1", "items": [self.fact("buyer:fixture", "buyer", "Buyer fixture")], "next_cursor": None}).encode()
                     content_type = "application/json"
@@ -203,6 +224,13 @@ class CockpitBrowserTest(unittest.TestCase):
         expect(coverage).to_contain_text("333 pages archived")
         expect(coverage).to_contain_text("31004 verified qualifying resources")
         expect(coverage.locator("button[data-provenance-id]")).to_have_count(1)
+        history = page.locator('[data-pulse-section="transaction-coverage"]')
+        expect(history).to_contain_text("BASE")
+        expect(history).to_contain_text("SOURCE-COMPLETE")
+        expect(history).to_contain_text("39 verified")
+        expect(history).to_contain_text("2 duplicates")
+        expect(history).to_contain_text("0 gaps")
+        expect(history).to_contain_text("provider-retained-window-unknown")
         discovery.locator("button[data-provenance-id]").click()
         drawer = page.locator("#provenance-drawer")
         expect(drawer).to_contain_text("runtime-402:fixture")
