@@ -4,7 +4,7 @@ use agent_economy_monitor::query::{
     BuyerDossierReadModel, CatalogCoverageReadModel, ClassificationReadModel, DashboardPage,
     EvidenceProvenanceBinding, Fact, GraphReadModel, PostgresQueryStore, ProjectionPage,
     ProjectionPageList, ProvenanceReadModel, PulseReadModel, QueryError, QueryStore,
-    SystemReadModel, api_router,
+    SystemReadModel, TransactionCoverageReadModel, api_router,
 };
 use async_trait::async_trait;
 use axum::{
@@ -52,6 +52,30 @@ impl QueryStore for FixtureStore {
             crawl_lag_seconds: Some(120),
             provenance_ids: vec!["11111111-1111-1111-1111-111111111111".into()],
         }))
+    }
+
+    async fn transaction_coverage(&self) -> Result<Vec<TransactionCoverageReadModel>, QueryError> {
+        Ok(vec![TransactionCoverageReadModel {
+            source_id: "naven-x402-base".into(),
+            chain_scope: "base".into(),
+            earliest_available_coordinate: Some(1),
+            frozen_upper_coordinate: Some(41),
+            indexed_through_coordinate: Some(41),
+            retention_limit: "provider-retained-window-unknown".into(),
+            pagination_semantics: "recipient-sequence".into(),
+            attribution_strength: "signed_payment_attestation_plus_rpc".into(),
+            source_total: Some(41),
+            archived_records: 41,
+            verified_transactions: 39,
+            duplicate_observations: 2,
+            conflicting_observations: 0,
+            gap_count: 0,
+            coverage_state: "source-complete".into(),
+            failure_code: None,
+            observed_at: Some("2026-11-13T00:00:00Z".into()),
+            lag_seconds: Some(60),
+            provenance_id: "11111111-1111-1111-1111-111111111111".into(),
+        }])
     }
 
     async fn buyers(
@@ -260,6 +284,32 @@ async fn catalog_coverage_exposes_explicit_complete_state_and_source_total() {
 }
 
 #[tokio::test]
+async fn transaction_coverage_exposes_honest_per_chain_source_limits_and_gaps() {
+    let response = api_router(Arc::new(FixtureStore))
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/x402/history/coverage")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body: Value =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert_eq!(body["data"][0]["chain_scope"], "base");
+    assert_eq!(body["data"][0]["coverage_state"], "source-complete");
+    assert_eq!(body["data"][0]["verified_transactions"], 39);
+    assert_eq!(body["data"][0]["duplicate_observations"], 2);
+    assert_eq!(body["data"][0]["gap_count"], 0);
+    assert_eq!(
+        body["data"][0]["retention_limit"],
+        "provider-retained-window-unknown"
+    );
+}
+
+#[tokio::test]
 async fn list_queries_are_bounded_and_cacheable_with_provenance() {
     let app = api_router(Arc::new(FixtureStore));
 
@@ -306,6 +356,7 @@ async fn purpose_built_surface_is_documented_without_graphql_or_sql() {
     let paths = [
         "/api/v1/pulse",
         "/api/v1/catalog/coverage",
+        "/api/v1/x402/history/coverage",
         "/api/v1/buyers",
         "/api/v1/buyers/buyer:1",
         "/api/v1/buyers/buyer:1/dossier",

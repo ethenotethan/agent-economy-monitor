@@ -55,6 +55,29 @@ pub struct CatalogCoverageReadModel {
     pub provenance_ids: Vec<String>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct TransactionCoverageReadModel {
+    pub source_id: String,
+    pub chain_scope: String,
+    pub earliest_available_coordinate: Option<i64>,
+    pub frozen_upper_coordinate: Option<i64>,
+    pub indexed_through_coordinate: Option<i64>,
+    pub retention_limit: String,
+    pub pagination_semantics: String,
+    pub attribution_strength: String,
+    pub source_total: Option<i64>,
+    pub archived_records: i64,
+    pub verified_transactions: i64,
+    pub duplicate_observations: i64,
+    pub conflicting_observations: i64,
+    pub gap_count: i64,
+    pub coverage_state: String,
+    pub failure_code: Option<String>,
+    pub observed_at: Option<String>,
+    pub lag_seconds: Option<i64>,
+    pub provenance_id: String,
+}
+
 impl DashboardPage {
     pub fn new(items: Vec<Fact>, next_cursor: Option<String>) -> Self {
         Self {
@@ -209,6 +232,9 @@ pub trait QueryStore: Send + Sync + 'static {
     async fn pulse(&self) -> Result<PulseReadModel, QueryError>;
     async fn catalog_coverage(&self) -> Result<Option<CatalogCoverageReadModel>, QueryError> {
         Ok(None)
+    }
+    async fn transaction_coverage(&self) -> Result<Vec<TransactionCoverageReadModel>, QueryError> {
+        Ok(Vec::new())
     }
     async fn buyers(&self, after: Option<&str>, limit: usize) -> Result<DashboardPage, QueryError>;
     async fn buyer(&self, id: &str) -> Result<Option<Fact>, QueryError>;
@@ -556,6 +582,41 @@ impl QueryStore for PostgresQueryStore {
         .transpose()
     }
 
+    async fn transaction_coverage(&self) -> Result<Vec<TransactionCoverageReadModel>, QueryError> {
+        self.client
+            .query(
+                "SELECT source_id, chain_scope, earliest_available_coordinate, frozen_upper_coordinate, indexed_through_coordinate, retention_limit, pagination_semantics, attribution_strength, source_total, archived_records, verified_transactions, duplicate_observations, conflicting_observations, gap_count, coverage_state, failure_code, observed_at::text, lag_seconds, provenance_id::text FROM agent_economy.x402_history_coverage WHERE namespace_id = $1::text::uuid ORDER BY chain_scope, source_id LIMIT 100",
+                &[&self.namespace_id],
+            )
+            .await
+            .map_err(|_| QueryError::Unavailable)?
+            .into_iter()
+            .map(|row| {
+                Ok(TransactionCoverageReadModel {
+                    source_id: row.try_get(0).map_err(|_| QueryError::Unavailable)?,
+                    chain_scope: row.try_get(1).map_err(|_| QueryError::Unavailable)?,
+                    earliest_available_coordinate: row.try_get(2).map_err(|_| QueryError::Unavailable)?,
+                    frozen_upper_coordinate: row.try_get(3).map_err(|_| QueryError::Unavailable)?,
+                    indexed_through_coordinate: row.try_get(4).map_err(|_| QueryError::Unavailable)?,
+                    retention_limit: row.try_get(5).map_err(|_| QueryError::Unavailable)?,
+                    pagination_semantics: row.try_get(6).map_err(|_| QueryError::Unavailable)?,
+                    attribution_strength: row.try_get(7).map_err(|_| QueryError::Unavailable)?,
+                    source_total: row.try_get(8).map_err(|_| QueryError::Unavailable)?,
+                    archived_records: row.try_get(9).map_err(|_| QueryError::Unavailable)?,
+                    verified_transactions: row.try_get(10).map_err(|_| QueryError::Unavailable)?,
+                    duplicate_observations: row.try_get(11).map_err(|_| QueryError::Unavailable)?,
+                    conflicting_observations: row.try_get(12).map_err(|_| QueryError::Unavailable)?,
+                    gap_count: row.try_get(13).map_err(|_| QueryError::Unavailable)?,
+                    coverage_state: row.try_get(14).map_err(|_| QueryError::Unavailable)?,
+                    failure_code: row.try_get(15).map_err(|_| QueryError::Unavailable)?,
+                    observed_at: row.try_get(16).map_err(|_| QueryError::Unavailable)?,
+                    lag_seconds: row.try_get(17).map_err(|_| QueryError::Unavailable)?,
+                    provenance_id: row.try_get(18).map_err(|_| QueryError::Unavailable)?,
+                })
+            })
+            .collect()
+    }
+
     async fn buyers(&self, after: Option<&str>, limit: usize) -> Result<DashboardPage, QueryError> {
         self.fact_page("buyer", after, limit).await
     }
@@ -797,6 +858,7 @@ pub fn api_router(store: Store) -> Router {
         .route("/api/v1/openapi.json", get(openapi))
         .route("/api/v1/pulse", get(pulse))
         .route("/api/v1/catalog/coverage", get(catalog_coverage))
+        .route("/api/v1/x402/history/coverage", get(transaction_coverage))
         .route("/api/v1/buyers", get(buyers))
         .route("/api/v1/buyers/{id}", get(buyer))
         .route("/api/v1/buyers/{id}/dossier", get(buyer_dossier))
@@ -851,6 +913,7 @@ async fn openapi() -> Json<Value> {
         "paths": {
             "/api/v1/pulse": {"get": {"responses": pulse_response()}},
             "/api/v1/catalog/coverage": {"get": {"responses": response()}},
+            "/api/v1/x402/history/coverage": {"get": {"responses": response()}},
             "/api/v1/buyers": {"get": {"parameters": page_parameters(), "responses": response()}},
             "/api/v1/buyers/{id}": {"get": {"parameters": [path_parameter("id")], "responses": response()}},
             "/api/v1/buyers/{id}/dossier": {"get": {"parameters": [path_parameter("id")], "responses": response()}},
@@ -931,6 +994,13 @@ async fn catalog_coverage(State(store): State<Store>) -> Result<Response, QueryE
     cacheable(&Versioned {
         api_version: API_VERSION,
         data,
+    })
+}
+
+async fn transaction_coverage(State(store): State<Store>) -> Result<Response, QueryError> {
+    cacheable(&Versioned {
+        api_version: API_VERSION,
+        data: store.transaction_coverage().await?,
     })
 }
 

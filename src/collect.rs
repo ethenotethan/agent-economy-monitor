@@ -27,6 +27,7 @@ use crate::worker::{
     CollectionAdmission, HandlerFailure, JobResult, LeasedJob, WorkerHandler, WorkerJobStore,
     WorkerMode, WorkerStoreError,
 };
+use crate::x402_history::FacilitatorRegistry;
 
 const MAX_RANGE_HEIGHTS: u64 = 10_000;
 const MAX_INPUTS: usize = 10_000;
@@ -44,6 +45,7 @@ const MAX_BAZAAR_CRAWL_BYTES: u64 = 256 * 1024 * 1024;
 const BAZAAR_REQUEST_INTERVAL_MS: u64 = 100;
 const CDP_BAZAAR_URL: &str =
     "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=100&offset=0";
+const FACILITATOR_REGISTRY: &[u8] = include_bytes!("../data/x402_facilitators.json");
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CollectionError {
@@ -219,6 +221,10 @@ impl ArchivedEvidence {
 
     pub const fn verified(&self) -> bool {
         self.verified
+    }
+
+    pub fn archived_bytes(&self) -> &[u8] {
+        &self.archived_bytes
     }
 }
 
@@ -853,6 +859,7 @@ struct BazaarPage {
 #[serde(rename_all = "snake_case")]
 enum InputKind {
     ChainTransfer,
+    X402FacilitatorBlock,
     X402Runtime,
     X402WellKnown,
     #[serde(rename = "x402_openapi")]
@@ -959,6 +966,9 @@ where
         if admission.acquisition_contract == "cdp-x402-bazaar-v1" {
             return self.build_public_source_batch(manifest).await;
         }
+        if admission.acquisition_contract == "facilitator-rpc-block-v1" {
+            return self.build_facilitator_history_batch(manifest).await;
+        }
         if admission.acquisition_contract != "alchemy-rpc-block-v1" {
             return Err(CollectionError::InvalidInput);
         }
@@ -1008,6 +1018,84 @@ where
             return Err(CollectionError::InvalidInput);
         }
         let evidence = rpc_archive.evidence;
+        Ok(CollectionBatch {
+            chain: manifest.chain,
+            source_id: manifest.source_id,
+            observed_at_unix_ms: manifest.observed_at_unix_ms,
+            start_height: manifest.start_height,
+            end_height: manifest.end_height,
+            evidence,
+            observations: Vec::new(),
+        })
+    }
+
+    async fn build_facilitator_history_batch(
+        &self,
+        manifest: Manifest,
+    ) -> Result<CollectionBatch, CollectionError> {
+        let registry = FacilitatorRegistry::parse(FACILITATOR_REGISTRY)
+            .map_err(|_| CollectionError::InvalidInput)?;
+        let registry_binding = format!("{}:sha256:{}", registry.version(), registry.sha256());
+        if !matches!(manifest.chain.as_str(), "base" | "solana")
+            || manifest.source_id != format!("x402-facilitator-{}", manifest.chain)
+            || manifest.inputs.len()
+                != usize::try_from(manifest.end_height - manifest.start_height + 1)
+                    .map_err(|_| CollectionError::InvalidInput)?
+            || manifest.inputs.iter().any(|input| {
+                !matches!(input.kind, InputKind::X402FacilitatorBlock)
+                    || input.context != registry_binding
+                    || !input.evidence_base64.is_empty()
+            })
+        {
+            return Err(CollectionError::InvalidInput);
+        }
+        let chain = manifest_chain(&manifest.chain)?;
+        let mut evidence = Vec::with_capacity(manifest.inputs.len());
+        let mut transport = self.rpc_transport.lock().await;
+        for input in &manifest.inputs {
+            let response = transport
+                .fetch_facilitator_block(chain, input.height)
+                .await
+                .map_err(|error| match error {
+                    CollectorError::Transport | CollectorError::HttpStatus(_) => {
+                        CollectionError::EvidenceUnavailable
+                    }
+                    _ => CollectionError::InvalidInput,
+                })?;
+            if response.status() != 200 || response.bytes().is_empty() {
+                return Err(CollectionError::EvidenceUnavailable);
+            }
+            let provenance = EvidenceProvenance::new(
+                "facilitator-rpc-evidence-v1",
+                &format!("{}:block:{}", manifest.source_id, input.height),
+                [
+                    ("chain", manifest.chain.clone()),
+                    ("height", input.height.to_string()),
+                    ("input-kind", "x402_facilitator_block".to_owned()),
+                    ("provider", "archival-rpc".to_owned()),
+                    ("registry", input.context.clone()),
+                ],
+            )
+            .map_err(|_| CollectionError::InvalidInput)?;
+            let context = EvidenceContext::new(&manifest.source_id, &manifest.observed_date)
+                .map_err(|_| CollectionError::InvalidInput)?
+                .with_provenance(provenance);
+            let receipt = self
+                .evidence_store
+                .archive_verified(&context, response.bytes())
+                .await?;
+            evidence.push(ArchivedEvidence {
+                evidence_id: format!("evidence:sha256:{}", receipt.object.sha256()),
+                sha256: receipt.object.sha256(),
+                storage_uri: receipt.object.name().to_owned(),
+                storage_generation: receipt.generation,
+                media_type: "application/json".to_owned(),
+                byte_length: response.bytes().len() as u64,
+                height: input.height,
+                verified: true,
+                archived_bytes: response.bytes().to_vec(),
+            });
+        }
         Ok(CollectionBatch {
             chain: manifest.chain,
             source_id: manifest.source_id,
@@ -1256,6 +1344,8 @@ fn verify_evidence(
         return Err(CollectionError::InvalidInput);
     }
     let is_bazaar = source_id == "cdp-x402-bazaar-base";
+    let is_facilitator = source_id == format!("x402-facilitator-{chain}")
+        && matches!(chain.as_str(), "base" | "solana");
     if is_bazaar {
         validate_replayed_bazaar_pages(&evidence)?;
     }
@@ -1271,6 +1361,8 @@ fn verify_evidence(
             height: start_height,
             kind: if is_bazaar {
                 InputKind::X402Bazaar
+            } else if is_facilitator {
+                InputKind::X402FacilitatorBlock
             } else {
                 InputKind::ChainTransfer
             },
@@ -1305,6 +1397,13 @@ fn verify_evidence(
                         .checked_mul(CDP_BAZAAR_PAGE_LIMIT)
                         .ok_or(CollectionError::InvalidInput)?,
                 ),
+                evidence_base64: String::new(),
+            }]
+        } else if archived.media_type == "application/json" && is_facilitator {
+            vec![ManifestInput {
+                height: archived.height,
+                kind: InputKind::X402FacilitatorBlock,
+                context: "x402scan-5732bb83c8c4290f413f24318a838e3fee4ed2bf:sha256:fcc4907070b96322fbc652a6833d90339c694d4453eac020e823e962b4dce21f".to_owned(),
                 evidence_base64: String::new(),
             }]
         } else {
@@ -1383,7 +1482,7 @@ fn parse_protocol_input(
     bytes: &[u8],
 ) -> Result<Vec<Observation>, CollectionError> {
     match input.kind {
-        InputKind::ChainTransfer => Ok(Vec::new()),
+        InputKind::ChainTransfer | InputKind::X402FacilitatorBlock => Ok(Vec::new()),
         InputKind::X402Runtime
         | InputKind::X402WellKnown
         | InputKind::X402OpenApi
@@ -1431,6 +1530,12 @@ fn validate_manifest(manifest: &Manifest) -> Result<(), CollectionError> {
         .all(|input| matches!(input.kind, InputKind::X402Bazaar))
     {
         "cdp-x402-bazaar-base".to_owned()
+    } else if manifest
+        .inputs
+        .iter()
+        .all(|input| matches!(input.kind, InputKind::X402FacilitatorBlock))
+    {
+        format!("x402-facilitator-{}", manifest.chain)
     } else {
         format!("alchemy-{}", manifest.chain)
     };

@@ -63,6 +63,58 @@ class CockpitBrowserTest(unittest.TestCase):
                         },
                     }).encode()
                     content_type = "application/json"
+                elif path == "/api/v1/x402/history/coverage":
+                    body = json.dumps({
+                        "api_version": "v1",
+                        "data": [
+                            {
+                                "source_id": "naven-x402-base",
+                                "chain_scope": "base",
+                                "frozen_upper_coordinate": 41,
+                                "indexed_through_coordinate": 41,
+                                "retention_limit": "provider-retained-window-unknown",
+                                "attribution_strength": "known_facilitator_onchain",
+                                "source_total": 41,
+                                "archived_records": 41,
+                                "verified_transactions": 39,
+                                "duplicate_observations": 2,
+                                "conflicting_observations": 0,
+                                "gap_count": 0,
+                                "coverage_state": "source-complete",
+                                "failure_code": None,
+                                "provenance_id": "11111111-1111-1111-1111-111111111111",
+                            },
+                            {
+                                "source_id": "x402-facilitator-registry",
+                                "chain_scope": "ethereum",
+                                "retention_limit": "not-available",
+                                "attribution_strength": "unavailable",
+                                "archived_records": 0,
+                                "verified_transactions": 0,
+                                "duplicate_observations": 0,
+                                "conflicting_observations": 0,
+                                "gap_count": 1,
+                                "coverage_state": "unknown",
+                                "failure_code": "no-admitted-x402-facilitator-registry",
+                                "provenance_id": "11111111-1111-1111-1111-111111111111",
+                            },
+                            {
+                                "source_id": "x402-facilitator-registry",
+                                "chain_scope": "tempo",
+                                "retention_limit": "not-available",
+                                "attribution_strength": "unavailable",
+                                "archived_records": 0,
+                                "verified_transactions": 0,
+                                "duplicate_observations": 0,
+                                "conflicting_observations": 0,
+                                "gap_count": 1,
+                                "coverage_state": "unknown",
+                                "failure_code": "mpp-is-a-separate-protocol-series",
+                                "provenance_id": "11111111-1111-1111-1111-111111111111",
+                            },
+                        ],
+                    }).encode()
+                    content_type = "application/json"
                 elif path == "/api/v1/buyers":
                     body = json.dumps({"api_version": "v1", "items": [self.fact("buyer:fixture", "buyer", "Buyer fixture")], "next_cursor": None}).encode()
                     content_type = "application/json"
@@ -203,6 +255,17 @@ class CockpitBrowserTest(unittest.TestCase):
         expect(coverage).to_contain_text("333 pages archived")
         expect(coverage).to_contain_text("31004 verified qualifying resources")
         expect(coverage.locator("button[data-provenance-id]")).to_have_count(1)
+        history = page.locator('[data-pulse-section="transaction-coverage"]')
+        expect(history).to_contain_text("BASE")
+        expect(history).to_contain_text("SOURCE-COMPLETE")
+        expect(history).to_contain_text("39 verified")
+        expect(history).to_contain_text("2 duplicates")
+        expect(history).to_contain_text("0 gaps")
+        expect(history).to_contain_text("provider-retained-window-unknown")
+        expect(history).to_contain_text("ETHEREUM")
+        expect(history).to_contain_text("no-admitted-x402-facilitator-registry")
+        expect(history).to_contain_text("TEMPO")
+        expect(history).to_contain_text("mpp-is-a-separate-protocol-series")
         discovery.locator("button[data-provenance-id]").click()
         drawer = page.locator("#provenance-drawer")
         expect(drawer).to_contain_text("runtime-402:fixture")
@@ -232,12 +295,57 @@ class CockpitBrowserTest(unittest.TestCase):
             }),
         )
         empty.route("**/api/v1/catalog/coverage", lambda route: route.fulfill(status=404))
+        empty.route("**/api/v1/x402/history/coverage", lambda route: route.fulfill(status=404))
         empty.goto(f"http://127.0.0.1:{self.port}/")
         expect(empty.locator("#view-root")).to_have_attribute("data-state", "empty")
         expect(empty.locator("#view-root")).to_contain_text(
             "No verified discovery observations or finalized payments"
         )
         empty.close()
+
+        history_only = self.browser.new_page(viewport={"width": 1440, "height": 900})
+        history_only.route(
+            "**/api/v1/pulse",
+            lambda route: route.fulfill(json={
+                "api_version": "v1",
+                "data": [],
+                "verified_discovery": [],
+            }),
+        )
+        history_only.route(
+            "**/api/v1/catalog/coverage", lambda route: route.fulfill(status=404)
+        )
+        history_only.route(
+            "**/api/v1/x402/history/coverage",
+            lambda route: route.fulfill(json={
+                "api_version": "v1",
+                "data": [{
+                    "source_id": "x402-facilitator-base",
+                    "chain_scope": "base",
+                    "frozen_upper_coordinate": 41,
+                    "indexed_through_coordinate": 41,
+                    "retention_limit": "archival-rpc-provider-dependent",
+                    "source_total": 41,
+                    "archived_records": 41,
+                    "verified_transactions": 39,
+                    "duplicate_observations": 2,
+                    "conflicting_observations": 0,
+                    "gap_count": 0,
+                    "coverage_state": "source-complete",
+                    "failure_code": None,
+                    "provenance_id": "11111111-1111-1111-1111-111111111111",
+                }],
+            }),
+        )
+        history_only.goto(f"http://127.0.0.1:{self.port}/")
+        expect(history_only.locator("#view-root")).to_have_attribute("data-state", "ready")
+        expect(history_only.locator('[data-pulse-section="transaction-coverage"]')).to_contain_text(
+            "Historical transaction coverage"
+        )
+        expect(history_only.locator('[data-pulse-section="transaction-coverage"]')).to_contain_text(
+            "SOURCE-COMPLETE"
+        )
+        history_only.close()
 
         failed = self.browser.new_page(viewport={"width": 1440, "height": 900})
         failed.route("**/api/v1/pulse", lambda route: route.fulfill(status=503, body=""))

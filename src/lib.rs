@@ -12,3 +12,4 @@ pub mod recovery;
 pub mod reduce;
 pub mod verify_evidence;
 pub mod worker;
+pub mod x402_history;
